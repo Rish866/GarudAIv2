@@ -1,0 +1,6 @@
+{
+  "name": "GARUD AI",
+  "description": "India’s AI Command Center for Fleet Safety, Live Monitoring & Transport Operations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
