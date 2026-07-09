@@ -5,6 +5,7 @@ import { useStore } from './store/useStore';
 import type { ModuleName } from './types';
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
+import { useSupabaseSync } from './lib/useSupabaseSync';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -321,6 +322,7 @@ function LoginPage() {
 
 function MainLayout() {
   const { activeModule, sidebarCollapsed } = useStore();
+  useSupabaseSync();
 
   const ActiveComponent = moduleComponents[activeModule];
 
