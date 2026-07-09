@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import type { Invoice, Payment, Expense, ExpenseCategory } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateInvoiceNumber } from '../../../lib/utils';
+import { generateInvoicePDF } from '../../../lib/pdf';
 
 type BillingTab = 'invoices' | 'payments' | 'expenses';
 
@@ -200,6 +201,7 @@ export default function BillingModule() {
                 <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Total</th>
                 <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Balance</th>
                 <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Status</th>
+                <th className="px-4 py-3 text-center text-[11px] uppercase font-semibold text-slate-500">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -212,6 +214,15 @@ export default function BillingModule() {
                   <td className="px-4 py-3 text-sm text-slate-700 text-right font-medium">{formatCurrency(inv.balance_amount)}</td>
                   <td className="px-4 py-3">
                     <span className={classNames('px-2 py-0.5 rounded-full text-xs font-medium', getStatusColor(inv.status))}>{inv.status}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => generateInvoicePDF(inv, company, trips)}
+                      className="px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                      title="Print Invoice PDF"
+                    >
+                      Print
+                    </button>
                   </td>
                 </tr>
               ))}

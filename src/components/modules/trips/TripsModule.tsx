@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import type { Trip, TripStatus } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber } from '../../../lib/utils';
-import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X } from 'lucide-react';
+import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
+import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download } from 'lucide-react';
 
 const STATUS_FLOW: TripStatus[] = [
   'booked', 'assigned', 'loading', 'in_transit', 'reached', 'unloading', 'pod_pending', 'completed', 'billed', 'settled'
@@ -24,7 +25,7 @@ function getNextStatuses(current: TripStatus): TripStatus[] {
 }
 
 export default function TripsModule() {
-  const { trips, customers, vehicles, drivers, addTrip, updateTripStatus } = useStore();
+  const { trips, customers, vehicles, drivers, company, addTrip, updateTripStatus } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,6 +66,13 @@ export default function TripsModule() {
         >
           <Plus size={18} />
           New Trip
+        </button>
+        <button
+          onClick={() => generateTripReportPDF(filteredTrips, company, 'Trip Report')}
+          className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium"
+        >
+          <Download size={18} />
+          Export PDF
         </button>
       </div>
 
@@ -116,7 +124,15 @@ export default function TripsModule() {
                   {trip.status.replace(/_/g, ' ')}
                 </span>
               </div>
-              <div className="relative">
+              <div className="relative flex items-center gap-2">
+                <button
+                  onClick={() => generateLRPDF(trip, useStore.getState().company)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  title="Print Lorry Receipt"
+                >
+                  <FileText size={14} />
+                  LR
+                </button>
                 <button
                   onClick={() => setStatusDropdown(statusDropdown === trip.id ? null : trip.id)}
                   className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
