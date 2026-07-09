@@ -118,7 +118,7 @@ export default function Sidebar() {
         {/* Logo Section */}
         <div className="flex items-center justify-between px-4 h-16 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20">
               <Truck size={18} className="text-white" />
             </div>
             {!sidebarCollapsed && (
@@ -271,7 +271,7 @@ export default function Sidebar() {
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-indigo-500/20">
               <span className="text-white text-xs font-bold">
                 {user.name.charAt(0)}
               </span>

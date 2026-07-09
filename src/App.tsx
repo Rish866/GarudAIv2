@@ -364,7 +364,7 @@ function MainLayout() {
 
         {/* Page Content */}
         <main
-          className="flex-1 overflow-y-auto p-4 lg:p-6"
+          className="flex-1 overflow-y-auto p-4 lg:p-6 bg-mesh noise"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           <Suspense fallback={<LoadingFallback />}>
