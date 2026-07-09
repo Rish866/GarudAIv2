@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type {
   Company,
   User,
@@ -225,7 +226,9 @@ const seedEnquiries: Enquiry[] = [
   { id: 'enq_002', company_id: COMPANY_ID, customer_id: 'cust_002', customer_name: 'Reliance Industries', origin: 'Jamnagar, Gujarat', destination: 'Delhi, NCR', material: 'Polymer Granules', vehicle_type: 'container', weight_tons: 20, loading_date: '2025-07-14', target_rate: 95000, status: 'quoted', remarks: 'Quoted at ₹1,05,000', created_at: '2025-07-08T16:00:00Z' },
 ];
 
-export const useStore = create<StoreState>((set) => ({
+export const useStore = create<StoreState>()(
+  persist(
+    (set) => ({
   company: seedCompany,
   user: seedUser,
   vehicles: seedVehicles,
@@ -344,4 +347,27 @@ export const useStore = create<StoreState>((set) => ({
   }),
   setActiveBranch: (branchId) => set({ activeBranch: branchId }),
   addActivityLog: (log) => set((state) => ({ activityLog: [log, ...state.activityLog] })),
-}));
+}),
+    {
+      name: 'garud-erp-storage',
+      partialize: (state) => ({
+        vehicles: state.vehicles,
+        drivers: state.drivers,
+        customers: state.customers,
+        trips: state.trips,
+        invoices: state.invoices,
+        payments: state.payments,
+        expenses: state.expenses,
+        fuelEntries: state.fuelEntries,
+        maintenance: state.maintenance,
+        alerts: state.alerts,
+        enquiries: state.enquiries,
+        notifications: state.notifications,
+        quotations: state.quotations,
+        activityLog: state.activityLog,
+        theme: state.theme,
+        company: state.company,
+      }),
+    }
+  )
+);
