@@ -23,6 +23,7 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { canAccessModule } from '../../lib/rbac';
 import type { ModuleName } from '../../types';
 
 interface NavItem {
@@ -70,6 +71,9 @@ export default function Sidebar() {
     { id: 'reports', label: 'Reports', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings, badge: unreadAlerts > 0 ? unreadAlerts : undefined },
   ];
+
+  const userRole = user.role;
+  const filteredNavItems = navItems.filter(item => canAccessModule(userRole, item.id));
 
   const handleNavClick = (module: ModuleName) => {
     setActiveModule(module);
@@ -179,7 +183,7 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeModule === item.id;
             return (
