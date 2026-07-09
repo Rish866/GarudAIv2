@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import type { Vehicle, VehicleType, VehicleStatus, OwnershipType } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
+import { exportVehicles } from '../../../lib/excel';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -170,6 +171,12 @@ export default function FleetModule() {
           <h1 className="text-2xl font-bold text-slate-900">Fleet Management</h1>
           <p className="text-slate-500 mt-1">{vehicles.length} vehicles in fleet</p>
         </div>
+        <button
+          onClick={() => exportVehicles(vehicles)}
+          className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors font-medium"
+        >
+          Export Excel
+        </button>
         <button
           onClick={openAddModal}
           className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200"

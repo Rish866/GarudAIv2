@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency } from '../../../lib/utils';
 import { generateTripReportPDF } from '../../../lib/pdf';
@@ -5,15 +6,56 @@ import { generateTripReportPDF } from '../../../lib/pdf';
 export default function ReportsModule() {
   const { invoices, expenses, trips, company } = useStore();
 
+  const [dateRange, setDateRange] = useState<'all' | 'this_month' | 'last_month' | 'custom'>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Filter trips by date range
+  const filteredTrips = trips.filter(t => {
+    if (dateRange === 'all') return true;
+    const tripDate = new Date(t.booking_date);
+    const now = new Date();
+    if (dateRange === 'this_month') {
+      return tripDate.getMonth() === now.getMonth() && tripDate.getFullYear() === now.getFullYear();
+    }
+    if (dateRange === 'last_month') {
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      return tripDate >= lastMonth && tripDate <= lastMonthEnd;
+    }
+    if (dateRange === 'custom' && startDate && endDate) {
+      return tripDate >= new Date(startDate) && tripDate <= new Date(endDate);
+    }
+    return true;
+  });
+
+  const filteredExpenses = expenses.filter(e => {
+    if (dateRange === 'all') return true;
+    const expDate = new Date(e.date);
+    const now = new Date();
+    if (dateRange === 'this_month') {
+      return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear();
+    }
+    if (dateRange === 'last_month') {
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      return expDate >= lastMonth && expDate <= lastMonthEnd;
+    }
+    if (dateRange === 'custom' && startDate && endDate) {
+      return expDate >= new Date(startDate) && expDate <= new Date(endDate);
+    }
+    return true;
+  });
+
   // P&L Summary
   const totalRevenue = invoices.reduce((sum, inv) => sum + inv.total_amount, 0);
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
   const netProfit = totalRevenue - totalExpenses;
   const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
   // Top Customers by Revenue (from trips grouped by customer_name)
   const customerRevenue: Record<string, number> = {};
-  trips.forEach((trip) => {
+  filteredTrips.forEach((trip) => {
     customerRevenue[trip.customer_name] = (customerRevenue[trip.customer_name] || 0) + trip.total_amount;
   });
   const topCustomers = Object.entries(customerRevenue)
@@ -23,17 +65,17 @@ export default function ReportsModule() {
 
   // Expense Breakdown by category
   const categoryExpenses: Record<string, number> = {};
-  expenses.forEach((exp) => {
+  filteredExpenses.forEach((exp) => {
     categoryExpenses[exp.category] = (categoryExpenses[exp.category] || 0) + exp.amount;
   });
   const expenseBreakdown = Object.entries(categoryExpenses).sort((a, b) => b[1] - a[1]);
   const maxCategoryExpense = expenseBreakdown.length > 0 ? expenseBreakdown[0][1] : 1;
 
   // Monthly Trip Stats
-  const totalTrips = trips.length;
-  const totalFreight = trips.reduce((sum, t) => sum + t.freight_amount, 0);
+  const totalTrips = filteredTrips.length;
+  const totalFreight = filteredTrips.reduce((sum, t) => sum + t.freight_amount, 0);
   const avgFreightPerTrip = totalTrips > 0 ? totalFreight / totalTrips : 0;
-  const totalKm = trips.reduce((sum, t) => sum + t.distance_km, 0);
+  const totalKm = filteredTrips.reduce((sum, t) => sum + t.distance_km, 0);
   const revenuePerKm = totalKm > 0 ? totalRevenue / totalKm : 0;
 
 
@@ -42,11 +84,42 @@ export default function ReportsModule() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-slate-900">Reports & Analytics</h2>
         <button
-          onClick={() => generateTripReportPDF(trips, company, 'Business Report')}
+          onClick={() => generateTripReportPDF(filteredTrips, company, 'Business Report')}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
         >
           Export PDF
         </button>
+      </div>
+
+      {/* Date Range Filter */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <select
+          value={dateRange}
+          onChange={(e) => setDateRange(e.target.value as typeof dateRange)}
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="all">All Time</option>
+          <option value="this_month">This Month</option>
+          <option value="last_month">Last Month</option>
+          <option value="custom">Custom Range</option>
+        </select>
+        {dateRange === 'custom' && (
+          <>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            <span className="text-sm text-slate-500">to</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </>
+        )}
       </div>
 
       {/* P&L Summary */}

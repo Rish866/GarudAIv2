@@ -6,6 +6,7 @@ import type { ModuleName } from './types';
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
 import { useSupabaseSync } from './lib/useSupabaseSync';
+import LandingPage from './components/LandingPage';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -82,7 +83,7 @@ function PlaceholderModule({ name }: { name: string }) {
   );
 }
 
-function LoginPage() {
+function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
   const { login } = useStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -326,6 +327,15 @@ function LoginPage() {
               Password: <span className="font-mono">any password works</span>
             </p>
           </motion.div>
+
+          {onBackToHome && (
+            <button
+              onClick={onBackToHome}
+              className="text-sm text-blue-600 hover:underline mt-4 block text-center w-full"
+            >
+              ← Back to Homepage
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -372,10 +382,26 @@ function MainLayout() {
 
 export default function App() {
   const { isLoggedIn, theme } = useStore();
+  const [showLanding, setShowLanding] = useState(true);
+
+  if (!isLoggedIn) {
+    if (showLanding) {
+      return (
+        <div className={theme === 'dark' ? 'dark' : ''}>
+          <LandingPage onGetStarted={() => setShowLanding(false)} />
+        </div>
+      );
+    }
+    return (
+      <div className={theme === 'dark' ? 'dark' : ''}>
+        <LoginPage onBackToHome={() => setShowLanding(true)} />
+      </div>
+    );
+  }
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-      {isLoggedIn ? <MainLayout /> : <LoginPage />}
+      <MainLayout />
     </div>
   );
 }

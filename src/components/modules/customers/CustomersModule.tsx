@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import type { Customer } from '../../../types';
 import { formatCurrency, getStatusColor, classNames } from '../../../lib/utils';
+import { exportCustomers } from '../../../lib/excel';
 import { Plus, Search, Users, IndianRupee, TrendingUp, X, ExternalLink } from 'lucide-react';
 import CustomerTrackingPortal from '../tracking/CustomerTrackingPortal';
 
@@ -50,6 +51,12 @@ export default function CustomersModule() {
           <p className="text-sm text-slate-500 mt-1">{customers.length} total customers</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => exportCustomers(customers)}
+            className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium"
+          >
+            Export
+          </button>
           <button
             onClick={() => setShowTracking(true)}
             className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium"

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import type { Driver } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
+import { exportDrivers } from '../../../lib/excel';
 import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle } from 'lucide-react';
 
 export default function DriversModule() {
@@ -26,6 +27,12 @@ export default function DriversModule() {
           <h1 className="text-2xl font-bold text-slate-900">Driver Management</h1>
           <p className="text-sm text-slate-500 mt-1">{drivers.length} total drivers</p>
         </div>
+        <button
+          onClick={() => exportDrivers(drivers)}
+          className="flex items-center gap-2 px-3 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+        >
+          Export
+        </button>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700 transition-colors font-medium"
