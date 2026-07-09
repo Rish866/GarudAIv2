@@ -52,6 +52,7 @@ export default function BillingModule() {
     description: '',
     paid_to: '',
     vehicle_id: '',
+    trip_id: '',
     payment_mode: 'cash' as Expense['payment_mode'],
     date: new Date().toISOString().split('T')[0],
   });
@@ -118,6 +119,7 @@ export default function BillingModule() {
     const expense: Expense = {
       id: generateId(),
       company_id: company.id,
+      trip_id: expForm.trip_id || undefined,
       vehicle_id: vehicle?.id,
       vehicle_reg: vehicle?.reg_number,
       category: expForm.category,
@@ -131,7 +133,7 @@ export default function BillingModule() {
     };
     addExpense(expense);
     setShowExpenseModal(false);
-    setExpForm({ category: 'diesel', amount: 0, description: '', paid_to: '', vehicle_id: '', payment_mode: 'cash', date: new Date().toISOString().split('T')[0] });
+    setExpForm({ category: 'diesel', amount: 0, description: '', paid_to: '', vehicle_id: '', trip_id: '', payment_mode: 'cash', date: new Date().toISOString().split('T')[0] });
   };
 
   const tabs: { key: BillingTab; label: string }[] = [
@@ -448,6 +450,15 @@ export default function BillingModule() {
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Date</label>
                   <input type="date" value={expForm.date} onChange={(e) => setExpForm({ ...expForm, date: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Link to Trip (optional)</label>
+                <select value={expForm.trip_id} onChange={(e) => setExpForm({ ...expForm, trip_id: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">No trip</option>
+                  {trips.filter(t => ['in_transit', 'loading', 'assigned'].includes(t.status)).map(t => (
+                    <option key={t.id} value={t.id}>{t.trip_number} - {t.vehicle_reg}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="flex justify-end space-x-3 mt-6">

@@ -4,6 +4,8 @@ import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
 import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download, Eye, Upload, Calendar, Phone, CreditCard, CheckCircle, Circle, Clock } from 'lucide-react';
+import DriverAdvanceTracker from './DriverAdvanceTracker';
+import SendNotificationModal from '../../ui/SendNotificationModal';
 
 const STATUS_FLOW: TripStatus[] = [
   'booked', 'assigned', 'loading', 'in_transit', 'reached', 'unloading', 'pod_pending', 'completed', 'billed', 'settled'
@@ -33,6 +35,7 @@ export default function TripsModule() {
   const [statusDropdown, setStatusDropdown] = useState<string | null>(null);
   const [podModalTrip, setPodModalTrip] = useState<Trip | null>(null);
   const [detailTrip, setDetailTrip] = useState<Trip | null>(null);
+  const [notifyTrip, setNotifyTrip] = useState<{ trip: Trip; status: string } | null>(null);
 
   const filteredTrips = trips.filter((trip) => {
     const matchesFilter = activeFilter === 'all' || trip.status === activeFilter;
@@ -54,6 +57,12 @@ export default function TripsModule() {
   const handleStatusUpdate = (tripId: string, newStatus: TripStatus) => {
     updateTripStatus(tripId, newStatus);
     setStatusDropdown(null);
+
+    // Trigger notification modal
+    const foundTrip = trips.find(t => t.id === tripId);
+    if (foundTrip) {
+      setNotifyTrip({ trip: foundTrip, status: newStatus.replace(/_/g, ' ') });
+    }
 
     // Auto-generate invoice when trip is completed
     if (newStatus === 'completed') {
@@ -292,10 +301,14 @@ export default function TripsModule() {
         )}
       </div>
 
+      {/* Driver Advance Summary */}
+      <DriverAdvanceTracker />
+
       {/* Modals */}
       {showModal && <NewTripModal onClose={() => setShowModal(false)} />}
       {podModalTrip && <PODUploadModal trip={podModalTrip} onClose={() => setPodModalTrip(null)} />}
       {detailTrip && <TripDetailModal trip={detailTrip} onClose={() => setDetailTrip(null)} />}
+      {notifyTrip && <SendNotificationModal trip={notifyTrip.trip} statusChange={notifyTrip.status} onClose={() => setNotifyTrip(null)} />}
     </div>
   );
 }
@@ -612,6 +625,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
     distance_km: '',
     material: '',
     weight_tons: '',
+    eway_bill: '',
     freight_amount: '',
     advance_amount: '',
     booking_date: new Date().toISOString().split('T')[0],
@@ -638,6 +652,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
       company_id: 'comp_garud_001',
       trip_number: generateTripNumber(),
       lr_number: generateLRNumber(),
+      eway_bill: form.eway_bill || ('EWB-' + Date.now().toString().slice(-9)),
       customer_id: customer.id,
       customer_name: customer.name,
       vehicle_id: vehicle.id,
@@ -725,6 +740,10 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
               <label className="block text-sm font-medium text-slate-700 mb-1">Weight (tons)</label>
               <input type="number" name="weight_tons" value={form.weight_tons} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">E-Way Bill Number (auto-generated if empty)</label>
+            <input type="text" name="eway_bill" value={form.eway_bill} onChange={handleChange} placeholder="EWB-XXXXXXXXX" className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
