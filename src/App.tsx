@@ -17,6 +17,8 @@ const FuelModule = lazy(() => import('./components/modules/fuel/FuelModule'));
 const MaintenanceModule = lazy(() => import('./components/modules/maintenance/MaintenanceModule'));
 const ReportsModule = lazy(() => import('./components/modules/reports/ReportsModule'));
 const SettingsModule = lazy(() => import('./components/modules/settings/SettingsModule'));
+const EnquiriesModule = lazy(() => import('./components/modules/enquiries/EnquiriesModule'));
+const NotificationsModule = lazy(() => import('./components/modules/notifications/NotificationsModule'));
 
 const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<React.ComponentType>>> = {
   dashboard: DashboardModule,
@@ -29,6 +31,8 @@ const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<Rea
   maintenance: MaintenanceModule,
   reports: ReportsModule,
   settings: SettingsModule,
+  enquiries: EnquiriesModule,
+  notifications: NotificationsModule,
 };
 
 function LoadingFallback() {

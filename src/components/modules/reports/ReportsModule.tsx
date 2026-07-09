@@ -1,8 +1,9 @@
 import { useStore } from '../../../store/useStore';
 import { formatCurrency } from '../../../lib/utils';
+import { generateTripReportPDF } from '../../../lib/pdf';
 
 export default function ReportsModule() {
-  const { invoices, expenses, trips } = useStore();
+  const { invoices, expenses, trips, company } = useStore();
 
   // P&L Summary
   const totalRevenue = invoices.reduce((sum, inv) => sum + inv.total_amount, 0);
@@ -38,7 +39,15 @@ export default function ReportsModule() {
 
   return (
     <div className="p-6 space-y-6">
-      <h2 className="text-xl font-semibold text-slate-900">Reports & Analytics</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-slate-900">Reports & Analytics</h2>
+        <button
+          onClick={() => generateTripReportPDF(trips, company, 'Business Report')}
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Export PDF
+        </button>
+      </div>
 
       {/* P&L Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
