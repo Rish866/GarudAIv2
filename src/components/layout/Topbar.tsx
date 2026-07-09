@@ -32,6 +32,12 @@ const moduleLabels: Record<ModuleName, string> = {
   reports: 'Reports & Analytics',
   settings: 'Settings',
   notifications: 'Notifications',
+  tyres: 'Tyre Management',
+  payroll: 'Payroll',
+  contracts: 'Contract Rate Master',
+  market: 'Market / Hire Vehicles',
+  documents: 'Document Vault',
+  gps: 'GPS Integration',
 };
 
 const notificationIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {

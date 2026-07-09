@@ -15,6 +15,12 @@ import {
   Moon,
   ChevronDown,
   X,
+  Circle,
+  CreditCard,
+  FileText,
+  Satellite,
+  DollarSign,
+  ShoppingCart,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { ModuleName } from '../../types';
@@ -52,9 +58,15 @@ export default function Sidebar() {
     { id: 'drivers', label: 'Drivers', icon: Users },
     { id: 'customers', label: 'Customers', icon: Building2 },
     { id: 'enquiries', label: 'Enquiries', icon: MessageSquare },
+    { id: 'contracts', label: 'Contracts', icon: FileText },
     { id: 'billing', label: 'Billing', icon: Receipt },
     { id: 'fuel', label: 'Fuel', icon: Fuel },
+    { id: 'tyres', label: 'Tyres', icon: Circle },
     { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+    { id: 'market', label: 'Market Hire', icon: ShoppingCart },
+    { id: 'payroll', label: 'Payroll', icon: DollarSign },
+    { id: 'documents', label: 'Documents', icon: FileText },
+    { id: 'gps', label: 'GPS Settings', icon: Satellite },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings, badge: unreadAlerts > 0 ? unreadAlerts : undefined },
   ];

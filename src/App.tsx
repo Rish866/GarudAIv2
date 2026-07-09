@@ -20,6 +20,12 @@ const ReportsModule = lazy(() => import('./components/modules/reports/ReportsMod
 const SettingsModule = lazy(() => import('./components/modules/settings/SettingsModule'));
 const EnquiriesModule = lazy(() => import('./components/modules/enquiries/EnquiriesModule'));
 const NotificationsModule = lazy(() => import('./components/modules/notifications/NotificationsModule'));
+const TyreModule = lazy(() => import('./components/modules/tyres/TyreModule'));
+const PayrollModule = lazy(() => import('./components/modules/payroll/PayrollModule'));
+const ContractRateModule = lazy(() => import('./components/modules/contracts/ContractRateModule'));
+const MarketHireModule = lazy(() => import('./components/modules/market/MarketHireModule'));
+const DocumentVaultModule = lazy(() => import('./components/modules/documents/DocumentVaultModule'));
+const GPSSettingsModule = lazy(() => import('./components/modules/gps/GPSSettingsModule'));
 
 const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<React.ComponentType>>> = {
   dashboard: DashboardModule,
@@ -34,6 +40,12 @@ const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<Rea
   settings: SettingsModule,
   enquiries: EnquiriesModule,
   notifications: NotificationsModule,
+  tyres: TyreModule,
+  payroll: PayrollModule,
+  contracts: ContractRateModule,
+  market: MarketHireModule,
+  documents: DocumentVaultModule,
+  gps: GPSSettingsModule,
 };
 
 function LoadingFallback() {
