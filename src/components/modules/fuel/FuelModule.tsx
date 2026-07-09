@@ -1,110 +1,186 @@
-import React from 'react';
-import { Fuel, Plus, TrendingDown, Gauge } from 'lucide-react';
-import { FuelEntry, MaintenanceRecord } from '../../../types';
+import { useState } from 'react';
+import { useStore, generateId } from '../../../store/useStore';
+import type { FuelEntry } from '../../../types';
+import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 
-interface FuelModuleProps { fuelEntries: FuelEntry[]; maintenanceRecords: MaintenanceRecord[]; }
+export default function FuelModule() {
+  const { fuelEntries, vehicles, drivers, company, addFuelEntry } = useStore();
+  const [showModal, setShowModal] = useState(false);
 
-export default function FuelModule({ fuelEntries, maintenanceRecords }: FuelModuleProps) {
-  const totalFuel = fuelEntries.reduce((s, f) => s + f.amount, 0);
-  const totalLitres = fuelEntries.reduce((s, f) => s + f.litres, 0);
-  const avgMileage = fuelEntries.filter(f => f.mileage).reduce((s, f) => s + (f.mileage || 0), 0) / (fuelEntries.filter(f => f.mileage).length || 1);
+  // Summary calculations
+  const totalFuelSpend = fuelEntries.reduce((sum, f) => sum + f.amount, 0);
+  const totalLitres = fuelEntries.reduce((sum, f) => sum + f.litres, 0);
+  const avgMileage = fuelEntries.length > 0
+    ? fuelEntries.reduce((sum, f) => sum + (f.mileage || 0), 0) / fuelEntries.filter((f) => f.mileage).length
+    : 0;
+
+  // Form state
+  const [form, setForm] = useState({
+    vehicle_id: '',
+    driver_id: '',
+    driver_name: '',
+    date: new Date().toISOString().split('T')[0],
+    litres: 0,
+    rate: 0,
+    odometer: 0,
+    station: '',
+  });
+
+  const selectedVehicle = vehicles.find((v) => v.id === form.vehicle_id);
+
+  const handleVehicleChange = (vehicleId: string) => {
+    const vehicle = vehicles.find((v) => v.id === vehicleId);
+    const driver = vehicle?.driver_id ? drivers.find((d) => d.id === vehicle.driver_id) : undefined;
+    setForm({
+      ...form,
+      vehicle_id: vehicleId,
+      driver_id: driver?.id || '',
+      driver_name: driver?.name || '',
+      odometer: vehicle?.odometer || 0,
+    });
+  };
+
+
+  const handleSubmit = () => {
+    if (!form.vehicle_id) return;
+    const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
+    const entry: FuelEntry = {
+      id: generateId(),
+      company_id: company.id,
+      vehicle_id: form.vehicle_id,
+      vehicle_reg: vehicle?.reg_number || '',
+      driver_id: form.driver_id,
+      driver_name: form.driver_name,
+      date: form.date,
+      litres: form.litres,
+      rate: form.rate,
+      amount: Math.round(form.litres * form.rate),
+      odometer: form.odometer,
+      station: form.station,
+      mileage: undefined,
+      created_at: new Date().toISOString(),
+    };
+    addFuelEntry(entry);
+    setShowModal(false);
+    setForm({ vehicle_id: '', driver_id: '', driver_name: '', date: new Date().toISOString().split('T')[0], litres: 0, rate: 0, odometer: 0, station: '' });
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Fuel & Maintenance</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Track fuel consumption and vehicle maintenance</p>
-        </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-lg shadow-blue-600/20 transition-all">
-          <Plus className="w-4 h-4" /> Log Fuel Entry
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-slate-900">Fuel Management</h2>
+        <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">
+          Add Fuel Entry
         </button>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center"><Fuel className="w-4 h-4 text-orange-600" /></div>
-            <span className="text-xs font-medium text-slate-500">Total Fuel Spend</span>
-          </div>
-          <p className="text-xl font-bold text-slate-900">₹{totalFuel.toLocaleString('en-IN')}</p>
-          <p className="text-[11px] text-slate-400 mt-1">{totalLitres.toLocaleString()} litres consumed</p>
+          <p className="text-sm text-slate-500">Total Fuel Spend</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalFuelSpend)}</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center"><Gauge className="w-4 h-4 text-emerald-600" /></div>
-            <span className="text-xs font-medium text-slate-500">Avg Mileage</span>
-          </div>
-          <p className="text-xl font-bold text-slate-900">{avgMileage.toFixed(1)} km/l</p>
-          <p className="text-[11px] text-slate-400 mt-1">Fleet average</p>
+          <p className="text-sm text-slate-500">Total Litres</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{totalLitres.toFixed(0)} L</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center"><TrendingDown className="w-4 h-4 text-purple-600" /></div>
-            <span className="text-xs font-medium text-slate-500">Maintenance Cost</span>
-          </div>
-          <p className="text-xl font-bold text-slate-900">₹{maintenanceRecords.reduce((s, m) => s + m.cost, 0).toLocaleString('en-IN')}</p>
-          <p className="text-[11px] text-slate-400 mt-1">{maintenanceRecords.length} service records</p>
+          <p className="text-sm text-slate-500">Avg Mileage</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">{avgMileage.toFixed(1)} km/l</p>
         </div>
       </div>
 
+
       {/* Fuel Log Table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-800">Recent Fuel Entries</h2>
-        </div>
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-200">
+        <table className="w-full">
+          <thead className="bg-slate-50">
             <tr>
-              <th className="px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase">Date</th>
-              <th className="px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase">Vehicle</th>
-              <th className="px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase">Driver</th>
-              <th className="px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase">Litres</th>
-              <th className="px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase">Amount</th>
-              <th className="px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase">Mileage</th>
-              <th className="px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase">Station</th>
+              <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Date</th>
+              <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Vehicle</th>
+              <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Driver</th>
+              <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Litres</th>
+              <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Rate</th>
+              <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Amount</th>
+              <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Odometer</th>
+              <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Mileage</th>
+              <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Station</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {fuelEntries.map((entry) => (
-              <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-5 py-3.5 text-xs text-slate-500">{entry.date}</td>
-                <td className="px-5 py-3.5 text-sm font-medium text-slate-800">{entry.vehicle_reg}</td>
-                <td className="px-5 py-3.5 text-sm text-slate-700">{entry.driver_name}</td>
-                <td className="px-5 py-3.5 text-sm text-slate-700">{entry.litres}L</td>
-                <td className="px-5 py-3.5 text-sm font-medium text-slate-800">₹{entry.amount.toLocaleString('en-IN')}</td>
-                <td className="px-5 py-3.5 text-sm font-medium text-emerald-700">{entry.mileage ? `${entry.mileage} km/l` : '—'}</td>
-                <td className="px-5 py-3.5 text-xs text-slate-500 max-w-[150px] truncate">{entry.fuel_station}</td>
+              <tr key={entry.id} className="hover:bg-slate-50">
+                <td className="px-4 py-3 text-sm text-slate-600">{formatDate(entry.date)}</td>
+                <td className="px-4 py-3 text-sm font-medium text-slate-700">{entry.vehicle_reg}</td>
+                <td className="px-4 py-3 text-sm text-slate-700">{entry.driver_name}</td>
+                <td className="px-4 py-3 text-sm text-slate-700 text-right">{entry.litres}</td>
+                <td className="px-4 py-3 text-sm text-slate-600 text-right">{formatCurrency(entry.rate)}</td>
+                <td className="px-4 py-3 text-sm text-slate-700 text-right font-medium">{formatCurrency(entry.amount)}</td>
+                <td className="px-4 py-3 text-sm text-slate-600 text-right">{entry.odometer.toLocaleString()} km</td>
+                <td className="px-4 py-3 text-sm text-right font-bold text-green-600">{entry.mileage ? `${entry.mileage} km/l` : '—'}</td>
+                <td className="px-4 py-3 text-sm text-slate-600">{entry.station}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Maintenance Records */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-800">Maintenance Records</h2>
-        </div>
-        <div className="divide-y divide-slate-100">
-          {maintenanceRecords.map((rec) => (
-            <div key={rec.id} className="px-5 py-4 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${rec.status === 'completed' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-                <span className="text-lg">{rec.service_type === 'repair' ? '🔧' : rec.service_type === 'tyre' ? '🛞' : '🛠️'}</span>
+
+      {/* Add Fuel Entry Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Add Fuel Entry</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Vehicle</label>
+                <select value={form.vehicle_id} onChange={(e) => handleVehicleChange(e.target.value)} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Select vehicle</option>
+                  {vehicles.map((v) => <option key={v.id} value={v.id}>{v.reg_number}</option>)}
+                </select>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800">{rec.description}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{rec.vehicle_reg} • {rec.vendor_name} • {rec.date}</p>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Driver</label>
+                <input type="text" value={form.driver_name} readOnly className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-600" placeholder="Auto-filled from vehicle" />
               </div>
-              <div className="text-right shrink-0">
-                <p className="text-sm font-semibold text-slate-800">₹{rec.cost.toLocaleString('en-IN')}</p>
-                <span className={`text-[10px] font-medium ${rec.status === 'completed' ? 'text-emerald-600' : 'text-amber-600'}`}>{rec.status}</span>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Date</label>
+                  <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Odometer (km)</label>
+                  <input type="number" value={form.odometer} onChange={(e) => setForm({ ...form, odometer: Number(e.target.value) })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Litres</label>
+                  <input type="number" value={form.litres} onChange={(e) => setForm({ ...form, litres: Number(e.target.value) })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Rate (₹/L)</label>
+                  <input type="number" value={form.rate} onChange={(e) => setForm({ ...form, rate: Number(e.target.value) })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Amount</label>
+                  <input type="number" value={Math.round(form.litres * form.rate)} readOnly className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-600" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Station</label>
+                <input type="text" value={form.station} onChange={(e) => setForm({ ...form, station: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Petrol pump name" />
               </div>
             </div>
-          ))}
+            <div className="flex justify-end space-x-3 mt-6">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
+              <button onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Add Entry</button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

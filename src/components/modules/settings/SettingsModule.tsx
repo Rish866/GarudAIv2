@@ -1,86 +1,137 @@
-import React from 'react';
-import { Settings, Building2, User, Shield, Bell, Database } from 'lucide-react';
-import { Company, User as UserType } from '../../../types';
+import { useState } from 'react';
+import { useStore } from '../../../store/useStore';
 
-interface SettingsModuleProps { company: Company; user: UserType; }
+export default function SettingsModule() {
+  const { company, user } = useStore();
 
-export default function SettingsModule({ company, user }: SettingsModuleProps) {
+  const [companyForm, setCompanyForm] = useState({
+    name: company.name,
+    address: company.address,
+    city: company.city,
+    state: company.state,
+    gstin: company.gstin,
+    pan: company.pan,
+    phone: company.phone,
+    email: company.email,
+  });
+
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleResetDemo = () => {
+    window.location.reload();
+  };
+
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Manage your account and company settings</p>
-      </div>
+    <div className="p-6 space-y-6">
+      <h2 className="text-xl font-semibold text-slate-900">Settings</h2>
 
-      {/* Company Profile */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-          <Building2 className="w-5 h-5 text-blue-600" />
-          <h2 className="text-sm font-semibold text-slate-800">Company Profile</h2>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1.5">Company Name</label>
-            <input type="text" defaultValue={company.name} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1.5">Industry</label>
-            <input type="text" defaultValue={company.industry} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1.5">GSTIN</label>
-            <input type="text" defaultValue={company.gstin} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1.5">PAN</label>
-            <input type="text" defaultValue={company.pan} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-xs font-medium text-slate-500 block mb-1.5">Address</label>
-            <input type="text" defaultValue={company.address} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1.5">Phone</label>
-            <input type="text" defaultValue={company.phone} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1.5">Email</label>
-            <input type="text" defaultValue={company.email} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          </div>
-        </div>
-        <div className="px-6 py-4 border-t border-slate-100 flex justify-end">
-          <button className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-all">Save Changes</button>
-        </div>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Company Profile */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <h3 className="text-sm font-semibold text-slate-900 mb-4">Company Profile</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Company Name</label>
+              <input type="text" value={companyForm.name} onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Address</label>
+              <input type="text" value={companyForm.address} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
 
-      {/* User Profile */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-          <User className="w-5 h-5 text-blue-600" />
-          <h2 className="text-sm font-semibold text-slate-800">User Account</h2>
-        </div>
-        <div className="p-6 flex items-center gap-6">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-            {user.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-          </div>
-          <div>
-            <p className="text-lg font-bold text-slate-900">{user.name}</p>
-            <p className="text-sm text-slate-500">{user.email}</p>
-            <p className="text-xs text-slate-400 capitalize mt-0.5">{user.role.replace('_', ' ')} • {company.plan} plan</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Plan */}
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold">Professional Plan</h3>
-            <p className="text-sm text-blue-100 mt-1">Unlimited vehicles • All modules • Priority support</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">City</label>
+                <input type="text" value={companyForm.city} onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">State</label>
+                <input type="text" value={companyForm.state} onChange={(e) => setCompanyForm({ ...companyForm, state: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">GSTIN</label>
+                <input type="text" value={companyForm.gstin} onChange={(e) => setCompanyForm({ ...companyForm, gstin: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">PAN</label>
+                <input type="text" value={companyForm.pan} onChange={(e) => setCompanyForm({ ...companyForm, pan: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone</label>
+                <input type="text" value={companyForm.phone} onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                <input type="text" value={companyForm.email} onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
           </div>
-          <button className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-xl border border-white/20 transition-all">
-            Upgrade to Enterprise
-          </button>
+          <div className="mt-4 flex items-center space-x-3">
+            <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">
+              Save Changes
+            </button>
+            {saved && <span className="text-sm text-green-600 font-medium">Saved successfully!</span>}
+          </div>
+        </div>
+
+
+        {/* User Profile */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+            <h3 className="text-sm font-semibold text-slate-900 mb-4">User Profile</h3>
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
+                <span className="text-xl font-bold text-blue-600">{user.name.charAt(0)}</span>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">{user.name}</p>
+                <p className="text-xs text-slate-500">{user.email}</p>
+              </div>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-500">Role</span>
+                <span className="font-medium text-slate-700 capitalize">{user.role.replace('_', ' ')}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-500">Phone</span>
+                <span className="font-medium text-slate-700">{user.phone}</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-slate-500">Status</span>
+                <span className="font-medium text-green-600 capitalize">{user.status}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Plan Card */}
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 text-white">
+            <h3 className="text-sm font-semibold mb-1">Current Plan</h3>
+            <p className="text-2xl font-bold mb-2">Professional</p>
+            <p className="text-sm text-blue-100 mb-4">Unlimited vehicles, drivers, and trips. Priority support included.</p>
+            <button className="px-4 py-2 bg-white text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50">
+              Upgrade Plan
+            </button>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="bg-white rounded-2xl border border-red-200 p-6">
+            <h3 className="text-sm font-semibold text-red-600 mb-2">Danger Zone</h3>
+            <p className="text-sm text-slate-600 mb-4">Reset all demo data back to default. This action cannot be undone.</p>
+            <button onClick={handleResetDemo} className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700">
+              Reset Demo Data
+            </button>
+          </div>
         </div>
       </div>
     </div>

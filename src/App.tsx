@@ -1,131 +1,217 @@
-import React, { useState } from 'react';
-import { ModuleName } from './types';
-import { DEMO_USER, DEMO_COMPANY, VEHICLES, DRIVERS, CUSTOMERS, TRIPS, INVOICES, PAYMENTS, EXPENSES, FUEL_ENTRIES, MAINTENANCE_RECORDS, ALERTS, getDashboardMetrics } from './store/data';
+import React, { Suspense, useState } from 'react';
+import { useStore } from './store/useStore';
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
-import Dashboard from './components/modules/dashboard/Dashboard';
-import FleetModule from './components/modules/fleet/FleetModule';
-import TripsModule from './components/modules/trips/TripsModule';
-import DriversModule from './components/modules/drivers/DriversModule';
-import BillingModule from './components/modules/billing/BillingModule';
-import FuelModule from './components/modules/fuel/FuelModule';
-import CustomersModule from './components/modules/crm/CustomersModule';
-import ReportsModule from './components/modules/reports/ReportsModule';
-import SettingsModule from './components/modules/settings/SettingsModule';
+import { Truck, Shield, BarChart3, Zap, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
-export default function App() {
-  const [activeModule, setActiveModule] = useState<ModuleName>('dashboard');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
+// Lazy load modules
+const DashboardModule = React.lazy(() => import('./components/modules/dashboard/DashboardModule'));
+const FleetModule = React.lazy(() => import('./components/modules/fleet/FleetModule'));
+const TripsModule = React.lazy(() => import('./components/modules/trips/TripsModule'));
+const DriversModule = React.lazy(() => import('./components/modules/drivers/DriversModule'));
+const CustomersModule = React.lazy(() => import('./components/modules/customers/CustomersModule'));
+const BillingModule = React.lazy(() => import('./components/modules/billing/BillingModule'));
+const FuelModule = React.lazy(() => import('./components/modules/fuel/FuelModule'));
+const MaintenanceModule = React.lazy(() => import('./components/modules/maintenance/MaintenanceModule'));
+const ReportsModule = React.lazy(() => import('./components/modules/reports/ReportsModule'));
+const SettingsModule = React.lazy(() => import('./components/modules/settings/SettingsModule'));
 
-  const metrics = getDashboardMetrics();
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        <p className="text-sm text-slate-500">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
-  const handleLogin = (e: React.FormEvent) => {
+function ModuleContent() {
+  const activeModule = useStore((s) => s.activeModule);
+
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      {activeModule === 'dashboard' && <DashboardModule />}
+      {activeModule === 'fleet' && <FleetModule />}
+      {activeModule === 'trips' && <TripsModule />}
+      {activeModule === 'drivers' && <DriversModule />}
+      {activeModule === 'customers' && <CustomersModule />}
+      {activeModule === 'billing' && <BillingModule />}
+      {activeModule === 'fuel' && <FuelModule />}
+      {activeModule === 'maintenance' && <MaintenanceModule />}
+      {activeModule === 'reports' && <ReportsModule />}
+      {activeModule === 'settings' && <SettingsModule />}
+    </Suspense>
+  );
+}
+
+function LoginPage() {
+  const login = useStore((s) => s.login);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Demo login - accept any credentials or specific ones
-    if (loginEmail && loginPassword) {
-      setIsLoggedIn(true);
-      setLoginError('');
-    } else {
-      setLoginError('Please enter email and password');
+    if (email && password) {
+      login({
+        id: 'user_001',
+        company_id: 'comp_garud_001',
+        name: 'Rajesh Sharma',
+        email,
+        role: 'super_admin',
+        phone: '+91 98765 43210',
+        status: 'active',
+      });
     }
   };
 
-  // Login Screen
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-[420px]">
-          {/* Logo */}
-          <div className="text-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-xl mx-auto shadow-xl shadow-blue-600/20 mb-4">
+  const features = [
+    { icon: <Truck size={20} />, title: 'Fleet Tracking', desc: 'Real-time GPS tracking for all vehicles' },
+    { icon: <Shield size={20} />, title: 'Compliance', desc: 'Automated document & permit management' },
+    { icon: <BarChart3 size={20} />, title: 'Analytics', desc: 'Revenue, expense & profit insights' },
+    { icon: <Zap size={20} />, title: 'Automation', desc: 'Trip booking to billing in one flow' },
+  ];
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-4">
+      <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 rounded-2xl shadow-2xl shadow-blue-900/10 overflow-hidden bg-white">
+        {/* Left Panel - Gradient */}
+        <div className="hidden lg:flex flex-col justify-between p-10 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white relative overflow-hidden">
+          {/* Decorative circles */}
+          <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/5 rounded-full" />
+          <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-white/5 rounded-full" />
+
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center font-bold text-lg">
+                G
+              </div>
+              <span className="text-xl font-bold tracking-tight">Garud AI</span>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">
+              Transport ERP Platform
+            </h2>
+            <p className="text-blue-200 text-sm leading-relaxed">
+              Complete fleet management, trip operations, billing, and analytics — all in one place.
+            </p>
+          </div>
+
+          <div className="relative z-10 space-y-4">
+            {features.map((f, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className="w-9 h-9 bg-white/10 backdrop-blur rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                  {f.icon}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{f.title}</p>
+                  <p className="text-xs text-blue-200">{f.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="relative z-10 text-xs text-blue-300">
+            © 2025 Garud AI. All rights reserved.
+          </p>
+        </div>
+
+        {/* Right Panel - Login Form */}
+        <div className="flex flex-col justify-center p-8 lg:p-10">
+          {/* Mobile logo */}
+          <div className="flex items-center gap-3 mb-8 lg:hidden">
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
               G
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">Garud AI</h1>
-            <p className="text-sm text-slate-500 mt-1">Transport ERP Platform</p>
+            <span className="text-lg font-bold text-slate-900">Garud AI</span>
           </div>
 
-          {/* Login Card */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-8">
-            <h2 className="text-lg font-bold text-slate-900 mb-1">Welcome back</h2>
-            <p className="text-sm text-slate-500 mb-6">Sign in to your account</p>
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
+            <p className="text-sm text-slate-500 mt-1">Sign in to your account to continue</p>
+          </div>
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="text-xs font-medium text-slate-600 block mb-1.5">Email address</label>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Email address
+              </label>
+              <div className="relative">
+                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="email"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="admin@company.com"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400"
+                  required
                 />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-600 block mb-1.5">Password</label>
-                <input
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-                />
-              </div>
-
-              {loginError && (
-                <p className="text-xs text-red-500 font-medium">{loginError}</p>
-              )}
-
-              <button
-                type="submit"
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition-all"
-              >
-                Sign In
-              </button>
-            </form>
-
-            <div className="mt-6 pt-5 border-t border-slate-100">
-              <p className="text-[11px] text-slate-400 text-center mb-3">Demo credentials (any email + password works)</p>
-              <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-500 space-y-1 font-mono">
-                <p>Email: admin@balajitransport.in</p>
-                <p>Password: demo123</p>
               </div>
             </div>
-          </div>
 
-          <p className="text-center text-xs text-slate-400 mt-6">Garud AI Transport ERP v2.0 • Enterprise Edition</p>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-9 pr-10 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25"
+            >
+              Sign in
+            </button>
+          </form>
+
+          {/* Demo credentials */}
+          <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-100">
+            <p className="text-xs font-medium text-slate-600 mb-1">Demo Credentials</p>
+            <p className="text-xs text-slate-500">
+              Email: <span className="font-mono text-slate-700">rajesh@garudtransport.in</span>
+            </p>
+            <p className="text-xs text-slate-500">
+              Password: <span className="font-mono text-slate-700">any password works</span>
+            </p>
+          </div>
         </div>
       </div>
-    );
+    </div>
+  );
+}
+
+export default function App() {
+  const isLoggedIn = useStore((s) => s.isLoggedIn);
+
+  if (!isLoggedIn) {
+    return <LoginPage />;
   }
 
-  // Main ERP Layout
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Sidebar
-        activeModule={activeModule}
-        onModuleChange={setActiveModule}
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
-
-      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-[72px]' : 'ml-[240px]'}`}>
-        <Topbar user={DEMO_USER} company={DEMO_COMPANY} alerts={ALERTS} onLogout={() => setIsLoggedIn(false)} />
-
-        <main className="p-6">
-          {activeModule === 'dashboard' && <Dashboard metrics={metrics} trips={TRIPS} alerts={ALERTS} vehicles={VEHICLES} />}
-          {activeModule === 'fleet' && <FleetModule vehicles={VEHICLES} />}
-          {activeModule === 'trips' && <TripsModule trips={TRIPS} />}
-          {activeModule === 'drivers' && <DriversModule drivers={DRIVERS} />}
-          {activeModule === 'customers' && <CustomersModule customers={CUSTOMERS} />}
-          {activeModule === 'billing' && <BillingModule invoices={INVOICES} payments={PAYMENTS} expenses={EXPENSES} />}
-          {activeModule === 'fuel' && <FuelModule fuelEntries={FUEL_ENTRIES} maintenanceRecords={MAINTENANCE_RECORDS} />}
-          {activeModule === 'maintenance' && <FuelModule fuelEntries={FUEL_ENTRIES} maintenanceRecords={MAINTENANCE_RECORDS} />}
-          {activeModule === 'reports' && <ReportsModule trips={TRIPS} invoices={INVOICES} expenses={EXPENSES} vehicles={VEHICLES} />}
-          {activeModule === 'settings' && <SettingsModule company={DEMO_COMPANY} user={DEMO_USER} />}
+    <div className="flex h-screen overflow-hidden bg-slate-50">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Topbar />
+        <main className="flex-1 overflow-y-auto">
+          <ModuleContent />
         </main>
       </div>
     </div>
