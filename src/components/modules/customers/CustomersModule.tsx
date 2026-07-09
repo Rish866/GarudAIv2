@@ -3,14 +3,16 @@ import { useStore, generateId } from '../../../store/useStore';
 import type { Customer } from '../../../types';
 import { formatCurrency, getStatusColor, classNames } from '../../../lib/utils';
 import { exportCustomers } from '../../../lib/excel';
-import { Plus, Search, Users, IndianRupee, TrendingUp, X, ExternalLink } from 'lucide-react';
+import { Plus, Search, Users, IndianRupee, TrendingUp, X, ExternalLink, Upload } from 'lucide-react';
 import CustomerTrackingPortal from '../tracking/CustomerTrackingPortal';
+import BulkUpload from '../../ui/BulkUpload';
 
 export default function CustomersModule() {
   const { customers, addCustomer } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showTracking, setShowTracking] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   if (showTracking) {
     return (
@@ -51,6 +53,13 @@ export default function CustomersModule() {
           <p className="text-sm text-slate-500 mt-1">{customers.length} total customers</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowBulkUpload(true)}
+            className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium"
+          >
+            <Upload size={18} />
+            Bulk Upload
+          </button>
           <button
             onClick={() => exportCustomers(customers)}
             className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium"
@@ -135,6 +144,7 @@ export default function CustomersModule() {
                 <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Outstanding</th>
                 <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Business</th>
                 <th className="text-center px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -171,6 +181,14 @@ export default function CustomersModule() {
                       {customer.status}
                     </span>
                   </td>
+                  <td className="px-5 py-4 text-right">
+                    <button
+                      onClick={() => {/* TODO: open edit modal */}}
+                      className="px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    >
+                      Edit
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -186,6 +204,36 @@ export default function CustomersModule() {
 
       {/* Add Customer Modal */}
       {showModal && <AddCustomerModal onClose={() => setShowModal(false)} />}
+
+      {/* Bulk Upload Modal */}
+      {showBulkUpload && (
+        <BulkUpload
+          title="Bulk Upload Customers"
+          description="Import customers from a CSV file"
+          sampleFields={['name', 'contact_person', 'phone', 'email', 'gstin', 'billing_address', 'credit_limit', 'credit_days']}
+          onUpload={(data) => {
+            data.forEach(row => {
+              addCustomer({
+                id: generateId(),
+                company_id: 'comp_garud_001',
+                name: row.name || '',
+                contact_person: row.contact_person || '',
+                phone: row.phone || '',
+                email: row.email || '',
+                gstin: row.gstin || '',
+                billing_address: row.billing_address || '',
+                credit_limit: Number(row.credit_limit) || 0,
+                credit_days: Number(row.credit_days) || 30,
+                outstanding: 0,
+                total_business: 0,
+                status: 'active',
+                created_at: new Date().toISOString(),
+              });
+            });
+          }}
+          onClose={() => setShowBulkUpload(false)}
+        />
+      )}
     </div>
   );
 }

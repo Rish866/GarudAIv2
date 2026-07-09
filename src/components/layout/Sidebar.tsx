@@ -16,7 +16,7 @@ import {
   ChevronDown,
   X,
   Circle,
-  CreditCard,
+
   FileText,
   Satellite,
   DollarSign,
@@ -31,6 +31,7 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   badge?: number;
+  separator?: boolean;
 }
 
 export default function Sidebar() {
@@ -53,21 +54,32 @@ export default function Sidebar() {
   const unreadAlerts = alerts.filter((a) => !a.is_read).length;
 
   const navItems: NavItem[] = [
+    // Overview
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'fleet', label: 'Fleet', icon: Truck },
-    { id: 'trips', label: 'Trips', icon: Route },
+    
+    // Masters (Setup first)
+    { id: 'fleet', label: 'Fleet', icon: Truck, separator: true },
     { id: 'drivers', label: 'Drivers', icon: Users },
     { id: 'customers', label: 'Customers', icon: Building2 },
-    { id: 'enquiries', label: 'Enquiries', icon: MessageSquare },
     { id: 'contracts', label: 'Contracts', icon: FileText },
-    { id: 'billing', label: 'Billing', icon: Receipt },
-    { id: 'fuel', label: 'Fuel', icon: Fuel },
+    
+    // Operations (Daily workflow)
+    { id: 'enquiries', label: 'Enquiries', icon: MessageSquare, separator: true },
+    { id: 'trips', label: 'Trips', icon: Route },
+    { id: 'market', label: 'Market Hire', icon: ShoppingCart },
+    
+    // Finance
+    { id: 'billing', label: 'Billing', icon: Receipt, separator: true },
+    { id: 'payroll', label: 'Payroll', icon: DollarSign },
+    
+    // Fleet Operations
+    { id: 'fuel', label: 'Fuel', icon: Fuel, separator: true },
     { id: 'tyres', label: 'Tyres', icon: Circle },
     { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-    { id: 'market', label: 'Market Hire', icon: ShoppingCart },
-    { id: 'payroll', label: 'Payroll', icon: DollarSign },
     { id: 'documents', label: 'Documents', icon: FileText },
-    { id: 'gps', label: 'GPS Settings', icon: Satellite },
+    
+    // Intelligence
+    { id: 'gps', label: 'GPS Tracking', icon: Satellite, separator: true },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings, badge: unreadAlerts > 0 ? unreadAlerts : undefined },
   ];
@@ -187,43 +199,47 @@ export default function Sidebar() {
             const Icon = item.icon;
             const isActive = activeModule === item.id;
             return (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative
-                  ${isActive ? 'border-l-[3px]' : 'border-l-[3px] border-transparent'}
-                `}
-                style={{
-                  backgroundColor: isActive ? 'var(--accent-light)' : 'transparent',
-                  color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                  borderLeftColor: isActive ? 'var(--accent)' : 'transparent',
-                }}
-                title={sidebarCollapsed ? item.label : undefined}
-              >
-                <div className="transition-transform duration-200 group-hover:scale-110 flex-shrink-0">
-                  <Icon size={20} />
-                </div>
-                {!sidebarCollapsed && (
-                  <span className="truncate animate-fade-in">{item.label}</span>
+              <React.Fragment key={item.id}>
+                {item.separator && (
+                  <div className="mx-3 my-2 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
                 )}
-                {!sidebarCollapsed && item.badge && (
-                  <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {item.badge}
-                  </span>
-                )}
-                {/* Tooltip for collapsed mode */}
-                {sidebarCollapsed && (
-                  <div
-                    className="absolute left-full ml-3 px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50"
-                    style={{
-                      backgroundColor: 'var(--bg-tertiary)',
-                      color: 'var(--text-primary)',
-                    }}
-                  >
-                    {item.label}
+                <button
+                  onClick={() => handleNavClick(item.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative
+                    ${isActive ? 'border-l-[3px]' : 'border-l-[3px] border-transparent'}
+                  `}
+                  style={{
+                    backgroundColor: isActive ? 'var(--accent-light)' : 'transparent',
+                    color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                    borderLeftColor: isActive ? 'var(--accent)' : 'transparent',
+                  }}
+                  title={sidebarCollapsed ? item.label : undefined}
+                >
+                  <div className="transition-transform duration-200 group-hover:scale-110 flex-shrink-0">
+                    <Icon size={20} />
                   </div>
-                )}
-              </button>
+                  {!sidebarCollapsed && (
+                    <span className="truncate animate-fade-in">{item.label}</span>
+                  )}
+                  {!sidebarCollapsed && item.badge && (
+                    <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {item.badge}
+                    </span>
+                  )}
+                  {/* Tooltip for collapsed mode */}
+                  {sidebarCollapsed && (
+                    <div
+                      className="absolute left-full ml-3 px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50"
+                      style={{
+                        backgroundColor: 'var(--bg-tertiary)',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      {item.label}
+                    </div>
+                  )}
+                </button>
+              </React.Fragment>
             );
           })}
         </nav>
