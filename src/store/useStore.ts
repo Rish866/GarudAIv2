@@ -73,6 +73,7 @@ interface StoreState {
   addExpense: (expense: Expense) => void;
   addFuelEntry: (entry: FuelEntry) => void;
   addMaintenance: (record: MaintenanceRecord) => void;
+  addEnquiry: (enquiry: Enquiry) => void;
   markAlertRead: (id: string) => void;
   setActiveModule: (module: ModuleName) => void;
   toggleSidebar: () => void;
@@ -270,6 +271,7 @@ export const useStore = create<StoreState>()(
   addExpense: (expense) => set((state) => ({ expenses: [...state.expenses, expense] })),
   addFuelEntry: (entry) => set((state) => ({ fuelEntries: [...state.fuelEntries, entry] })),
   addMaintenance: (record) => set((state) => ({ maintenance: [...state.maintenance, record] })),
+  addEnquiry: (enquiry) => set((state) => ({ enquiries: [...state.enquiries, enquiry] })),
   markAlertRead: (id) => set((state) => ({ alerts: state.alerts.map((a) => a.id === id ? { ...a, is_read: true } : a) })),
   setActiveModule: (module) => set({ activeModule: module }),
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),

@@ -1,14 +1,15 @@
-import { useState } from 'react';
-import { useStore } from '../../../store/useStore';
+import React, { useState } from 'react';
+import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
-import { ArrowRight, FileText, Send, Truck, Package, MapPin, Calendar, Weight, IndianRupee } from 'lucide-react';
-import type { Enquiry, Quotation } from '../../../types';
+import { ArrowRight, FileText, Send, Truck, Package, MapPin, Calendar, Weight, IndianRupee, Plus, X } from 'lucide-react';
+import type { Enquiry, Quotation, VehicleType } from '../../../types';
 
 type Tab = 'enquiries' | 'quotations';
 
 export default function EnquiriesModule() {
   const [activeTab, setActiveTab] = useState<Tab>('enquiries');
-  const { enquiries, quotations, convertEnquiryToQuotation, convertQuotationToTrip, updateQuotation } = useStore();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const { enquiries, quotations, customers, convertEnquiryToQuotation, convertQuotationToTrip, updateQuotation, addEnquiry } = useStore();
 
   const steps = [
     { label: 'Enquiry', color: 'bg-purple-500', active: activeTab === 'enquiries' },
@@ -18,6 +19,21 @@ export default function EnquiriesModule() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Enquiries & Quotations</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{enquiries.length} enquiries, {quotations.length} quotations</p>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700 transition-colors font-medium"
+        >
+          <Plus size={18} />
+          New Enquiry
+        </button>
+      </div>
+
       {/* Workflow Indicator */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
         <div className="flex items-center justify-center gap-2">
@@ -235,6 +251,133 @@ export default function EnquiriesModule() {
           )}
         </div>
       )}
+
+      {/* Add Enquiry Modal */}
+      {showAddModal && (
+        <AddEnquiryModal onClose={() => setShowAddModal(false)} />
+      )}
+    </div>
+  );
+}
+
+function AddEnquiryModal({ onClose }: { onClose: () => void }) {
+  const { customers, addEnquiry } = useStore();
+
+  const [form, setForm] = useState({
+    customer_id: '',
+    origin: '',
+    destination: '',
+    material: '',
+    vehicle_type: 'truck' as VehicleType,
+    weight_tons: '',
+    loading_date: '',
+    target_rate: '',
+    remarks: '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const customer = customers.find(c => c.id === form.customer_id);
+    if (!customer) return;
+
+    const enquiry: Enquiry = {
+      id: generateId(),
+      company_id: 'comp_garud_001',
+      customer_id: customer.id,
+      customer_name: customer.name,
+      origin: form.origin,
+      destination: form.destination,
+      material: form.material,
+      vehicle_type: form.vehicle_type,
+      weight_tons: Number(form.weight_tons) || 0,
+      loading_date: form.loading_date,
+      target_rate: Number(form.target_rate) || 0,
+      status: 'new',
+      remarks: form.remarks || undefined,
+      created_at: new Date().toISOString(),
+    };
+
+    addEnquiry(enquiry);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200">
+          <h2 className="text-lg font-bold text-slate-900">New Enquiry</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
+            <X size={18} className="text-slate-500" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Customer</label>
+            <select name="customer_id" value={form.customer_id} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="">Select customer</option>
+              {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Origin</label>
+              <input type="text" name="origin" value={form.origin} onChange={handleChange} required placeholder="e.g., Pune, Maharashtra" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Destination</label>
+              <input type="text" name="destination" value={form.destination} onChange={handleChange} required placeholder="e.g., Mumbai, Maharashtra" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
+              <input type="text" name="material" value={form.material} onChange={handleChange} required placeholder="e.g., Cement Bags" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Vehicle Type</label>
+              <select name="vehicle_type" value={form.vehicle_type} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="truck">Truck</option>
+                <option value="trailer">Trailer</option>
+                <option value="container">Container</option>
+                <option value="tanker">Tanker</option>
+                <option value="tipper">Tipper</option>
+                <option value="reefer">Reefer</option>
+                <option value="lcv">LCV</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Weight (Tons)</label>
+              <input type="number" name="weight_tons" value={form.weight_tons} onChange={handleChange} required placeholder="25" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Loading Date</label>
+              <input type="date" name="loading_date" value={form.loading_date} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Target Rate (₹)</label>
+              <input type="number" name="target_rate" value={form.target_rate} onChange={handleChange} required placeholder="55000" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Remarks (optional)</label>
+            <textarea name="remarks" value={form.remarks} onChange={handleChange} rows={2} placeholder="Any special requirements..." className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none resize-none" />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">
+              Cancel
+            </button>
+            <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700">
+              Create Enquiry
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
