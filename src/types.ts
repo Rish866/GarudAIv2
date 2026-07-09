@@ -9,7 +9,122 @@ export type TripStatus = 'booked' | 'assigned' | 'loading' | 'in_transit' | 'rea
 export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'cancelled';
 export type ExpenseCategory = 'diesel' | 'toll' | 'driver_bata' | 'loading' | 'unloading' | 'repair' | 'tyre' | 'insurance' | 'emi' | 'salary' | 'office' | 'misc';
 export type AlertSeverity = 'critical' | 'warning' | 'info';
-export type ModuleName = 'dashboard' | 'fleet' | 'trips' | 'drivers' | 'customers' | 'billing' | 'fuel' | 'maintenance' | 'reports' | 'settings';
+
+// Theme
+export type Theme = 'light' | 'dark';
+
+// Module names - expanded
+export type ModuleName = 'dashboard' | 'fleet' | 'trips' | 'drivers' | 'customers' | 'billing' | 'fuel' | 'maintenance' | 'reports' | 'settings' | 'notifications' | 'enquiries';
+
+// Branch (multi-branch support)
+export interface Branch {
+  id: string;
+  company_id: string;
+  name: string;
+  code: string;
+  city: string;
+  state: string;
+  address: string;
+  manager_name: string;
+  phone: string;
+  status: 'active' | 'inactive';
+}
+
+// Notification
+export interface Notification {
+  id: string;
+  company_id: string;
+  type: 'trip_update' | 'payment_received' | 'document_expiry' | 'maintenance_due' | 'pod_received' | 'invoice_generated' | 'system';
+  title: string;
+  message: string;
+  link_module?: ModuleName;
+  link_id?: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+// Quotation (for enquiry to quotation to trip flow)
+export interface Quotation {
+  id: string;
+  company_id: string;
+  quotation_number: string;
+  enquiry_id?: string;
+  customer_id: string;
+  customer_name: string;
+  origin: string;
+  destination: string;
+  vehicle_type: VehicleType;
+  material: string;
+  weight_tons: number;
+  rate_type: 'per_trip' | 'per_ton' | 'per_km';
+  rate: number;
+  total_amount: number;
+  gst_percent: number;
+  validity_days: number;
+  terms?: string;
+  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
+  created_at: string;
+}
+
+// Trip POD details
+export interface PODDetails {
+  received_date?: string;
+  received_by?: string;
+  condition: 'good' | 'damaged' | 'partial';
+  remarks?: string;
+  image_url?: string;
+}
+
+// E-Way Bill
+export interface EWayBill {
+  number: string;
+  generated_date: string;
+  valid_until: string;
+  distance_km: number;
+  transporter_id?: string;
+  status: 'active' | 'expired' | 'cancelled';
+}
+
+// GST Invoice details
+export interface GSTDetails {
+  place_of_supply: string;
+  hsn_code: string;
+  is_igst: boolean;
+  cgst_percent: number;
+  sgst_percent: number;
+  igst_percent: number;
+  cgst_amount: number;
+  sgst_amount: number;
+  igst_amount: number;
+  cess_amount: number;
+  reverse_charge: boolean;
+}
+
+// Activity Log (for audit trail)
+export interface ActivityLog {
+  id: string;
+  company_id: string;
+  user_name: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  details: string;
+  timestamp: string;
+}
+
+// Dashboard Chart Data
+export interface ChartDataPoint {
+  label: string;
+  value: number;
+  color?: string;
+}
+
+// Onboarding state
+export interface OnboardingState {
+  completed: boolean;
+  current_step: number;
+  steps_completed: string[];
+}
 
 export interface Company {
   id: string;
@@ -143,6 +258,8 @@ export interface Trip {
   status: TripStatus;
   pod_url?: string;
   pod_date?: string;
+  pod_details?: PODDetails;
+  eway_bill_details?: EWayBill;
   remarks?: string;
   created_at: string;
 }
@@ -166,6 +283,7 @@ export interface Invoice {
   total_amount: number;
   paid_amount: number;
   balance_amount: number;
+  gst_details?: GSTDetails;
   status: InvoiceStatus;
   created_at: string;
 }

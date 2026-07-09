@@ -1,62 +1,342 @@
-import { Search, Bell, LogOut } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Menu,
+  Search,
+  Bell,
+  LogOut,
+  Moon,
+  Sun,
+  User as UserIcon,
+  TruckIcon,
+  CreditCard,
+  FileWarning,
+  Wrench,
+  Package,
+  FileText,
+  Info,
+} from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import type { ModuleName } from '../../types';
+
+const moduleLabels: Record<ModuleName, string> = {
+  dashboard: 'Dashboard',
+  fleet: 'Fleet Management',
+  trips: 'Trip Management',
+  drivers: 'Driver Management',
+  customers: 'Customer Management',
+  enquiries: 'Enquiries',
+  billing: 'Billing & Invoices',
+  fuel: 'Fuel Management',
+  maintenance: 'Maintenance',
+  reports: 'Reports & Analytics',
+  settings: 'Settings',
+  notifications: 'Notifications',
+};
+
+const notificationIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  trip_update: TruckIcon,
+  payment_received: CreditCard,
+  document_expiry: FileWarning,
+  maintenance_due: Wrench,
+  pod_received: Package,
+  invoice_generated: FileText,
+  system: Info,
+};
+
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+}
 
 export default function Topbar() {
-  const user = useStore((s) => s.user);
-  const company = useStore((s) => s.company);
-  const alerts = useStore((s) => s.alerts);
-  const logout = useStore((s) => s.logout);
+  const {
+    activeModule,
+    notifications,
+    user,
+    theme,
+    toggleSidebar,
+    toggleTheme,
+    markNotificationRead,
+    markAllNotificationsRead,
+    logout,
+  } = useStore();
 
-  const unreadCount = alerts.filter((a) => !a.is_read).length;
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const recentNotifications = notifications.slice(0, 5);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+      if (userRef.current && !userRef.current.contains(e.target as Node)) {
+        setUserOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   return (
-    <header className="flex items-center justify-between h-16 px-6 bg-white border-b border-slate-200">
-      {/* Left: Search */}
-      <div className="relative w-80">
-        <Search
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-        />
-        <input
-          type="text"
-          placeholder="Search vehicles, trips, customers..."
-          className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400"
-        />
+    <header
+      className="h-16 flex items-center justify-between px-4 lg:px-6 border-b sticky top-0 z-30"
+      style={{
+        backgroundColor: 'var(--bg-primary)',
+        borderColor: 'var(--border-color)',
+      }}
+    >
+      {/* Left */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={toggleSidebar}
+          className="lg:hidden p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+        >
+          <Menu size={20} style={{ color: 'var(--text-primary)' }} />
+        </button>
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+          {moduleLabels[activeModule] || 'Dashboard'}
+        </h2>
       </div>
 
-      {/* Right: Actions */}
-      <div className="flex items-center gap-4">
-        {/* Notification bell */}
-        <button className="relative p-2 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors">
-          <Bell size={20} />
-          {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full">
-              {unreadCount}
-            </span>
-          )}
-        </button>
+      {/* Center - Search */}
+      <div className="hidden md:flex flex-1 max-w-md mx-8">
+        <div
+          className="w-full flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors"
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            borderColor: 'var(--border-color)',
+          }}
+        >
+          <Search size={16} style={{ color: 'var(--text-tertiary)' }} />
+          <input
+            type="text"
+            placeholder="Search vehicles, trips, customers..."
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-tertiary)]"
+            style={{ color: 'var(--text-primary)' }}
+          />
+          <kbd
+            className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border"
+            style={{
+              color: 'var(--text-tertiary)',
+              borderColor: 'var(--border-color)',
+              backgroundColor: 'var(--bg-tertiary)',
+            }}
+          >
+            <span>&#8984;</span>K
+          </kbd>
+        </div>
+      </div>
 
-        {/* Company badge */}
-        <span className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-full">
-          {company.name}
-        </span>
+      {/* Right */}
+      <div className="flex items-center gap-2">
+        {/* Notifications */}
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => {
+              setNotifOpen(!notifOpen);
+              setUserOpen(false);
+            }}
+            className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+          >
+            <Bell size={20} style={{ color: 'var(--text-secondary)' }} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse-dot">
+                {unreadCount}
+              </span>
+            )}
+          </button>
 
-        {/* User avatar + name */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white text-xs font-semibold">
-            {user.name.charAt(0)}
-          </div>
-          <span className="text-sm font-medium text-slate-700">{user.name}</span>
+          <AnimatePresence>
+            {notifOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="absolute right-0 mt-2 w-80 rounded-2xl border shadow-xl overflow-hidden"
+                style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  borderColor: 'var(--border-color)',
+                }}
+              >
+                {/* Header */}
+                <div
+                  className="flex items-center justify-between px-4 py-3 border-b"
+                  style={{ borderColor: 'var(--border-color)' }}
+                >
+                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    Notifications
+                  </h3>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => markAllNotificationsRead()}
+                      className="text-xs font-medium transition-colors hover:opacity-80"
+                      style={{ color: 'var(--accent)' }}
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+
+                {/* Notifications List */}
+                <div className="max-h-80 overflow-y-auto">
+                  {recentNotifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                      <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                        No notifications
+                      </p>
+                    </div>
+                  ) : (
+                    recentNotifications.map((notif) => {
+                      const Icon = notificationIcons[notif.type] || Info;
+                      return (
+                        <button
+                          key={notif.id}
+                          onClick={() => markNotificationRead(notif.id)}
+                          className="w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--bg-secondary)]"
+                          style={{
+                            backgroundColor: notif.is_read ? 'transparent' : 'var(--accent-light)',
+                          }}
+                        >
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                          >
+                            <Icon size={14} style={{ color: 'var(--accent)' }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className={`text-xs ${notif.is_read ? 'font-medium' : 'font-semibold'}`}
+                              style={{ color: 'var(--text-primary)' }}
+                            >
+                              {notif.title}
+                            </p>
+                            <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
+                              {notif.message}
+                            </p>
+                            <p className="text-[10px] mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                              {timeAgo(notif.created_at)}
+                            </p>
+                          </div>
+                          {!notif.is_read && (
+                            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Logout */}
-        <button
-          onClick={logout}
-          className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-          title="Logout"
-        >
-          <LogOut size={18} />
-        </button>
+        {/* User Menu */}
+        <div className="relative" ref={userRef}>
+          <button
+            onClick={() => {
+              setUserOpen(!userOpen);
+              setNotifOpen(false);
+            }}
+            className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">{user.name.charAt(0)}</span>
+            </div>
+          </button>
+
+          <AnimatePresence>
+            {userOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="absolute right-0 mt-2 w-64 rounded-2xl border shadow-xl overflow-hidden"
+                style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  borderColor: 'var(--border-color)',
+                }}
+              >
+                {/* User Info */}
+                <div
+                  className="px-4 py-3 border-b"
+                  style={{ borderColor: 'var(--border-color)' }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">{user.name.charAt(0)}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        {user.name}
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                        {user.email}
+                      </p>
+                      <p className="text-[10px] mt-0.5 font-medium" style={{ color: 'var(--accent)' }}>
+                        {user.role.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Menu Items */}
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      setUserOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[var(--bg-secondary)]"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    <UserIcon size={16} />
+                    <span>My Profile</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      toggleTheme();
+                      setUserOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[var(--bg-secondary)]"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                    <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                  </button>
+
+                  <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
+
+                  <button
+                    onClick={() => {
+                      logout();
+                      setUserOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-950/20"
+                  >
+                    <LogOut size={16} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </header>
   );

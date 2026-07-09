@@ -1,219 +1,363 @@
-import React, { Suspense, useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Eye, EyeOff, Truck, BarChart3, Shield, Zap, Loader2 } from 'lucide-react';
 import { useStore } from './store/useStore';
+import type { ModuleName } from './types';
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
-import { Truck, Shield, BarChart3, Zap, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
-// Lazy load modules
-const DashboardModule = React.lazy(() => import('./components/modules/dashboard/DashboardModule'));
-const FleetModule = React.lazy(() => import('./components/modules/fleet/FleetModule'));
-const TripsModule = React.lazy(() => import('./components/modules/trips/TripsModule'));
-const DriversModule = React.lazy(() => import('./components/modules/drivers/DriversModule'));
-const CustomersModule = React.lazy(() => import('./components/modules/customers/CustomersModule'));
-const BillingModule = React.lazy(() => import('./components/modules/billing/BillingModule'));
-const FuelModule = React.lazy(() => import('./components/modules/fuel/FuelModule'));
-const MaintenanceModule = React.lazy(() => import('./components/modules/maintenance/MaintenanceModule'));
-const ReportsModule = React.lazy(() => import('./components/modules/reports/ReportsModule'));
-const SettingsModule = React.lazy(() => import('./components/modules/settings/SettingsModule'));
+// Lazy-loaded modules
+const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
+const FleetModule = lazy(() => import('./components/modules/fleet/FleetModule'));
+const TripsModule = lazy(() => import('./components/modules/trips/TripsModule'));
+const DriversModule = lazy(() => import('./components/modules/drivers/DriversModule'));
+const CustomersModule = lazy(() => import('./components/modules/customers/CustomersModule'));
+const BillingModule = lazy(() => import('./components/modules/billing/BillingModule'));
+const FuelModule = lazy(() => import('./components/modules/fuel/FuelModule'));
+const MaintenanceModule = lazy(() => import('./components/modules/maintenance/MaintenanceModule'));
+const ReportsModule = lazy(() => import('./components/modules/reports/ReportsModule'));
+const SettingsModule = lazy(() => import('./components/modules/settings/SettingsModule'));
+
+const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<React.ComponentType>>> = {
+  dashboard: DashboardModule,
+  fleet: FleetModule,
+  trips: TripsModule,
+  drivers: DriversModule,
+  customers: CustomersModule,
+  billing: BillingModule,
+  fuel: FuelModule,
+  maintenance: MaintenanceModule,
+  reports: ReportsModule,
+  settings: SettingsModule,
+};
 
 function LoadingFallback() {
   return (
-    <div className="flex items-center justify-center h-full">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-        <p className="text-sm text-slate-500">Loading...</p>
+    <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-3">
+      <Loader2
+        size={32}
+        className="animate-spin"
+        style={{ color: 'var(--accent)' }}
+      />
+      <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+        Loading module...
+      </p>
+    </div>
+  );
+}
+
+function PlaceholderModule({ name }: { name: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-3">
+      <div
+        className="w-16 h-16 rounded-2xl flex items-center justify-center"
+        style={{ backgroundColor: 'var(--accent-light)' }}
+      >
+        <Zap size={28} style={{ color: 'var(--accent)' }} />
+      </div>
+      <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+        {name.charAt(0).toUpperCase() + name.slice(1)} Module
+      </h3>
+      <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+        Coming soon...
+      </p>
+    </div>
+  );
+}
+
+function LoginPage() {
+  const { login } = useStore();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(false);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    login({
+      id: 'user_001',
+      company_id: 'comp_garud_001',
+      name: 'Rajesh Sharma',
+      email: email || 'rajesh@garudtransport.in',
+      role: 'super_admin',
+      phone: '+91 98765 43210',
+      status: 'active',
+    });
+  };
+
+  const features = [
+    { icon: Truck, title: 'Fleet Tracking', description: 'Real-time GPS tracking for all vehicles' },
+    { icon: BarChart3, title: 'Smart Analytics', description: 'AI-powered insights and reporting' },
+    { icon: Shield, title: 'Compliance Ready', description: 'E-way bill, GST, and document management' },
+    { icon: Zap, title: 'Automation', description: 'Automated billing, alerts, and workflows' },
+  ];
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Left Panel - Gradient */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50" />
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Truck size={22} className="text-white" />
+            </div>
+            <span className="text-white text-xl font-bold">Garud AI</span>
+          </div>
+
+          {/* Features */}
+          <div className="space-y-6">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-3xl font-bold text-white leading-tight"
+            >
+              India&apos;s Smartest<br />Transport ERP
+            </motion.h2>
+            <div className="space-y-4">
+              {features.map((feat, i) => {
+                const Icon = feat.icon;
+                return (
+                  <motion.div
+                    key={feat.title}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + i * 0.1 }}
+                    className="flex items-center gap-4"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-white/10 backdrop-blur flex items-center justify-center flex-shrink-0">
+                      <Icon size={18} className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm">{feat.title}</p>
+                      <p className="text-blue-200 text-xs">{feat.description}</p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Stats & Testimonial */}
+          <div className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              className="grid grid-cols-2 gap-4"
+            >
+              <div className="bg-white/10 backdrop-blur rounded-xl p-4">
+                <p className="text-2xl font-bold text-white">2000+</p>
+                <p className="text-blue-200 text-xs">Trucks Tracked</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur rounded-xl p-4">
+                <p className="text-2xl font-bold text-white">{'\u20B9'}50Cr+</p>
+                <p className="text-blue-200 text-xs">Freight Managed</p>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1 }}
+              className="bg-white/10 backdrop-blur rounded-xl p-4"
+            >
+              <p className="text-white/90 text-sm italic">
+                &ldquo;Garud AI transformed our operations. We saved 20% on fuel costs and reduced billing time by 80%.&rdquo;
+              </p>
+              <p className="text-blue-200 text-xs mt-2">— Amit Patel, CEO, Patel Logistics</p>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Login Form */}
+      <div
+        className="flex-1 flex items-center justify-center p-6 lg:p-12"
+        style={{ backgroundColor: 'var(--bg-primary)' }}
+      >
+        <div className="w-full max-w-md">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+              <Truck size={22} className="text-white" />
+            </div>
+            <span className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+              Garud AI
+            </span>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+              Welcome back
+            </h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+              Sign in to your Transport ERP account
+            </p>
+          </motion.div>
+
+          <motion.form
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            onSubmit={handleLogin}
+            className="mt-8 space-y-5"
+          >
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
+                Email address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)]"
+                style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-3 pr-12 rounded-xl border text-sm outline-none transition-all focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)]"
+                  style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderColor: 'var(--border-color)',
+                    color: 'var(--text-primary)',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
+                  style={{ color: 'var(--text-tertiary)' }}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember & Forgot */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="w-4 h-4 rounded border-[var(--border-color)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                />
+                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Remember me
+                </span>
+              </label>
+              <button
+                type="button"
+                className="text-sm font-medium hover:opacity-80 transition-opacity"
+                style={{ color: 'var(--accent)' }}
+              >
+                Forgot password?
+              </button>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              className="w-full py-3 rounded-xl text-white text-sm font-semibold bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
+            >
+              Sign In
+            </button>
+          </motion.form>
+
+          {/* Demo Credentials */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-6 rounded-xl border p-4"
+            style={{
+              backgroundColor: 'var(--accent-light)',
+              borderColor: 'var(--accent)',
+            }}
+          >
+            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--accent)' }}>
+              Demo Credentials
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Email: <span className="font-mono">rajesh@garudtransport.in</span>
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Password: <span className="font-mono">any password works</span>
+            </p>
+          </motion.div>
+        </div>
       </div>
     </div>
   );
 }
 
-function ModuleContent() {
-  const activeModule = useStore((s) => s.activeModule);
+function MainLayout() {
+  const { activeModule, sidebarCollapsed } = useStore();
+
+  const ActiveComponent = moduleComponents[activeModule];
 
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      {activeModule === 'dashboard' && <DashboardModule />}
-      {activeModule === 'fleet' && <FleetModule />}
-      {activeModule === 'trips' && <TripsModule />}
-      {activeModule === 'drivers' && <DriversModule />}
-      {activeModule === 'customers' && <CustomersModule />}
-      {activeModule === 'billing' && <BillingModule />}
-      {activeModule === 'fuel' && <FuelModule />}
-      {activeModule === 'maintenance' && <MaintenanceModule />}
-      {activeModule === 'reports' && <ReportsModule />}
-      {activeModule === 'settings' && <SettingsModule />}
-    </Suspense>
-  );
-}
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar */}
+      <Sidebar />
 
-function LoginPage() {
-  const login = useStore((s) => s.login);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+      {/* Main Content */}
+      <div
+        className={`flex-1 flex flex-col transition-all duration-300 ${
+          sidebarCollapsed ? 'lg:ml-[68px]' : 'lg:ml-[260px]'
+        }`}
+      >
+        {/* Topbar */}
+        <Topbar />
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email && password) {
-      login({
-        id: 'user_001',
-        company_id: 'comp_garud_001',
-        name: 'Rajesh Sharma',
-        email,
-        role: 'super_admin',
-        phone: '+91 98765 43210',
-        status: 'active',
-      });
-    }
-  };
-
-  const features = [
-    { icon: <Truck size={20} />, title: 'Fleet Tracking', desc: 'Real-time GPS tracking for all vehicles' },
-    { icon: <Shield size={20} />, title: 'Compliance', desc: 'Automated document & permit management' },
-    { icon: <BarChart3 size={20} />, title: 'Analytics', desc: 'Revenue, expense & profit insights' },
-    { icon: <Zap size={20} />, title: 'Automation', desc: 'Trip booking to billing in one flow' },
-  ];
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 rounded-2xl shadow-2xl shadow-blue-900/10 overflow-hidden bg-white">
-        {/* Left Panel - Gradient */}
-        <div className="hidden lg:flex flex-col justify-between p-10 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white relative overflow-hidden">
-          {/* Decorative circles */}
-          <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/5 rounded-full" />
-          <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-white/5 rounded-full" />
-
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center font-bold text-lg">
-                G
-              </div>
-              <span className="text-xl font-bold tracking-tight">Garud AI</span>
-            </div>
-            <h2 className="text-2xl font-bold mb-2">
-              Transport ERP Platform
-            </h2>
-            <p className="text-blue-200 text-sm leading-relaxed">
-              Complete fleet management, trip operations, billing, and analytics — all in one place.
-            </p>
-          </div>
-
-          <div className="relative z-10 space-y-4">
-            {features.map((f, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="w-9 h-9 bg-white/10 backdrop-blur rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                  {f.icon}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">{f.title}</p>
-                  <p className="text-xs text-blue-200">{f.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <p className="relative z-10 text-xs text-blue-300">
-            © 2025 Garud AI. All rights reserved.
-          </p>
-        </div>
-
-        {/* Right Panel - Login Form */}
-        <div className="flex flex-col justify-center p-8 lg:p-10">
-          {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-              G
-            </div>
-            <span className="text-lg font-bold text-slate-900">Garud AI</span>
-          </div>
-
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
-            <p className="text-sm text-slate-500 mt-1">Sign in to your account to continue</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Email address
-              </label>
-              <div className="relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.com"
-                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-9 pr-10 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-400"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25"
-            >
-              Sign in
-            </button>
-          </form>
-
-          {/* Demo credentials */}
-          <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-100">
-            <p className="text-xs font-medium text-slate-600 mb-1">Demo Credentials</p>
-            <p className="text-xs text-slate-500">
-              Email: <span className="font-mono text-slate-700">rajesh@garudtransport.in</span>
-            </p>
-            <p className="text-xs text-slate-500">
-              Password: <span className="font-mono text-slate-700">any password works</span>
-            </p>
-          </div>
-        </div>
+        {/* Page Content */}
+        <main
+          className="flex-1 overflow-y-auto p-4 lg:p-6"
+          style={{ backgroundColor: 'var(--bg-secondary)' }}
+        >
+          <Suspense fallback={<LoadingFallback />}>
+            {ActiveComponent ? (
+              <ActiveComponent />
+            ) : (
+              <PlaceholderModule name={activeModule} />
+            )}
+          </Suspense>
+        </main>
       </div>
     </div>
   );
 }
 
 export default function App() {
-  const isLoggedIn = useStore((s) => s.isLoggedIn);
-
-  if (!isLoggedIn) {
-    return <LoginPage />;
-  }
+  const { isLoggedIn, theme } = useStore();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Topbar />
-        <main className="flex-1 overflow-y-auto">
-          <ModuleContent />
-        </main>
-      </div>
+    <div className={theme === 'dark' ? 'dark' : ''}>
+      {isLoggedIn ? <MainLayout /> : <LoginPage />}
     </div>
   );
 }
