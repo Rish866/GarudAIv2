@@ -2,12 +2,30 @@ import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import type { Customer } from '../../../types';
 import { formatCurrency, getStatusColor, classNames } from '../../../lib/utils';
-import { Plus, Search, Users, IndianRupee, TrendingUp, X } from 'lucide-react';
+import { Plus, Search, Users, IndianRupee, TrendingUp, X, ExternalLink } from 'lucide-react';
+import CustomerTrackingPortal from '../tracking/CustomerTrackingPortal';
 
 export default function CustomersModule() {
   const { customers, addCustomer } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showTracking, setShowTracking] = useState(false);
+
+  if (showTracking) {
+    return (
+      <div>
+        <div className="flex items-center gap-3 p-6 pb-0">
+          <button
+            onClick={() => setShowTracking(false)}
+            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+          >
+            ← Back to Customers
+          </button>
+        </div>
+        <CustomerTrackingPortal />
+      </div>
+    );
+  }
 
   const filteredCustomers = customers.filter((customer) => {
     const query = searchQuery.toLowerCase();
@@ -31,13 +49,22 @@ export default function CustomersModule() {
           <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
           <p className="text-sm text-slate-500 mt-1">{customers.length} total customers</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700 transition-colors font-medium"
-        >
-          <Plus size={18} />
-          Add Customer
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowTracking(true)}
+            className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium"
+          >
+            <ExternalLink size={18} />
+            Customer Portal
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700 transition-colors font-medium"
+          >
+            <Plus size={18} />
+            Add Customer
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
-import type { Trip, TripStatus } from '../../../types';
-import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber } from '../../../lib/utils';
+import type { Trip, TripStatus, Invoice } from '../../../types';
+import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
-import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download } from 'lucide-react';
+import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download, Eye, Upload, Calendar, Phone, CreditCard, CheckCircle, Circle, Clock } from 'lucide-react';
 
 const STATUS_FLOW: TripStatus[] = [
   'booked', 'assigned', 'loading', 'in_transit', 'reached', 'unloading', 'pod_pending', 'completed', 'billed', 'settled'
@@ -24,12 +24,15 @@ function getNextStatuses(current: TripStatus): TripStatus[] {
   return STATUS_FLOW.slice(idx + 1, idx + 3);
 }
 
+
 export default function TripsModule() {
-  const { trips, customers, vehicles, drivers, company, addTrip, updateTripStatus } = useStore();
+  const { trips, customers, vehicles, drivers, company, addTrip, updateTripStatus, updateTrip, addInvoice, addNotification } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusDropdown, setStatusDropdown] = useState<string | null>(null);
+  const [podModalTrip, setPodModalTrip] = useState<Trip | null>(null);
+  const [detailTrip, setDetailTrip] = useState<Trip | null>(null);
 
   const filteredTrips = trips.filter((trip) => {
     const matchesFilter = activeFilter === 'all' || trip.status === activeFilter;
@@ -47,10 +50,63 @@ export default function TripsModule() {
     return trips.filter((t) => t.status === key).length;
   };
 
+
   const handleStatusUpdate = (tripId: string, newStatus: TripStatus) => {
     updateTripStatus(tripId, newStatus);
     setStatusDropdown(null);
+
+    // Auto-generate invoice when trip is completed
+    if (newStatus === 'completed') {
+      const trip = trips.find(t => t.id === tripId);
+      if (trip) {
+        const subtotal = trip.freight_amount + trip.detention_charges + trip.other_charges;
+        const gst_amount = Math.round(subtotal * 0.05);
+        const tds_amount = Math.round(subtotal * 0.02);
+        const total_amount = subtotal + gst_amount - tds_amount;
+
+        const invoice: Invoice = {
+          id: generateId(),
+          company_id: trip.company_id,
+          invoice_number: generateInvoiceNumber(),
+          customer_id: trip.customer_id,
+          customer_name: trip.customer_name,
+          invoice_date: new Date().toISOString().split('T')[0],
+          due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+          trip_ids: [trip.id],
+          freight_total: trip.freight_amount,
+          detention_total: trip.detention_charges,
+          other_charges: trip.other_charges,
+          subtotal,
+          gst_percent: 5,
+          gst_amount,
+          tds_amount,
+          total_amount,
+          paid_amount: 0,
+          balance_amount: total_amount,
+          status: 'sent',
+          created_at: new Date().toISOString(),
+        };
+        addInvoice(invoice);
+
+        // Also update trip to billed
+        updateTripStatus(tripId, 'billed');
+
+        // Send notification
+        addNotification({
+          id: generateId(),
+          company_id: trip.company_id,
+          type: 'invoice_generated',
+          title: 'Invoice Auto-Generated',
+          message: `Invoice ${invoice.invoice_number} created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,
+          link_module: 'billing',
+          link_id: invoice.id,
+          is_read: false,
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
   };
+
 
   return (
     <div className="p-6 space-y-6">
@@ -60,20 +116,22 @@ export default function TripsModule() {
           <h1 className="text-2xl font-bold text-slate-900">Trip Management</h1>
           <p className="text-sm text-slate-500 mt-1">{trips.length} total trips</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700 transition-colors font-medium"
-        >
-          <Plus size={18} />
-          New Trip
-        </button>
-        <button
-          onClick={() => generateTripReportPDF(filteredTrips, company, 'Trip Report')}
-          className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium"
-        >
-          <Download size={18} />
-          Export PDF
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => generateTripReportPDF(filteredTrips, company, 'Trip Report')}
+            className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium"
+          >
+            <Download size={18} />
+            Export PDF
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700 transition-colors font-medium"
+          >
+            <Plus size={18} />
+            New Trip
+          </button>
+        </div>
       </div>
 
       {/* Status Filter Tabs */}
@@ -109,6 +167,7 @@ export default function TripsModule() {
         />
       </div>
 
+
       {/* Trip Cards */}
       <div className="space-y-4">
         {filteredTrips.map((trip) => (
@@ -126,7 +185,25 @@ export default function TripsModule() {
               </div>
               <div className="relative flex items-center gap-2">
                 <button
-                  onClick={() => generateLRPDF(trip, useStore.getState().company)}
+                  onClick={() => setDetailTrip(trip)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  title="View Trip Details"
+                >
+                  <Eye size={14} />
+                  View
+                </button>
+                {trip.status === 'pod_pending' && (
+                  <button
+                    onClick={() => setPodModalTrip(trip)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors"
+                    title="Upload POD"
+                  >
+                    <Upload size={14} />
+                    Upload POD
+                  </button>
+                )}
+                <button
+                  onClick={() => generateLRPDF(trip, company)}
                   className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                   title="Print Lorry Receipt"
                 >
@@ -158,6 +235,7 @@ export default function TripsModule() {
                 )}
               </div>
             </div>
+
 
             {/* Route */}
             <div className="flex items-center gap-3 mb-4">
@@ -214,11 +292,311 @@ export default function TripsModule() {
         )}
       </div>
 
-      {/* New Trip Modal */}
+      {/* Modals */}
       {showModal && <NewTripModal onClose={() => setShowModal(false)} />}
+      {podModalTrip && <PODUploadModal trip={podModalTrip} onClose={() => setPodModalTrip(null)} />}
+      {detailTrip && <TripDetailModal trip={detailTrip} onClose={() => setDetailTrip(null)} />}
     </div>
   );
 }
+
+
+function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
+  const { updateTrip } = useStore();
+  const [receivedBy, setReceivedBy] = useState('');
+  const [condition, setCondition] = useState<'good' | 'damaged' | 'partial'>('good');
+  const [remarks, setRemarks] = useState('');
+  const [filename, setFilename] = useState('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFilename(e.target.files[0].name);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const today = new Date().toISOString().split('T')[0];
+    updateTrip(trip.id, {
+      pod_url: filename || 'pod_uploaded.jpg',
+      pod_date: today,
+      pod_details: {
+        received_by: receivedBy,
+        condition,
+        remarks,
+        received_date: today,
+        image_url: filename || undefined,
+      },
+      status: 'completed',
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200">
+          <h2 className="text-lg font-bold text-slate-900">Upload POD - {trip.trip_number}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
+            <X size={18} className="text-slate-500" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Received By</label>
+            <input
+              type="text"
+              value={receivedBy}
+              onChange={(e) => setReceivedBy(e.target.value)}
+              required
+              placeholder="Name of person who received goods"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Condition</label>
+            <select
+              value={condition}
+              onChange={(e) => setCondition(e.target.value as 'good' | 'damaged' | 'partial')}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="good">Good</option>
+              <option value="damaged">Damaged</option>
+              <option value="partial">Partial</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Remarks</label>
+            <textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder="Any additional remarks..."
+              rows={3}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">POD Image (Simulated Upload)</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 file:mr-3 file:px-3 file:py-1 file:border-0 file:rounded file:bg-blue-50 file:text-blue-600 file:font-medium file:text-sm"
+            />
+            {filename && <p className="text-xs text-green-600 mt-1">Selected: {filename}</p>}
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">
+              Cancel
+            </button>
+            <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg shadow-lg shadow-amber-500/25 hover:bg-amber-700">
+              Submit POD
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
+  const { company } = useStore();
+  const currentIdx = STATUS_FLOW.indexOf(trip.status);
+
+  const getStatusDate = (status: TripStatus): string | null => {
+    switch (status) {
+      case 'booked': return trip.booking_date;
+      case 'loading': return trip.loading_date || null;
+      case 'in_transit': return trip.departure_date || null;
+      case 'completed': return trip.actual_delivery || null;
+      default: return null;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 sticky top-0 bg-white z-10 rounded-t-2xl">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">{trip.trip_number}</h2>
+            <p className="text-sm text-slate-500">LR: {trip.lr_number}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg">
+            <X size={20} className="text-slate-500" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-6">
+          {/* Trip Timeline */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 mb-4">Trip Timeline</h3>
+            <div className="relative pl-6">
+              {STATUS_FLOW.map((status, idx) => {
+                const isCompleted = idx <= currentIdx;
+                const isCurrent = idx === currentIdx;
+                const dateStr = getStatusDate(status);
+                return (
+                  <div key={status} className="relative flex items-start pb-4 last:pb-0">
+                    {/* Vertical line */}
+                    {idx < STATUS_FLOW.length - 1 && (
+                      <div className={classNames(
+                        'absolute left-[-14px] top-5 w-0.5 h-full',
+                        isCompleted ? 'bg-green-400' : 'bg-slate-200'
+                      )} />
+                    )}
+                    {/* Circle */}
+                    <div className="absolute left-[-18px] top-0.5">
+                      {isCompleted ? (
+                        <CheckCircle size={16} className={isCurrent ? 'text-blue-600' : 'text-green-500'} />
+                      ) : (
+                        <Circle size={16} className="text-slate-300" />
+                      )}
+                    </div>
+                    <div className="ml-2">
+                      <span className={classNames(
+                        'text-sm font-medium capitalize',
+                        isCurrent ? 'text-blue-600' : isCompleted ? 'text-slate-900' : 'text-slate-400'
+                      )}>
+                        {status.replace(/_/g, ' ')}
+                      </span>
+                      {dateStr && <span className="text-xs text-slate-500 ml-2">{formatDate(dateStr)}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+
+          {/* Route Section */}
+          <div className="bg-slate-50 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3">Route</h3>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500" />
+                <span className="text-sm font-medium text-slate-700">{trip.origin}</span>
+              </div>
+              <div className="flex-1 border-t-2 border-dashed border-slate-300" />
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-700">{trip.destination}</span>
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">{trip.distance_km} km | Expected: {trip.expected_delivery ? formatDate(trip.expected_delivery) : 'N/A'}</p>
+          </div>
+
+          {/* Vehicle & Driver */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-50 rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                <Truck size={14} /> Vehicle
+              </h3>
+              <p className="text-sm text-slate-700 font-medium">{trip.vehicle_reg}</p>
+              <p className="text-xs text-slate-500">ID: {trip.vehicle_id}</p>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                <User size={14} /> Driver
+              </h3>
+              <p className="text-sm text-slate-700 font-medium">{trip.driver_name}</p>
+              <p className="text-xs text-slate-500 flex items-center gap-1">
+                <Phone size={10} /> {trip.driver_phone}
+              </p>
+            </div>
+          </div>
+
+
+          {/* Financial Breakdown */}
+          <div className="bg-slate-50 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+              <CreditCard size={14} /> Financial Breakdown
+            </h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-600">Freight</span>
+                <span className="font-medium">{formatCurrency(trip.freight_amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Advance</span>
+                <span className="font-medium">{formatCurrency(trip.advance_amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Balance</span>
+                <span className="font-medium">{formatCurrency(trip.balance_amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Detention</span>
+                <span className="font-medium">{formatCurrency(trip.detention_charges)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Other Charges</span>
+                <span className="font-medium">{formatCurrency(trip.other_charges)}</span>
+              </div>
+              <div className="flex justify-between border-t border-slate-300 pt-2">
+                <span className="text-slate-900 font-semibold">Total</span>
+                <span className="font-bold text-slate-900">{formatCurrency(trip.total_amount)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* POD Section */}
+          {trip.pod_details && (
+            <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+              <h3 className="text-sm font-semibold text-green-900 mb-3">POD Details</h3>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div>
+                  <span className="text-green-700 text-xs">Received By</span>
+                  <p className="font-medium text-green-900">{trip.pod_details.received_by || '—'}</p>
+                </div>
+                <div>
+                  <span className="text-green-700 text-xs">Condition</span>
+                  <p className="font-medium text-green-900 capitalize">{trip.pod_details.condition}</p>
+                </div>
+                <div>
+                  <span className="text-green-700 text-xs">Date</span>
+                  <p className="font-medium text-green-900">{trip.pod_details.received_date ? formatDate(trip.pod_details.received_date) : trip.pod_date ? formatDate(trip.pod_date) : '—'}</p>
+                </div>
+              </div>
+              {trip.pod_details.remarks && (
+                <p className="text-xs text-green-700 mt-2">Remarks: {trip.pod_details.remarks}</p>
+              )}
+            </div>
+          )}
+
+
+          {/* Documents */}
+          <div className="bg-slate-50 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+              <FileText size={14} /> Documents
+            </h3>
+            <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+              <div>
+                <span className="text-slate-500 text-xs">LR Number</span>
+                <p className="font-medium text-slate-900">{trip.lr_number}</p>
+              </div>
+              <div>
+                <span className="text-slate-500 text-xs">E-Way Bill</span>
+                <p className="font-medium text-slate-900">{trip.eway_bill || '—'}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => generateLRPDF(trip, company)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+            >
+              <FileText size={14} />
+              Print LR
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function NewTripModal({ onClose }: { onClose: () => void }) {
   const { customers, vehicles, drivers, addTrip } = useStore();
@@ -288,6 +666,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
     onClose();
   };
 
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
@@ -321,6 +700,8 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
               </select>
             </div>
           </div>
+
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Origin</label>
