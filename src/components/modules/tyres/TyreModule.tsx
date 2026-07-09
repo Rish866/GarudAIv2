@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Circle, Plus, X, RotateCcw, Trash2, Truck } from 'lucide-react';
+import BulkUpload from '../../ui/BulkUpload';
 
 interface TyreRecord {
   id: string;
@@ -34,6 +35,7 @@ export default function TyreModule() {
   ]);
 
   const [showModal, setShowModal] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [form, setForm] = useState({
     serial_number: '',
     vehicle_id: '',
@@ -105,6 +107,12 @@ export default function TyreModule() {
           <h1 className="text-2xl font-bold text-slate-900">Tyre Management</h1>
           <p className="text-slate-500 mt-1">Track tyre lifecycle, costs and replacements</p>
         </div>
+        <button
+          onClick={() => setShowBulkUpload(true)}
+          className="flex items-center gap-2 px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          Bulk Upload
+        </button>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -192,6 +200,33 @@ export default function TyreModule() {
           </table>
         </div>
       </div>
+
+      {showBulkUpload && (
+        <BulkUpload
+          title="Bulk Upload Tyres"
+          description="Import tyre records from a CSV file"
+          sampleFields={['serial_number', 'vehicle_reg', 'position', 'make', 'km_run', 'purchase_date', 'cost']}
+          onUpload={(data) => {
+            data.forEach(row => {
+              const vehicle = vehicles.find(v => v.reg_number === row.vehicle_reg);
+              setTyres(prev => [...prev, {
+                id: 'tyr_' + generateId(),
+                serial_number: row.serial_number || '',
+                vehicle_id: vehicle?.id || '',
+                vehicle_reg: row.vehicle_reg || '',
+                position: (row.position as any) || 'FL',
+                make: (row.make as any) || 'MRF',
+                km_run: Number(row.km_run) || 0,
+                status: 'active',
+                retread_count: 0,
+                purchase_date: row.purchase_date || new Date().toISOString().split('T')[0],
+                cost: Number(row.cost) || 0,
+              }]);
+            });
+          }}
+          onClose={() => setShowBulkUpload(false)}
+        />
+      )}
 
       {/* Add Tyre Modal */}
       {showModal && (

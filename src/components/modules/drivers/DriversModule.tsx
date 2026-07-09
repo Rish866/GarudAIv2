@@ -4,11 +4,13 @@ import type { Driver } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
 import { exportDrivers } from '../../../lib/excel';
 import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle } from 'lucide-react';
+import BulkUpload from '../../ui/BulkUpload';
 
 export default function DriversModule() {
   const { drivers, addDriver } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   const filteredDrivers = drivers.filter((driver) => {
     const query = searchQuery.toLowerCase();
@@ -27,6 +29,12 @@ export default function DriversModule() {
           <h1 className="text-2xl font-bold text-slate-900">Driver Management</h1>
           <p className="text-sm text-slate-500 mt-1">{drivers.length} total drivers</p>
         </div>
+        <button
+          onClick={() => setShowBulkUpload(true)}
+          className="flex items-center gap-2 px-3 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+        >
+          Bulk Upload
+        </button>
         <button
           onClick={() => exportDrivers(drivers)}
           className="flex items-center gap-2 px-3 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
@@ -65,6 +73,38 @@ export default function DriversModule() {
         <div className="text-center py-12 text-slate-400">
           No drivers found matching your search.
         </div>
+      )}
+
+      {showBulkUpload && (
+        <BulkUpload
+          title="Bulk Upload Drivers"
+          description="Import drivers from a CSV file"
+          sampleFields={['name', 'phone', 'license_number', 'license_expiry', 'address', 'emergency_contact', 'emergency_phone', 'salary_type', 'base_salary', 'date_of_joining']}
+          onUpload={(data) => {
+            data.forEach(row => {
+              addDriver({
+                id: generateId(),
+                company_id: 'comp_garud_001',
+                name: row.name || '',
+                phone: row.phone || '',
+                license_number: row.license_number || '',
+                license_expiry: row.license_expiry || '',
+                address: row.address || '',
+                emergency_contact: row.emergency_contact || '',
+                emergency_phone: row.emergency_phone || '',
+                salary_type: (row.salary_type as any) || 'monthly',
+                base_salary: Number(row.base_salary) || 0,
+                date_of_joining: row.date_of_joining || new Date().toISOString().split('T')[0],
+                status: 'available',
+                safety_score: 85,
+                total_trips: 0,
+                total_km: 0,
+                created_at: new Date().toISOString(),
+              });
+            });
+          }}
+          onClose={() => setShowBulkUpload(false)}
+        />
       )}
 
       {/* Add Driver Modal */}

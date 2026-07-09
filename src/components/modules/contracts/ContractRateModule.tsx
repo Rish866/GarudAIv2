@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { FileText, Plus, X, AlertTriangle } from 'lucide-react';
+import BulkUpload from '../../ui/BulkUpload';
 
 interface ContractRate {
   id: string;
@@ -30,6 +31,7 @@ export default function ContractRateModule() {
   ]);
 
   const [showModal, setShowModal] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [form, setForm] = useState({
     customer_id: '',
     origin: '',
@@ -92,6 +94,12 @@ export default function ContractRateModule() {
           <h1 className="text-2xl font-bold text-slate-900">Contract Rate Master</h1>
           <p className="text-slate-500 mt-1">Fixed rates per customer per route</p>
         </div>
+        <button
+          onClick={() => setShowBulkUpload(true)}
+          className="flex items-center gap-2 px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          Bulk Upload
+        </button>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -187,6 +195,34 @@ export default function ContractRateModule() {
           </table>
         </div>
       </div>
+
+      {showBulkUpload && (
+        <BulkUpload
+          title="Bulk Upload Contracts"
+          description="Import contract rates from a CSV file"
+          sampleFields={['customer_name', 'origin', 'destination', 'vehicle_type', 'rate_type', 'rate', 'effective_from', 'effective_to']}
+          onUpload={(data) => {
+            data.forEach(row => {
+              const today = new Date().toISOString().split('T')[0];
+              const isExpired = (row.effective_to || '') < today;
+              setContracts(prev => [...prev, {
+                id: 'ctr_' + generateId(),
+                customer_id: '',
+                customer_name: row.customer_name || '',
+                origin: row.origin || '',
+                destination: row.destination || '',
+                vehicle_type: row.vehicle_type || 'truck',
+                rate_type: (row.rate_type as any) || 'per_trip',
+                rate: Number(row.rate) || 0,
+                effective_from: row.effective_from || today,
+                effective_to: row.effective_to || '',
+                status: isExpired ? 'expired' : 'active',
+              }]);
+            });
+          }}
+          onClose={() => setShowBulkUpload(false)}
+        />
+      )}
 
       {/* Add Contract Modal */}
       {showModal && (

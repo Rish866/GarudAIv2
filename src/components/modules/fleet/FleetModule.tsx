@@ -6,6 +6,7 @@ import { exportVehicles } from '../../../lib/excel';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import BulkUpload from '../../ui/BulkUpload';
 
 // Fix default leaflet icon
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -67,6 +68,7 @@ export default function FleetModule() {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [form, setForm] = useState<VehicleForm>(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   const filteredVehicles = vehicles.filter((v) => {
     const matchesSearch =
@@ -171,6 +173,12 @@ export default function FleetModule() {
           <h1 className="text-2xl font-bold text-slate-900">Fleet Management</h1>
           <p className="text-slate-500 mt-1">{vehicles.length} vehicles in fleet</p>
         </div>
+        <button
+          onClick={() => setShowBulkUpload(true)}
+          className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors font-medium"
+        >
+          Bulk Upload
+        </button>
         <button
           onClick={() => exportVehicles(vehicles)}
           className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors font-medium"
@@ -423,6 +431,38 @@ export default function FleetModule() {
         </div>
       )}
 
+
+      {showBulkUpload && (
+        <BulkUpload
+          title="Bulk Upload Vehicles"
+          description="Import vehicles from a CSV file"
+          sampleFields={['reg_number', 'vehicle_type', 'make', 'model', 'year', 'ownership_type', 'owner_name', 'capacity_tons', 'fitness_expiry', 'insurance_expiry', 'puc_expiry', 'permit_expiry']}
+          onUpload={(data) => {
+            data.forEach(row => {
+              addVehicle({
+                id: generateId(),
+                company_id: 'comp_garud_001',
+                reg_number: row.reg_number || '',
+                vehicle_type: (row.vehicle_type as any) || 'truck',
+                make: row.make || '',
+                model: row.model || '',
+                year: Number(row.year) || new Date().getFullYear(),
+                ownership_type: (row.ownership_type as any) || 'owned',
+                owner_name: row.owner_name || 'Self',
+                capacity_tons: Number(row.capacity_tons) || 0,
+                fitness_expiry: row.fitness_expiry || '',
+                insurance_expiry: row.insurance_expiry || '',
+                puc_expiry: row.puc_expiry || '',
+                permit_expiry: row.permit_expiry || '',
+                status: 'available',
+                odometer: 0,
+                created_at: new Date().toISOString(),
+              });
+            });
+          }}
+          onClose={() => setShowBulkUpload(false)}
+        />
+      )}
 
       {/* Add/Edit Vehicle Modal */}
       {showModal && (
