@@ -26,9 +26,9 @@ export default function HelpButton({ title, content, steps }: HelpButtonProps) {
           {/* Backdrop */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
 
-          {/* Help Box */}
+          {/* Help Box — Fixed center on screen */}
           <div
-            className="absolute right-0 top-12 z-50 w-80 rounded-2xl shadow-2xl border p-5 animate-in fade-in slide-in-from-top-2 duration-200"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-sm rounded-2xl shadow-2xl border p-5"
             style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}
           >
             {/* Header */}
