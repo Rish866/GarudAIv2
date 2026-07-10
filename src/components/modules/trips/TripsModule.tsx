@@ -651,11 +651,16 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
 
 
 function NewTripModal({ onClose }: { onClose: () => void }) {
-  const { customers, vehicles, drivers, addTrip } = useStore();
-  const availableVehicles = vehicles; // Show all vehicles, mark status in dropdown
-  const availableDrivers = drivers; // Show all drivers, mark status in dropdown
+  const { customers, vehicles, drivers, quotations, addTrip } = useStore();
+  const availableVehicles = vehicles;
+  const availableDrivers = drivers;
+
+  // Simulated indents (from store would be better but indents are local to IndentModule currently)
+  const pendingQuotations = quotations.filter(q => q.status === 'sent' || q.status === 'draft' || q.status === 'accepted');
 
   const [form, setForm] = useState({
+    source_type: '' as '' | 'quotation' | 'manual',
+    quotation_id: '',
     customer_id: '',
     vehicle_id: '',
     driver_id: '',
@@ -673,6 +678,25 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  // Auto-fill from quotation
+  const handleQuotationFill = (quotId: string) => {
+    const quot = quotations.find(q => q.id === quotId);
+    if (quot) {
+      const customer = customers.find(c => c.id === quot.customer_id);
+      setForm({
+        ...form,
+        source_type: 'quotation',
+        quotation_id: quotId,
+        customer_id: quot.customer_id,
+        origin: quot.origin,
+        destination: quot.destination,
+        material: quot.material,
+        weight_tons: String(quot.weight_tons),
+        freight_amount: String(quot.rate),
+      });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -731,6 +755,16 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {/* Source Selection — Link to Quotation */}
+          <div className="p-3 rounded-xl border border-dashed" style={{ borderColor: 'var(--accent)', backgroundColor: 'var(--accent-light)' }}>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>📋 Create from Quotation (auto-fills details)</label>
+            <select value={form.quotation_id} onChange={(e) => handleQuotationFill(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+              <option value="">— Manual Entry (no quotation) —</option>
+              {pendingQuotations.map(q => (
+                <option key={q.id} value={q.id}>{q.quotation_number} — {q.customer_name} ({q.origin} → {q.destination}) ₹{q.rate.toLocaleString()}</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Customer</label>
             <select name="customer_id" value={form.customer_id} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">

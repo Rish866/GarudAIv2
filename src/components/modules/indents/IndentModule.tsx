@@ -39,7 +39,7 @@ const seedIndents: Indent[] = [
 ];
 
 export default function IndentModule() {
-  const { customers, vehicles, trips, addTrip } = useStore();
+  const { customers, vehicles, trips, quotations, addTrip } = useStore();
   const [indents, setIndents] = useState<Indent[]>(seedIndents);
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -48,9 +48,29 @@ export default function IndentModule() {
 
 
   const [form, setForm] = useState({
-    customer_id: '', origin: '', destination: '', material: '', weight_tons: '',
+    quotation_id: '', customer_id: '', origin: '', destination: '', material: '', weight_tons: '',
     vehicle_type: 'truck', num_vehicles: '1', loading_date: '', rate: '', remarks: '',
   });
+
+  // When quotation is selected, auto-fill form
+  const handleQuotationSelect = (quotId: string) => {
+    const quot = quotations.find(q => q.id === quotId);
+    if (quot) {
+      setForm({
+        ...form,
+        quotation_id: quotId,
+        customer_id: quot.customer_id,
+        origin: quot.origin,
+        destination: quot.destination,
+        material: quot.material,
+        weight_tons: String(quot.weight_tons),
+        vehicle_type: quot.vehicle_type,
+        rate: String(quot.rate),
+      });
+    } else {
+      setForm({ ...form, quotation_id: '' });
+    }
+  };
 
   const filteredIndents = indents.filter(ind => {
     if (statusFilter !== 'all' && ind.status !== statusFilter) return false;
@@ -88,13 +108,13 @@ export default function IndentModule() {
       num_vehicles: parseInt(form.num_vehicles) || 1,
       loading_date: form.loading_date,
       rate: parseFloat(form.rate) || 0,
-      remarks: form.remarks,
+      remarks: form.remarks + (form.quotation_id ? ` [Ref: ${quotations.find(q => q.id === form.quotation_id)?.quotation_number || ''}]` : ''),
       status: 'pending',
       created_at: new Date().toISOString(),
     };
     setIndents([newIndent, ...indents]);
     setShowModal(false);
-    setForm({ customer_id: '', origin: '', destination: '', material: '', weight_tons: '', vehicle_type: 'truck', num_vehicles: '1', loading_date: '', rate: '', remarks: '' });
+    setForm({ quotation_id: '', customer_id: '', origin: '', destination: '', material: '', weight_tons: '', vehicle_type: 'truck', num_vehicles: '1', loading_date: '', rate: '', remarks: '' });
   };
 
   const allocateVehicle = (indentId: string, vehicleId: string) => {
@@ -247,6 +267,16 @@ export default function IndentModule() {
               <button onClick={() => setShowModal(false)} className="p-1 rounded-lg hover:opacity-70"><X className="w-5 h-5" style={{ color: 'var(--text-tertiary)' }} /></button>
             </div>
             <div className="space-y-3">
+              {/* Link to Quotation */}
+              <div className="p-3 rounded-xl border border-dashed" style={{ borderColor: 'var(--accent)', backgroundColor: 'var(--accent-light)' }}>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>📋 Auto-fill from Quotation (optional)</label>
+                <select value={form.quotation_id} onChange={(e) => handleQuotationSelect(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                  <option value="">— Select Quotation to auto-fill —</option>
+                  {quotations.filter(q => q.status === 'sent' || q.status === 'draft').map(q => (
+                    <option key={q.id} value={q.id}>{q.quotation_number} — {q.customer_name} ({q.origin} → {q.destination}) ₹{q.rate.toLocaleString()}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Customer *</label>
                 <select value={form.customer_id} onChange={(e) => setForm({...form, customer_id: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
