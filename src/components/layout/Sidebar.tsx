@@ -25,6 +25,7 @@ import {
   Target,
   Camera,
   AlertTriangle,
+  Bell,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { canAccessModule } from '../../lib/rbac';
@@ -34,9 +35,87 @@ interface NavItem {
   id: ModuleName;
   label: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
-  badge?: number;
-  separator?: boolean;
 }
+
+interface NavSection {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    icon: LayoutDashboard,
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'notifications', label: 'Notifications', icon: Bell },
+    ],
+  },
+  {
+    id: 'operations',
+    label: 'Operations',
+    icon: Route,
+    items: [
+      { id: 'enquiries', label: 'Enquiries', icon: MessageSquare },
+      { id: 'trips', label: 'Trips', icon: Route },
+      { id: 'fleet', label: 'Fleet', icon: Truck },
+      { id: 'drivers', label: 'Drivers', icon: Users },
+      { id: 'customers', label: 'Customers', icon: Building2 },
+      { id: 'contracts', label: 'Contracts', icon: FileText },
+      { id: 'market', label: 'Market Hire', icon: ShoppingCart },
+    ],
+  },
+  {
+    id: 'finance',
+    label: 'Finance',
+    icon: Receipt,
+    items: [
+      { id: 'billing', label: 'Billing', icon: Receipt },
+      { id: 'accounts', label: 'Cash & Bank', icon: DollarSign },
+      { id: 'purchases', label: 'Purchases', icon: ShoppingCart },
+      { id: 'sales', label: 'Sales', icon: Receipt },
+      { id: 'payroll', label: 'Payroll', icon: DollarSign },
+      { id: 'inventory', label: 'Inventory', icon: Package },
+    ],
+  },
+  {
+    id: 'fleet_ops',
+    label: 'Fleet Ops',
+    icon: Wrench,
+    items: [
+      { id: 'fuel', label: 'Fuel', icon: Fuel },
+      { id: 'tyres', label: 'Tyres', icon: Circle },
+      { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+      { id: 'workorders', label: 'Work Orders', icon: Wrench },
+      { id: 'challans', label: 'Challans', icon: FileText },
+      { id: 'documents', label: 'Documents', icon: FileText },
+    ],
+  },
+  {
+    id: 'tracking',
+    label: 'Tracking & AI',
+    icon: Satellite,
+    items: [
+      { id: 'gps', label: 'GPS Settings', icon: Satellite },
+      { id: 'geofencing', label: 'Geofencing', icon: MapPin },
+      { id: 'sla', label: 'SLA Monitor', icon: Target },
+      { id: 'dashcam', label: 'AI Dashcam', icon: Camera },
+      { id: 'fueltheft', label: 'Fuel Alerts', icon: AlertTriangle },
+    ],
+  },
+  {
+    id: 'reports_settings',
+    label: 'Reports',
+    icon: BarChart3,
+    items: [
+      { id: 'reports', label: 'Reports', icon: BarChart3 },
+      { id: 'settings', label: 'Settings', icon: Settings },
+    ],
+  },
+];
 
 export default function Sidebar() {
   const {
@@ -46,7 +125,6 @@ export default function Sidebar() {
     user,
     branches,
     activeBranch,
-    alerts,
     setActiveModule,
     toggleSidebar,
     toggleTheme,
@@ -54,52 +132,15 @@ export default function Sidebar() {
   } = useStore();
 
   const [branchOpen, setBranchOpen] = useState(false);
-
-  const unreadAlerts = alerts.filter((a) => !a.is_read).length;
-
-  const navItems: NavItem[] = [
-    // Overview
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    
-    // Masters (Setup first)
-    { id: 'fleet', label: 'Fleet', icon: Truck, separator: true },
-    { id: 'drivers', label: 'Drivers', icon: Users },
-    { id: 'customers', label: 'Customers', icon: Building2 },
-    { id: 'contracts', label: 'Contracts', icon: FileText },
-    
-    // Operations (Daily workflow)
-    { id: 'enquiries', label: 'Enquiries', icon: MessageSquare, separator: true },
-    { id: 'trips', label: 'Trips', icon: Route },
-    { id: 'market', label: 'Market Hire', icon: ShoppingCart },
-    
-    // Finance
-    { id: 'billing', label: 'Billing', icon: Receipt, separator: true },
-    { id: 'accounts', label: 'Cash & Bank', icon: DollarSign },
-    { id: 'purchases', label: 'Purchases', icon: ShoppingCart },
-    { id: 'sales', label: 'Sales', icon: Receipt },
-    { id: 'inventory', label: 'Inventory', icon: Package },
-    { id: 'payroll', label: 'Payroll', icon: DollarSign },
-    
-    // Fleet Operations
-    { id: 'fuel', label: 'Fuel', icon: Fuel, separator: true },
-    { id: 'tyres', label: 'Tyres', icon: Circle },
-    { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-    { id: 'workorders', label: 'Work Orders', icon: Wrench },
-    { id: 'challans', label: 'Challans', icon: FileText },
-    { id: 'documents', label: 'Documents', icon: FileText },
-    
-    // Intelligence
-    { id: 'gps', label: 'GPS Tracking', icon: Satellite, separator: true },
-    { id: 'geofencing', label: 'Geofencing', icon: MapPin },
-    { id: 'sla', label: 'SLA Monitor', icon: Target },
-    { id: 'dashcam', label: 'AI Dashcam', icon: Camera },
-    { id: 'fueltheft', label: 'Fuel Alerts', icon: AlertTriangle },
-    { id: 'reports', label: 'Reports', icon: BarChart3 },
-    { id: 'settings', label: 'Settings', icon: Settings, badge: unreadAlerts > 0 ? unreadAlerts : undefined },
-  ];
+  const [expandedSections, setExpandedSections] = useState<string[]>(['overview', 'operations']);
 
   const userRole = user.role;
-  const filteredNavItems = navItems.filter(item => canAccessModule(userRole, item.id));
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev =>
+      prev.includes(sectionId) ? prev.filter(s => s !== sectionId) : [...prev, sectionId]
+    );
+  };
 
   const handleNavClick = (module: ModuleName) => {
     setActiveModule(module);
@@ -223,53 +264,103 @@ export default function Sidebar() {
         {/* Separator */}
         <div className="mx-3 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {filteredNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeModule === item.id;
+        {/* Navigation - Collapsible Sections */}
+        <nav className="flex-1 overflow-y-auto py-3 px-2">
+          {navSections.map((section) => {
+            const SectionIcon = section.icon;
+            const isExpanded = expandedSections.includes(section.id);
+            const sectionItems = section.items.filter(item => canAccessModule(userRole, item.id));
+            if (sectionItems.length === 0) return null;
+            const hasActiveItem = sectionItems.some(item => item.id === activeModule);
+
             return (
-              <React.Fragment key={item.id}>
-                {item.separator && (
-                  <div className="mx-3 my-2 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
-                )}
+              <div key={section.id} className="mb-1">
                 <button
-                  onClick={() => handleNavClick(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative
-                    ${isActive ? 'border-l-[3px]' : 'border-l-[3px] border-transparent'}
-                  `}
-                  style={{
-                    backgroundColor: isActive ? 'var(--accent-light)' : 'transparent',
-                    color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                    borderLeftColor: isActive ? 'var(--accent)' : 'transparent',
-                  }}
-                  title={sidebarCollapsed ? item.label : undefined}
+                  onClick={() => toggleSection(section.id)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors"
+                  style={{ color: hasActiveItem ? 'var(--accent)' : 'var(--text-tertiary)' }}
                 >
-                  <div className="transition-transform duration-200 group-hover:scale-110 flex-shrink-0">
-                    <Icon size={20} />
+                  <div className="flex items-center gap-2">
+                    <SectionIcon size={14} />
+                    {!sidebarCollapsed && <span>{section.label}</span>}
                   </div>
                   {!sidebarCollapsed && (
-                    <span className="truncate animate-fade-in">{item.label}</span>
-                  )}
-                  {!sidebarCollapsed && item.badge && (
-                    <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                      {item.badge}
-                    </span>
-                  )}
-                  {/* Tooltip for collapsed mode */}
-                  {sidebarCollapsed && (
-                    <div
-                      className="absolute left-full ml-3 px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50"
-                      style={{
-                        backgroundColor: 'var(--bg-tertiary)',
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      {item.label}
-                    </div>
+                    <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                   )}
                 </button>
-              </React.Fragment>
+                {isExpanded && !sidebarCollapsed && (
+                  <div className="mt-0.5 space-y-0.5 pl-2">
+                    {sectionItems.map(item => {
+                      const Icon = item.icon;
+                      const isActive = activeModule === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => handleNavClick(item.id)}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 group relative
+                            ${isActive ? 'border-l-[3px]' : 'border-l-[3px] border-transparent'}
+                          `}
+                          style={{
+                            backgroundColor: isActive ? 'var(--accent-light)' : 'transparent',
+                            color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                            borderLeftColor: isActive ? 'var(--accent)' : 'transparent',
+                          }}
+                          title={sidebarCollapsed ? item.label : undefined}
+                        >
+                          <div className="transition-transform duration-200 group-hover:scale-110 flex-shrink-0">
+                            <Icon size={18} />
+                          </div>
+                          <span className="truncate">{item.label}</span>
+                          {/* Tooltip for collapsed mode */}
+                          {sidebarCollapsed && (
+                            <div
+                              className="absolute left-full ml-3 px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50"
+                              style={{
+                                backgroundColor: 'var(--bg-tertiary)',
+                                color: 'var(--text-primary)',
+                              }}
+                            >
+                              {item.label}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* Collapsed mode: show only section icon */}
+                {sidebarCollapsed && (
+                  <div className="space-y-0.5">
+                    {sectionItems.map(item => {
+                      const Icon = item.icon;
+                      const isActive = activeModule === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => handleNavClick(item.id)}
+                          className="w-full flex items-center justify-center py-2 rounded-xl transition-all duration-200 group relative"
+                          style={{
+                            backgroundColor: isActive ? 'var(--accent-light)' : 'transparent',
+                            color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                          }}
+                          title={item.label}
+                        >
+                          <Icon size={18} />
+                          <div
+                            className="absolute left-full ml-3 px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50"
+                            style={{
+                              backgroundColor: 'var(--bg-tertiary)',
+                              color: 'var(--text-primary)',
+                            }}
+                          >
+                            {item.label}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>

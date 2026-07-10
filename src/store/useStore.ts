@@ -245,7 +245,7 @@ export const useStore = create<StoreState>()(
   enquiries: seedEnquiries,
   activeModule: 'dashboard',
   sidebarCollapsed: false,
-  isLoggedIn: true,
+  isLoggedIn: false,
   showModal: null,
   theme: 'light',
   notifications: seedNotifications,

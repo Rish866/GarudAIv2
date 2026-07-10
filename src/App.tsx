@@ -338,7 +338,7 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
             }}
           >
             <p className="text-xs font-semibold mb-1" style={{ color: 'var(--accent)' }}>
-              Demo Credentials
+              Demo Mode — All credentials accepted
             </p>
             <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
               Email: <span className="font-mono">rajesh@garudtransport.in</span>

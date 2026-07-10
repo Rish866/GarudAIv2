@@ -5,6 +5,7 @@ import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
 import { exportTrips } from '../../../lib/excel';
+import { estimateDistance } from '../../../lib/distance';
 import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download, Eye, Upload, Calendar, Phone, CreditCard, CheckCircle, Circle, Clock } from 'lucide-react';
 import DriverAdvanceTracker from './DriverAdvanceTracker';
 import SendNotificationModal from '../../ui/SendNotificationModal';
@@ -769,6 +770,18 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Distance (km)</label>
               <input type="number" name="distance_km" value={form.distance_km} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              {form.origin && form.destination && estimateDistance(form.origin, form.destination) > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const km = estimateDistance(form.origin, form.destination);
+                    if (km > 0) setForm({ ...form, distance_km: String(km) });
+                  }}
+                  className="text-xs text-blue-600 hover:underline mt-1"
+                >
+                  Auto-calculate: ~{estimateDistance(form.origin, form.destination)} km
+                </button>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
