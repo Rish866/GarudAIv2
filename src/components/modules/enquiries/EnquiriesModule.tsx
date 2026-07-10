@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { generateQuotationPDF } from '../../../lib/pdf';
+import { estimateDistance } from '../../../lib/distance';
 import { ArrowRight, FileText, Send, Truck, Package, MapPin, Calendar, Weight, IndianRupee, Plus, X, Edit } from 'lucide-react';
 import type { Enquiry, Quotation, VehicleType } from '../../../types';
 
@@ -353,6 +354,14 @@ function AddEnquiryModal({ onClose }: { onClose: () => void }) {
               <input type="text" name="destination" value={form.destination} onChange={handleChange} required placeholder="e.g., Mumbai, Maharashtra" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
           </div>
+          {/* Auto KM estimation */}
+          {form.origin && form.destination && estimateDistance(form.origin, form.destination) > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <span className="text-blue-600 text-sm font-medium">📍 Estimated Distance:</span>
+              <span className="text-blue-800 font-bold text-sm">{estimateDistance(form.origin, form.destination)} km</span>
+              <span className="text-blue-500 text-xs">(auto-calculated)</span>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>

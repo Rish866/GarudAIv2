@@ -52,6 +52,40 @@ const ROUTE_DISTANCES: Record<string, number> = {
   'delhi-bhopal': 780,
   'indore-mumbai': 590,
   'mumbai-indore': 590,
+  'nashik-mumbai': 170,
+  'mumbai-nashik': 170,
+  'nashik-pune': 210,
+  'pune-nashik': 210,
+  'nashik-delhi': 1250,
+  'delhi-nashik': 1250,
+  'nashik-ahmedabad': 520,
+  'ahmedabad-nashik': 520,
+  'nashik-hyderabad': 580,
+  'hyderabad-nashik': 580,
+  'aurangabad-mumbai': 340,
+  'mumbai-aurangabad': 340,
+  'aurangabad-pune': 240,
+  'pune-aurangabad': 240,
+  'aurangabad-hyderabad': 500,
+  'hyderabad-aurangabad': 500,
+  'pune-chennai': 1170,
+  'chennai-pune': 1170,
+  'pune-kolkata': 1860,
+  'kolkata-pune': 1860,
+  'pune-goa': 450,
+  'goa-pune': 450,
+  'mumbai-kolkata': 2000,
+  'kolkata-mumbai': 2000,
+  'mumbai-lucknow': 1370,
+  'lucknow-mumbai': 1370,
+  'bangalore-hyderabad': 570,
+  'hyderabad-bangalore': 570,
+  'chennai-hyderabad': 630,
+  'hyderabad-chennai': 630,
+  'delhi-bangalore': 2150,
+  'bangalore-delhi': 2150,
+  'jamshedpur-chennai': 1890,
+  'chennai-jamshedpur': 1890,
 };
 
 /**
@@ -69,9 +103,28 @@ function normalizeCity(input: string): string {
  * Extract city name from full address
  * "Pune, Maharashtra" -> "pune"
  * "Mumbai JNPT Port" -> "mumbai"
+ * "talegaon nashik" -> "nashik" (finds known city in the text)
  */
 function extractCity(address: string): string {
-  const city = address.split(',')[0].split(' ')[0].toLowerCase().trim();
+  const lowerAddr = address.toLowerCase().trim();
+  
+  // Known cities to search for in the full text
+  const knownCities = [
+    'mumbai', 'pune', 'delhi', 'bangalore', 'chennai', 'hyderabad', 'ahmedabad',
+    'kolkata', 'jaipur', 'lucknow', 'nagpur', 'goa', 'nashik', 'aurangabad',
+    'indore', 'bhopal', 'chandigarh', 'jamnagar', 'ankleshwar', 'manesar',
+    'hubli', 'jamshedpur', 'surat', 'vadodara', 'rajkot', 'coimbatore',
+    'kochi', 'vizag', 'visakhapatnam', 'madurai', 'mysore', 'mangalore',
+    'thiruvananthapuram', 'patna', 'ranchi', 'raipur', 'bhubaneswar',
+  ];
+
+  // Check if any known city appears anywhere in the text
+  for (const city of knownCities) {
+    if (lowerAddr.includes(city)) return city;
+  }
+
+  // Fallback: take first word and check aliases
+  const city = lowerAddr.split(',')[0].split(' ')[0].trim();
   // Common aliases
   const aliases: Record<string, string> = {
     'bengaluru': 'bangalore',
@@ -89,6 +142,25 @@ function extractCity(address: string): string {
     'navi': 'mumbai',
     'thane': 'mumbai',
     'pimpri': 'pune',
+    'taloja': 'mumbai',
+    'panvel': 'mumbai',
+    'bhiwandi': 'mumbai',
+    'vashi': 'mumbai',
+    'talegaon': 'pune',
+    'chakan': 'pune',
+    'ranjangaon': 'pune',
+    'hinjewadi': 'pune',
+    'shirwal': 'pune',
+    'satara': 'pune',
+    'kolhapur': 'pune',
+    'sangli': 'pune',
+    'solapur': 'pune',
+    'aurangabad': 'aurangabad',
+    'nashik': 'nashik',
+    'nasik': 'nashik',
+    'rajashree': 'hubli',
+    'hosur': 'bangalore',
+    'whitefield': 'bangalore',
   };
   return aliases[city] || city;
 }
