@@ -8,17 +8,19 @@ const ROLE_PERMISSIONS: Record<UserRole, ModuleName[]> = {
     'dashboard', 'fleet', 'trips', 'drivers', 'customers', 'billing',
     'fuel', 'maintenance', 'reports', 'settings', 'notifications',
     'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps',
-    'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders'
+    'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders',
+    'ewaybill', 'audittrail', 'portal'
   ],
   admin: [
     'dashboard', 'fleet', 'trips', 'drivers', 'customers', 'billing',
     'fuel', 'maintenance', 'reports', 'settings', 'notifications',
     'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps',
-    'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders'
+    'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders',
+    'ewaybill', 'audittrail', 'portal'
   ],
   operations: [
     'dashboard', 'fleet', 'trips', 'drivers', 'fuel', 'maintenance',
-    'notifications', 'enquiries', 'tyres', 'documents', 'gps'
+    'notifications', 'enquiries', 'tyres', 'documents', 'gps', 'ewaybill'
   ],
   fleet_manager: [
     'dashboard', 'fleet', 'trips', 'drivers', 'fuel', 'maintenance',
@@ -26,7 +28,7 @@ const ROLE_PERMISSIONS: Record<UserRole, ModuleName[]> = {
   ],
   accounts: [
     'dashboard', 'billing', 'reports', 'customers', 'notifications',
-    'payroll', 'contracts', 'market', 'accounts', 'purchases', 'sales', 'inventory'
+    'payroll', 'contracts', 'market', 'accounts', 'purchases', 'sales', 'inventory', 'ewaybill', 'portal'
   ],
   driver: [
     'dashboard', 'trips', 'notifications'

@@ -38,6 +38,9 @@ const DashcamModule = lazy(() => import('./components/modules/dashcam/DashcamMod
 const FuelTheftModule = lazy(() => import('./components/modules/fueltheft/FuelTheftModule'));
 const ChallanModule = lazy(() => import('./components/modules/challans/ChallanModule'));
 const WorkOrderModule = lazy(() => import('./components/modules/workorders/WorkOrderModule'));
+const EWayBillModule = lazy(() => import('./components/modules/ewaybill/EWayBillModule'));
+const AuditTrailModule = lazy(() => import('./components/modules/audittrail/AuditTrailModule'));
+const CustomerPortalModule = lazy(() => import('./components/modules/portal/CustomerPortalModule'));
 
 const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<React.ComponentType>>> = {
   dashboard: DashboardModule,
@@ -68,6 +71,9 @@ const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<Rea
   fueltheft: FuelTheftModule,
   challans: ChallanModule,
   workorders: WorkOrderModule,
+  ewaybill: EWayBillModule,
+  audittrail: AuditTrailModule,
+  portal: CustomerPortalModule,
 };
 
 function LoadingFallback() {

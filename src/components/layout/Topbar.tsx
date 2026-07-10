@@ -48,6 +48,9 @@ const moduleLabels: Record<ModuleName, string> = {
   fueltheft: 'Fuel Alerts',
   challans: 'Challans & Fines',
   workorders: 'Work Orders',
+  ewaybill: 'E-Way Bill',
+  audittrail: 'Audit Trail',
+  portal: 'Customer Portal',
 };
 
 const notificationIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {

@@ -26,6 +26,8 @@ import {
   Camera,
   AlertTriangle,
   Bell,
+  Shield,
+  Globe,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { canAccessModule } from '../../lib/rbac';
@@ -92,6 +94,7 @@ const navSections: NavSection[] = [
       { id: 'workorders', label: 'Work Orders', icon: Wrench },
       { id: 'challans', label: 'Challans', icon: FileText },
       { id: 'documents', label: 'Documents', icon: FileText },
+      { id: 'ewaybill', label: 'E-Way Bill', icon: FileText },
     ],
   },
   {
@@ -112,6 +115,8 @@ const navSections: NavSection[] = [
     icon: BarChart3,
     items: [
       { id: 'reports', label: 'Reports', icon: BarChart3 },
+      { id: 'audittrail', label: 'Audit Trail', icon: Shield },
+      { id: 'portal', label: 'Customer Portal', icon: Globe },
       { id: 'settings', label: 'Settings', icon: Settings },
     ],
   },
