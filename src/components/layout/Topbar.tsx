@@ -69,20 +69,34 @@ export default function Topbar() {
     notifications,
     user,
     theme,
+    vehicles,
+    trips,
+    customers,
+    drivers,
     toggleSidebar,
     toggleTheme,
     markNotificationRead,
     markAllNotificationsRead,
+    setActiveModule,
     logout,
   } = useStore();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
   const recentNotifications = notifications.slice(0, 5);
+
+  // Search logic
+  const searchResults = searchQuery.length >= 2 ? [
+    ...vehicles.filter(v => v.reg_number.toLowerCase().includes(searchQuery.toLowerCase()) || v.driver_name?.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3).map(v => ({ type: 'Vehicle', title: v.reg_number, subtitle: `${v.make} ${v.model} • ${v.driver_name || 'No driver'}`, module: 'fleet' as ModuleName })),
+    ...trips.filter(t => t.trip_number.toLowerCase().includes(searchQuery.toLowerCase()) || t.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) || t.lr_number.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3).map(t => ({ type: 'Trip', title: t.trip_number, subtitle: `${t.origin} → ${t.destination} • ${t.customer_name}`, module: 'trips' as ModuleName })),
+    ...customers.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.contact_person.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3).map(c => ({ type: 'Customer', title: c.name, subtitle: `${c.contact_person} • ${c.phone}`, module: 'customers' as ModuleName })),
+    ...drivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.phone.includes(searchQuery)).slice(0, 3).map(d => ({ type: 'Driver', title: d.name, subtitle: `${d.phone} • ${d.assigned_vehicle_reg || 'Unassigned'}`, module: 'drivers' as ModuleName })),
+  ].slice(0, 8) : [];
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -120,7 +134,7 @@ export default function Topbar() {
       </div>
 
       {/* Center - Search */}
-      <div className="hidden md:flex flex-1 max-w-md mx-8">
+      <div className="hidden md:flex flex-1 max-w-md mx-8 relative">
         <div
           className="w-full flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors"
           style={{
@@ -132,20 +146,59 @@ export default function Topbar() {
           <input
             type="text"
             placeholder="Search vehicles, trips, customers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-tertiary)]"
             style={{ color: 'var(--text-primary)' }}
           />
-          <kbd
-            className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border"
-            style={{
-              color: 'var(--text-tertiary)',
-              borderColor: 'var(--border-color)',
-              backgroundColor: 'var(--bg-tertiary)',
-            }}
-          >
-            <span>&#8984;</span>K
-          </kbd>
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="text-xs px-1.5 py-0.5 rounded hover:bg-[var(--bg-tertiary)]" style={{ color: 'var(--text-tertiary)' }}>✕</button>
+          )}
+          {!searchQuery && (
+            <kbd
+              className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border"
+              style={{
+                color: 'var(--text-tertiary)',
+                borderColor: 'var(--border-color)',
+                backgroundColor: 'var(--bg-tertiary)',
+              }}
+            >
+              <span>&#8984;</span>K
+            </kbd>
+          )}
         </div>
+
+        {/* Search Results Dropdown */}
+        {searchQuery.length >= 2 && searchResults.length > 0 && (
+          <div
+            className="absolute top-full left-0 right-0 mt-2 rounded-xl border shadow-xl overflow-hidden z-50 max-h-80 overflow-y-auto animate-slide-in"
+            style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}
+          >
+            {searchResults.map((result, idx) => (
+              <button
+                key={idx}
+                onClick={() => { setActiveModule(result.module); setSearchQuery(''); }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--bg-secondary)]"
+              >
+                <span className="text-xs px-2 py-0.5 rounded font-medium" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
+                  {result.type}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{result.title}</p>
+                  <p className="text-xs truncate" style={{ color: 'var(--text-tertiary)' }}>{result.subtitle}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        {searchQuery.length >= 2 && searchResults.length === 0 && (
+          <div
+            className="absolute top-full left-0 right-0 mt-2 rounded-xl border shadow-xl p-4 text-center animate-slide-in"
+            style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}
+          >
+            <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No results found</p>
+          </div>
+        )}
       </div>
 
       {/* Right */}

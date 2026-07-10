@@ -219,10 +219,10 @@ export default function DashboardModule() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
             {greeting}, {user.name.split(' ')[0]} 👋
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
             Here&apos;s what&apos;s happening with your fleet today
           </p>
         </div>
