@@ -16,11 +16,11 @@ import {
   ChevronDown,
   X,
   Circle,
-
   FileText,
   Satellite,
   DollarSign,
   ShoppingCart,
+  Package,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { canAccessModule } from '../../lib/rbac';
@@ -70,6 +70,10 @@ export default function Sidebar() {
     
     // Finance
     { id: 'billing', label: 'Billing', icon: Receipt, separator: true },
+    { id: 'accounts', label: 'Cash & Bank', icon: DollarSign },
+    { id: 'purchases', label: 'Purchases', icon: ShoppingCart },
+    { id: 'sales', label: 'Sales', icon: Receipt },
+    { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'payroll', label: 'Payroll', icon: DollarSign },
     
     // Fleet Operations

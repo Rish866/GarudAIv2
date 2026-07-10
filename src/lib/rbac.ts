@@ -7,12 +7,14 @@ const ROLE_PERMISSIONS: Record<UserRole, ModuleName[]> = {
   super_admin: [
     'dashboard', 'fleet', 'trips', 'drivers', 'customers', 'billing',
     'fuel', 'maintenance', 'reports', 'settings', 'notifications',
-    'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps'
+    'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps',
+    'accounts', 'purchases', 'sales', 'inventory'
   ],
   admin: [
     'dashboard', 'fleet', 'trips', 'drivers', 'customers', 'billing',
     'fuel', 'maintenance', 'reports', 'settings', 'notifications',
-    'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps'
+    'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps',
+    'accounts', 'purchases', 'sales', 'inventory'
   ],
   operations: [
     'dashboard', 'fleet', 'trips', 'drivers', 'fuel', 'maintenance',
@@ -24,7 +26,7 @@ const ROLE_PERMISSIONS: Record<UserRole, ModuleName[]> = {
   ],
   accounts: [
     'dashboard', 'billing', 'reports', 'customers', 'notifications',
-    'payroll', 'contracts', 'market'
+    'payroll', 'contracts', 'market', 'accounts', 'purchases', 'sales', 'inventory'
   ],
   driver: [
     'dashboard', 'trips', 'notifications'

@@ -38,6 +38,10 @@ const moduleLabels: Record<ModuleName, string> = {
   market: 'Market / Hire Vehicles',
   documents: 'Document Vault',
   gps: 'GPS Integration',
+  accounts: 'Cash & Bank',
+  purchases: 'Purchases',
+  sales: 'Sales',
+  inventory: 'Inventory',
 };
 
 const notificationIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
