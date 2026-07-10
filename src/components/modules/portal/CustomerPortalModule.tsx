@@ -302,7 +302,7 @@ export default function CustomerPortalModule() {
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Vehicle Type</label>
               <select className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-                <option>Trailer</option><option>Container</option><option>Truck</option><option>Tanker</option>
+                <option>Truck</option><option>Trailer</option><option>Container</option><option>Tanker</option><option>Tipper</option><option>Reefer</option><option>LCV</option><option>Open Body</option><option>Flatbed</option><option>Bulker</option><option>Car Carrier</option><option>Half Body</option><option>Full Body</option><option>Mini Truck</option>
               </select>
             </div>
           </div>

@@ -1,7 +1,7 @@
 // Types for Transport ERP
 
 export type UserRole = 'super_admin' | 'admin' | 'operations' | 'fleet_manager' | 'accounts' | 'driver';
-export type VehicleType = 'trailer' | 'container' | 'truck' | 'tanker' | 'tipper' | 'reefer' | 'lcv';
+export type VehicleType = 'trailer' | 'container' | 'truck' | 'tanker' | 'tipper' | 'reefer' | 'lcv' | 'open_body' | 'flatbed' | 'bulker' | 'car_carrier' | 'half_body' | 'full_body' | 'jcb_crane' | 'mini_truck';
 export type VehicleStatus = 'available' | 'on_trip' | 'maintenance' | 'breakdown' | 'inactive';
 export type OwnershipType = 'owned' | 'attached' | 'market';
 export type DriverStatus = 'available' | 'on_trip' | 'on_leave' | 'inactive';

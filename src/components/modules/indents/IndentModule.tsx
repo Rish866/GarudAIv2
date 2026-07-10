@@ -342,7 +342,7 @@ export default function IndentModule() {
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Vehicle Type</label>
                   <select value={form.vehicle_type} onChange={(e) => setForm({...form, vehicle_type: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-                    <option value="truck">Truck</option><option value="trailer">Trailer</option><option value="container">Container</option><option value="tanker">Tanker</option>
+                    <option value="truck">Truck</option><option value="trailer">Trailer</option><option value="container">Container</option><option value="tanker">Tanker</option><option value="tipper">Tipper</option><option value="reefer">Reefer (Cold Chain)</option><option value="lcv">LCV (Light Commercial)</option><option value="open_body">Open Body</option><option value="flatbed">Flatbed</option><option value="bulker">Bulker (Cement)</option><option value="car_carrier">Car Carrier</option><option value="half_body">Half Body</option><option value="full_body">Full Body (Closed)</option><option value="jcb_crane">JCB / Crane / ODC</option><option value="mini_truck">Mini Truck</option>
                   </select>
                 </div>
                 <div>
