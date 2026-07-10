@@ -84,6 +84,8 @@ export default function Sidebar() {
     { id: 'fuel', label: 'Fuel', icon: Fuel, separator: true },
     { id: 'tyres', label: 'Tyres', icon: Circle },
     { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+    { id: 'workorders', label: 'Work Orders', icon: Wrench },
+    { id: 'challans', label: 'Challans', icon: FileText },
     { id: 'documents', label: 'Documents', icon: FileText },
     
     // Intelligence

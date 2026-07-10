@@ -8,13 +8,13 @@ const ROLE_PERMISSIONS: Record<UserRole, ModuleName[]> = {
     'dashboard', 'fleet', 'trips', 'drivers', 'customers', 'billing',
     'fuel', 'maintenance', 'reports', 'settings', 'notifications',
     'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps',
-    'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft'
+    'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders'
   ],
   admin: [
     'dashboard', 'fleet', 'trips', 'drivers', 'customers', 'billing',
     'fuel', 'maintenance', 'reports', 'settings', 'notifications',
     'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps',
-    'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft'
+    'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders'
   ],
   operations: [
     'dashboard', 'fleet', 'trips', 'drivers', 'fuel', 'maintenance',
