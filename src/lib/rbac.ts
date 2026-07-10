@@ -9,18 +9,20 @@ const ROLE_PERMISSIONS: Record<UserRole, ModuleName[]> = {
     'fuel', 'maintenance', 'reports', 'settings', 'notifications',
     'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps',
     'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders',
-    'ewaybill', 'audittrail', 'portal', 'pnl', 'gstreports', 'vendors', 'routes', 'indents'
+    'ewaybill', 'audittrail', 'portal', 'pnl', 'gstreports', 'vendors', 'routes', 'indents',
+    'attendance', 'creditblock', 'transfers'
   ],
   admin: [
     'dashboard', 'fleet', 'trips', 'drivers', 'customers', 'billing',
     'fuel', 'maintenance', 'reports', 'settings', 'notifications',
     'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps',
     'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders',
-    'ewaybill', 'audittrail', 'portal', 'pnl', 'gstreports', 'vendors', 'routes', 'indents'
+    'ewaybill', 'audittrail', 'portal', 'pnl', 'gstreports', 'vendors', 'routes', 'indents',
+    'attendance', 'creditblock', 'transfers'
   ],
   operations: [
     'dashboard', 'fleet', 'trips', 'drivers', 'fuel', 'maintenance',
-    'notifications', 'enquiries', 'tyres', 'documents', 'gps', 'ewaybill', 'indents', 'routes', 'vendors'
+    'notifications', 'enquiries', 'tyres', 'documents', 'gps', 'ewaybill', 'indents', 'routes', 'vendors', 'transfers', 'attendance'
   ],
   fleet_manager: [
     'dashboard', 'fleet', 'trips', 'drivers', 'fuel', 'maintenance',
@@ -28,7 +30,7 @@ const ROLE_PERMISSIONS: Record<UserRole, ModuleName[]> = {
   ],
   accounts: [
     'dashboard', 'billing', 'reports', 'customers', 'notifications',
-    'payroll', 'contracts', 'market', 'accounts', 'purchases', 'sales', 'inventory', 'ewaybill', 'portal', 'pnl', 'gstreports', 'vendors'
+    'payroll', 'contracts', 'market', 'accounts', 'purchases', 'sales', 'inventory', 'ewaybill', 'portal', 'pnl', 'gstreports', 'vendors', 'creditblock', 'attendance'
   ],
   driver: [
     'dashboard', 'trips', 'notifications'

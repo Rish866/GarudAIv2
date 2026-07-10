@@ -71,6 +71,7 @@ const navSections: NavSection[] = [
       { id: 'contracts', label: 'Contracts', icon: FileText },
       { id: 'market', label: 'Market Hire', icon: ShoppingCart },
       { id: 'routes', label: 'Route Master', icon: MapPin },
+      { id: 'transfers', label: 'Branch Transfers', icon: Package },
     ],
   },
   {
@@ -84,7 +85,9 @@ const navSections: NavSection[] = [
       { id: 'sales', label: 'Sales', icon: Receipt },
       { id: 'pnl', label: 'P&L / Balance Sheet', icon: DollarSign },
       { id: 'gstreports', label: 'GST Reports', icon: FileText },
+      { id: 'creditblock', label: 'Credit Control', icon: DollarSign },
       { id: 'payroll', label: 'Payroll', icon: DollarSign },
+      { id: 'attendance', label: 'Attendance & Leave', icon: DollarSign },
       { id: 'inventory', label: 'Inventory', icon: Package },
     ],
   },

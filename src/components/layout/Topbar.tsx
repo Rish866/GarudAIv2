@@ -56,6 +56,9 @@ const moduleLabels: Record<ModuleName, string> = {
   vendors: 'Vendors',
   routes: 'Routes',
   indents: 'Indents / Orders',
+  attendance: 'Attendance & Leave',
+  creditblock: 'Credit Control',
+  transfers: 'Branch Transfers',
 };
 
 const notificationIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {

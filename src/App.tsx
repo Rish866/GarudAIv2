@@ -46,6 +46,9 @@ const GSTReportsModule = lazy(() => import('./components/modules/gst/GSTReportsM
 const VendorModule = lazy(() => import('./components/modules/vendors/VendorModule'));
 const RouteModule = lazy(() => import('./components/modules/routes/RouteModule'));
 const IndentModule = lazy(() => import('./components/modules/indents/IndentModule'));
+const AttendanceModule = lazy(() => import('./components/modules/attendance/AttendanceModule'));
+const CreditBlockModule = lazy(() => import('./components/modules/creditblock/CreditBlockModule'));
+const TransferModule = lazy(() => import('./components/modules/transfers/TransferModule'));
 
 const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<React.ComponentType>>> = {
   dashboard: DashboardModule,
@@ -84,6 +87,9 @@ const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<Rea
   vendors: VendorModule,
   routes: RouteModule,
   indents: IndentModule,
+  attendance: AttendanceModule,
+  creditblock: CreditBlockModule,
+  transfers: TransferModule,
 };
 
 function LoadingFallback() {
