@@ -153,7 +153,7 @@ export default function Sidebar() {
               className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors hover:bg-[var(--bg-tertiary)]"
               style={{ color: 'var(--text-secondary)' }}
             >
-              <span className="truncate">{branches.find(b => b.id === activeBranch)?.name || 'Select Branch'}</span>
+              <span className="truncate">{activeBranch === 'all' ? 'All Branches' : branches.find(b => b.id === activeBranch)?.name || 'Select Branch'}</span>
               <ChevronDown
                 size={14}
                 className={`transition-transform ${branchOpen ? 'rotate-180' : ''}`}
@@ -167,6 +167,22 @@ export default function Sidebar() {
                   borderColor: 'var(--border-color)',
                 }}
               >
+                <button
+                  key="all"
+                  onClick={() => {
+                    setActiveBranch('all');
+                    setBranchOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-xs transition-colors first:rounded-t-lg
+                    ${activeBranch === 'all' ? 'font-semibold' : ''}
+                  `}
+                  style={{
+                    color: activeBranch === 'all' ? 'var(--accent)' : 'var(--text-secondary)',
+                    backgroundColor: activeBranch === 'all' ? 'var(--accent-light)' : 'transparent',
+                  }}
+                >
+                  All Branches
+                </button>
                 {branches.map((branch) => (
                   <button
                     key={branch.id}

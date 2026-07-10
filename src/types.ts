@@ -153,6 +153,7 @@ export interface User {
 export interface Vehicle {
   id: string;
   company_id: string;
+  branch_id?: string;
   reg_number: string;
   vehicle_type: VehicleType;
   make: string;
@@ -183,6 +184,7 @@ export interface Vehicle {
 export interface Driver {
   id: string;
   company_id: string;
+  branch_id?: string;
   name: string;
   phone: string;
   license_number: string;
@@ -207,6 +209,7 @@ export interface Driver {
 export interface Customer {
   id: string;
   company_id: string;
+  branch_id?: string;
   name: string;
   contact_person: string;
   phone: string;
@@ -224,6 +227,7 @@ export interface Customer {
 export interface Trip {
   id: string;
   company_id: string;
+  branch_id?: string;
   trip_number: string;
   lr_number: string;
   eway_bill?: string;
@@ -267,6 +271,7 @@ export interface Trip {
 export interface Invoice {
   id: string;
   company_id: string;
+  branch_id?: string;
   invoice_number: string;
   customer_id: string;
   customer_name: string;
@@ -291,6 +296,7 @@ export interface Invoice {
 export interface Payment {
   id: string;
   company_id: string;
+  branch_id?: string;
   invoice_id?: string;
   customer_id: string;
   customer_name: string;
@@ -306,6 +312,7 @@ export interface Payment {
 export interface Expense {
   id: string;
   company_id: string;
+  branch_id?: string;
   trip_id?: string;
   vehicle_id?: string;
   vehicle_reg?: string;
@@ -322,6 +329,7 @@ export interface Expense {
 export interface FuelEntry {
   id: string;
   company_id: string;
+  branch_id?: string;
   vehicle_id: string;
   vehicle_reg: string;
   driver_id: string;
@@ -340,6 +348,7 @@ export interface FuelEntry {
 export interface MaintenanceRecord {
   id: string;
   company_id: string;
+  branch_id?: string;
   vehicle_id: string;
   vehicle_reg: string;
   type: 'preventive' | 'repair' | 'breakdown' | 'tyre' | 'inspection';
@@ -369,6 +378,7 @@ export interface SystemAlert {
 export interface Enquiry {
   id: string;
   company_id: string;
+  branch_id?: string;
   customer_id: string;
   customer_name: string;
   origin: string;
