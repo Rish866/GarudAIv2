@@ -19,8 +19,7 @@ interface Indent {
   num_vehicles: number;
   loading_date: string;
   rate: number;
-  allocated_vehicle_id?: string;
-  allocated_vehicle_reg?: string;
+  allocated_vehicles: { id: string; reg: string }[];
   trip_id?: string;
   status: IndentStatus;
   remarks?: string;
@@ -31,11 +30,11 @@ const generateIndentId = () => Date.now().toString(36) + Math.random().toString(
 
 
 const seedIndents: Indent[] = [
-  { id: 'ind_001', indent_number: 'IND-2025-0045', customer_id: 'cust_001', customer_name: 'Tata Motors Ltd', origin: 'Pune, Maharashtra', destination: 'Chennai, Tamil Nadu', material: 'Auto Parts', weight_tons: 22, vehicle_type: 'trailer', num_vehicles: 2, loading_date: '2025-07-12', rate: 95000, allocated_vehicle_id: 'veh_001', allocated_vehicle_reg: 'MH-12-AB-1234', status: 'allocated', created_at: '2025-07-09T10:00:00Z' },
-  { id: 'ind_002', indent_number: 'IND-2025-0044', customer_id: 'cust_002', customer_name: 'Reliance Industries', origin: 'Jamnagar, Gujarat', destination: 'Mumbai, Maharashtra', material: 'Polymer Granules', weight_tons: 20, vehicle_type: 'container', num_vehicles: 1, loading_date: '2025-07-11', rate: 65000, status: 'pending', created_at: '2025-07-09T08:30:00Z' },
-  { id: 'ind_003', indent_number: 'IND-2025-0043', customer_id: 'cust_004', customer_name: 'UltraTech Cement', origin: 'Rajashree Nagar, Karnataka', destination: 'Hyderabad, Telangana', material: 'Cement 53 Grade', weight_tons: 25, vehicle_type: 'truck', num_vehicles: 3, loading_date: '2025-07-10', rate: 55000, allocated_vehicle_id: 'veh_003', allocated_vehicle_reg: 'MH-14-EF-9012', status: 'confirmed', created_at: '2025-07-08T15:00:00Z' },
-  { id: 'ind_004', indent_number: 'IND-2025-0042', customer_id: 'cust_003', customer_name: 'Asian Paints Ltd', origin: 'Ankleshwar, Gujarat', destination: 'Pune, Maharashtra', material: 'Paint Drums', weight_tons: 18, vehicle_type: 'container', num_vehicles: 1, loading_date: '2025-07-09', rate: 42000, allocated_vehicle_id: 'veh_004', allocated_vehicle_reg: 'GJ-05-GH-3456', trip_id: 'trip_003', status: 'in_progress', created_at: '2025-07-07T12:00:00Z' },
-  { id: 'ind_005', indent_number: 'IND-2025-0041', customer_id: 'cust_005', customer_name: 'Maruti Suzuki India', origin: 'Manesar, Haryana', destination: 'Bangalore, Karnataka', material: 'Car Components', weight_tons: 20, vehicle_type: 'trailer', num_vehicles: 2, loading_date: '2025-07-06', rate: 125000, allocated_vehicle_id: 'veh_007', allocated_vehicle_reg: 'MP-09-NP-6789', trip_id: 'trip_006', status: 'completed', created_at: '2025-07-05T09:00:00Z' },
+  { id: 'ind_001', indent_number: 'IND-2025-0045', customer_id: 'cust_001', customer_name: 'Tata Motors Ltd', origin: 'Pune, Maharashtra', destination: 'Chennai, Tamil Nadu', material: 'Auto Parts', weight_tons: 22, vehicle_type: 'trailer', num_vehicles: 2, loading_date: '2025-07-12', rate: 95000, allocated_vehicles: [{ id: 'veh_001', reg: 'MH-12-AB-1234' }], status: 'allocated', created_at: '2025-07-09T10:00:00Z' },
+  { id: 'ind_002', indent_number: 'IND-2025-0044', customer_id: 'cust_002', customer_name: 'Reliance Industries', origin: 'Jamnagar, Gujarat', destination: 'Mumbai, Maharashtra', material: 'Polymer Granules', weight_tons: 20, vehicle_type: 'container', num_vehicles: 1, loading_date: '2025-07-11', rate: 65000, allocated_vehicles: [], status: 'pending', created_at: '2025-07-09T08:30:00Z' },
+  { id: 'ind_003', indent_number: 'IND-2025-0043', customer_id: 'cust_004', customer_name: 'UltraTech Cement', origin: 'Rajashree Nagar, Karnataka', destination: 'Hyderabad, Telangana', material: 'Cement 53 Grade', weight_tons: 25, vehicle_type: 'truck', num_vehicles: 3, loading_date: '2025-07-10', rate: 55000, allocated_vehicles: [{ id: 'veh_003', reg: 'MH-14-EF-9012' }, { id: 'veh_006', reg: 'KA-01-LM-2345' }], status: 'confirmed', created_at: '2025-07-08T15:00:00Z' },
+  { id: 'ind_004', indent_number: 'IND-2025-0042', customer_id: 'cust_003', customer_name: 'Asian Paints Ltd', origin: 'Ankleshwar, Gujarat', destination: 'Pune, Maharashtra', material: 'Paint Drums', weight_tons: 18, vehicle_type: 'container', num_vehicles: 1, loading_date: '2025-07-09', rate: 42000, allocated_vehicles: [{ id: 'veh_004', reg: 'GJ-05-GH-3456' }], trip_id: 'trip_003', status: 'in_progress', created_at: '2025-07-07T12:00:00Z' },
+  { id: 'ind_005', indent_number: 'IND-2025-0041', customer_id: 'cust_005', customer_name: 'Maruti Suzuki India', origin: 'Manesar, Haryana', destination: 'Bangalore, Karnataka', material: 'Car Components', weight_tons: 20, vehicle_type: 'trailer', num_vehicles: 2, loading_date: '2025-07-06', rate: 125000, allocated_vehicles: [{ id: 'veh_007', reg: 'MP-09-NP-6789' }, { id: 'veh_008', reg: 'TN-07-QR-4567' }], trip_id: 'trip_006', status: 'completed', created_at: '2025-07-05T09:00:00Z' },
 ];
 
 export default function IndentModule() {
@@ -109,6 +108,7 @@ export default function IndentModule() {
       loading_date: form.loading_date,
       rate: parseFloat(form.rate) || 0,
       remarks: form.remarks + (form.quotation_id ? ` [Ref: ${quotations.find(q => q.id === form.quotation_id)?.quotation_number || ''}]` : ''),
+      allocated_vehicles: [],
       status: 'pending',
       created_at: new Date().toISOString(),
     };
@@ -120,42 +120,61 @@ export default function IndentModule() {
   const allocateVehicle = (indentId: string, vehicleId: string) => {
     const vehicle = vehicles.find(v => v.id === vehicleId);
     if (!vehicle) return;
-    setIndents(indents.map(i => i.id === indentId ? { ...i, allocated_vehicle_id: vehicleId, allocated_vehicle_reg: vehicle.reg_number, status: 'allocated' } : i));
+    setIndents(indents.map(i => {
+      if (i.id !== indentId) return i;
+      // Add to allocated_vehicles array (prevent duplicates)
+      const alreadyAllocated = i.allocated_vehicles.some(v => v.id === vehicleId);
+      if (alreadyAllocated) return i;
+      const updated = [...i.allocated_vehicles, { id: vehicleId, reg: vehicle.reg_number }];
+      const allAllocated = updated.length >= i.num_vehicles;
+      return { ...i, allocated_vehicles: updated, status: allAllocated ? 'allocated' as IndentStatus : i.status };
+    }));
+  };
+
+  const removeAllocatedVehicle = (indentId: string, vehicleId: string) => {
+    setIndents(indents.map(i => {
+      if (i.id !== indentId) return i;
+      const updated = i.allocated_vehicles.filter(v => v.id !== vehicleId);
+      return { ...i, allocated_vehicles: updated, status: updated.length === 0 ? 'pending' as IndentStatus : i.status };
+    }));
   };
 
   const convertToTrip = (indent: Indent) => {
-    if (!indent.allocated_vehicle_id) return;
-    const vehicle = vehicles.find(v => v.id === indent.allocated_vehicle_id);
-    const trip = {
-      id: 'trip_' + generateId(),
-      company_id: 'comp_garud_001',
-      trip_number: `TRP-2025-${String(150 + Math.floor(Math.random() * 50)).padStart(4, '0')}`,
-      lr_number: `LR-${7850 + Math.floor(Math.random() * 100)}`,
-      customer_id: indent.customer_id,
-      customer_name: indent.customer_name,
-      vehicle_id: indent.allocated_vehicle_id || '',
-      vehicle_reg: indent.allocated_vehicle_reg || '',
-      driver_id: vehicle?.driver_id || '',
-      driver_name: vehicle?.driver_name || '',
-      driver_phone: '',
-      origin: indent.origin,
-      destination: indent.destination,
-      distance_km: 0,
-      material: indent.material,
-      weight_tons: indent.weight_tons,
-      booking_date: new Date().toISOString().split('T')[0],
-      loading_date: indent.loading_date,
-      freight_amount: indent.rate,
-      advance_amount: 0,
-      balance_amount: indent.rate,
-      detention_charges: 0,
-      other_charges: 0,
-      total_amount: indent.rate,
-      status: 'booked' as const,
-      created_at: new Date().toISOString(),
-    };
-    addTrip(trip);
-    setIndents(indents.map(i => i.id === indent.id ? { ...i, trip_id: trip.id, status: 'in_progress' } : i));
+    if (indent.allocated_vehicles.length === 0) return;
+    // Create one trip per allocated vehicle
+    indent.allocated_vehicles.forEach((allocVeh, idx) => {
+      const vehicle = vehicles.find(v => v.id === allocVeh.id);
+      const trip = {
+        id: 'trip_' + generateId(),
+        company_id: 'comp_garud_001',
+        trip_number: `TRP-2025-${String(150 + Math.floor(Math.random() * 50) + idx).padStart(4, '0')}`,
+        lr_number: `LR-${7850 + Math.floor(Math.random() * 100) + idx}`,
+        customer_id: indent.customer_id,
+        customer_name: indent.customer_name,
+        vehicle_id: allocVeh.id,
+        vehicle_reg: allocVeh.reg,
+        driver_id: vehicle?.driver_id || '',
+        driver_name: vehicle?.driver_name || '',
+        driver_phone: '',
+        origin: indent.origin,
+        destination: indent.destination,
+        distance_km: 0,
+        material: indent.material,
+        weight_tons: Math.round(indent.weight_tons / indent.num_vehicles),
+        booking_date: new Date().toISOString().split('T')[0],
+        loading_date: indent.loading_date,
+        freight_amount: Math.round(indent.rate / indent.num_vehicles),
+        advance_amount: 0,
+        balance_amount: Math.round(indent.rate / indent.num_vehicles),
+        detention_charges: 0,
+        other_charges: 0,
+        total_amount: Math.round(indent.rate / indent.num_vehicles),
+        status: 'booked' as const,
+        created_at: new Date().toISOString(),
+      };
+      addTrip(trip);
+    });
+    setIndents(indents.map(i => i.id === indent.id ? { ...i, status: 'in_progress' } : i));
   };
 
 
@@ -236,20 +255,35 @@ export default function IndentModule() {
               <span>Weight: {indent.weight_tons}T</span>
               <span>Vehicle: {indent.vehicle_type}</span>
               <span>Loading: {formatDate(indent.loading_date)}</span>
-              {indent.allocated_vehicle_reg && <span className="font-medium" style={{ color: 'var(--accent)' }}>Assigned: {indent.allocated_vehicle_reg}</span>}
             </div>
+            {/* Allocated Vehicles */}
+            {indent.allocated_vehicles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {indent.allocated_vehicles.map(v => (
+                  <span key={v.id} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700">
+                    <Truck className="w-3 h-3" /> {v.reg}
+                    {(indent.status === 'pending' || indent.status === 'allocated') && (
+                      <button onClick={() => removeAllocatedVehicle(indent.id, v.id)} className="ml-1 hover:text-red-600">×</button>
+                    )}
+                  </span>
+                ))}
+                <span className="text-xs self-center" style={{ color: 'var(--text-tertiary)' }}>
+                  ({indent.allocated_vehicles.length}/{indent.num_vehicles} allocated)
+                </span>
+              </div>
+            )}
             {/* Action Buttons */}
-            {indent.status === 'pending' && (
-              <div className="mt-3 pt-3 border-t flex gap-2" style={{ borderColor: 'var(--border-color)' }}>
-                <select onChange={(e) => { if (e.target.value) allocateVehicle(indent.id, e.target.value); }} className="px-3 py-1.5 border rounded-lg text-xs" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-                  <option value="">Allocate Vehicle...</option>
-                  {vehicles.filter(v => v.status === 'available').map(v => <option key={v.id} value={v.id}>{v.reg_number} ({v.vehicle_type})</option>)}
+            {(indent.status === 'pending' || (indent.status === 'allocated' && indent.allocated_vehicles.length < indent.num_vehicles)) && (
+              <div className="mt-3 pt-3 border-t flex gap-2 flex-wrap" style={{ borderColor: 'var(--border-color)' }}>
+                <select onChange={(e) => { if (e.target.value) allocateVehicle(indent.id, e.target.value); e.target.value = ''; }} className="px-3 py-1.5 border rounded-lg text-xs" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                  <option value="">+ Allocate Vehicle ({indent.allocated_vehicles.length}/{indent.num_vehicles})...</option>
+                  {vehicles.filter(v => !indent.allocated_vehicles.some(a => a.id === v.id)).map(v => <option key={v.id} value={v.id}>{v.reg_number} ({v.vehicle_type}) {v.status !== 'available' ? `— ${v.status}` : '✓'}</option>)}
                 </select>
               </div>
             )}
-            {indent.status === 'allocated' && (
+            {indent.status === 'allocated' && indent.allocated_vehicles.length >= indent.num_vehicles && (
               <div className="mt-3 pt-3 border-t flex gap-2" style={{ borderColor: 'var(--border-color)' }}>
-                <button onClick={() => convertToTrip(indent)} className="px-4 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700">Convert to Trip</button>
+                <button onClick={() => convertToTrip(indent)} className="px-4 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700">Convert to {indent.num_vehicles} Trip(s)</button>
                 <button onClick={() => setIndents(indents.map(i => i.id === indent.id ? { ...i, status: 'cancelled' } : i))} className="px-4 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50">Cancel</button>
               </div>
             )}
