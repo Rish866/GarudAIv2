@@ -42,6 +42,10 @@ const moduleLabels: Record<ModuleName, string> = {
   purchases: 'Purchases',
   sales: 'Sales',
   inventory: 'Inventory',
+  geofencing: 'Geofencing',
+  sla: 'SLA Monitoring',
+  dashcam: 'AI Dashcam',
+  fueltheft: 'Fuel Alerts',
 };
 
 const notificationIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {

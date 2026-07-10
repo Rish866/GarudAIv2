@@ -31,6 +31,10 @@ const AccountsModule = lazy(() => import('./components/modules/accounts/Accounts
 const PurchaseModule = lazy(() => import('./components/modules/purchases/PurchaseModule'));
 const SalesModule = lazy(() => import('./components/modules/sales/SalesModule'));
 const InventoryModule = lazy(() => import('./components/modules/inventory/InventoryModule'));
+const GeofencingModule = lazy(() => import('./components/modules/geofencing/GeofencingModule'));
+const SLAModule = lazy(() => import('./components/modules/sla/SLAModule'));
+const DashcamModule = lazy(() => import('./components/modules/dashcam/DashcamModule'));
+const FuelTheftModule = lazy(() => import('./components/modules/fueltheft/FuelTheftModule'));
 
 const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<React.ComponentType>>> = {
   dashboard: DashboardModule,
@@ -55,6 +59,10 @@ const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<Rea
   purchases: PurchaseModule,
   sales: SalesModule,
   inventory: InventoryModule,
+  geofencing: GeofencingModule,
+  sla: SLAModule,
+  dashcam: DashcamModule,
+  fueltheft: FuelTheftModule,
 };
 
 function LoadingFallback() {

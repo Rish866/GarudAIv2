@@ -21,6 +21,10 @@ import {
   DollarSign,
   ShoppingCart,
   Package,
+  MapPin,
+  Target,
+  Camera,
+  AlertTriangle,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { canAccessModule } from '../../lib/rbac';
@@ -84,6 +88,10 @@ export default function Sidebar() {
     
     // Intelligence
     { id: 'gps', label: 'GPS Tracking', icon: Satellite, separator: true },
+    { id: 'geofencing', label: 'Geofencing', icon: MapPin },
+    { id: 'sla', label: 'SLA Monitor', icon: Target },
+    { id: 'dashcam', label: 'AI Dashcam', icon: Camera },
+    { id: 'fueltheft', label: 'Fuel Alerts', icon: AlertTriangle },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings, badge: unreadAlerts > 0 ? unreadAlerts : undefined },
   ];
