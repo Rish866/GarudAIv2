@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
+import { useBranchData } from '../../../hooks/useBranchData';
 import type { FuelEntry } from '../../../types';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 
 export default function FuelModule() {
-  const { fuelEntries, vehicles, drivers, company, addFuelEntry } = useStore();
+  const { addFuelEntry, company } = useStore();
+  const { fuelEntries, vehicles, drivers } = useBranchData();
   const [showModal, setShowModal] = useState(false);
 
   // Summary calculations

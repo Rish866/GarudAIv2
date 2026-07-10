@@ -185,7 +185,6 @@ export default function CustomersModule() {
                   </td>
                   <td className="px-5 py-4 text-right">
                     <button
-                      onClick={() => {/* TODO: open edit modal */}}
                       className="px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
                     >
                       Edit

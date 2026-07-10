@@ -1,4 +1,5 @@
 import { useStore, getDashboardMetrics } from '../../../store/useStore';
+import { useBranchData } from '../../../hooks/useBranchData';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -112,8 +113,10 @@ const itemVariants = {
 
 export default function DashboardModule() {
   const state = useStore();
-  const metrics = getDashboardMetrics(state);
-  const { vehicles, trips, alerts, notifications, user } = state;
+  const branchData = useBranchData();
+  // Use branch-filtered data for KPIs
+  const metrics = getDashboardMetrics({ ...state, vehicles: branchData.vehicles, trips: branchData.trips, invoices: branchData.invoices, payments: branchData.payments, expenses: branchData.expenses, drivers: branchData.drivers, alerts: branchData.alerts });
+  const { vehicles, trips, alerts, notifications, user } = { ...state, vehicles: branchData.vehicles, trips: branchData.trips, alerts: branchData.alerts };
 
   const vehiclesWithLocation = vehicles.filter(
     (v) => v.lat !== undefined && v.lng !== undefined
