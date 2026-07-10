@@ -19,7 +19,7 @@ interface Indent {
   num_vehicles: number;
   loading_date: string;
   rate: number;
-  allocated_vehicles: { id: string; reg: string }[];
+  allocated_vehicles: { id: string; reg: string; driver_id?: string; driver_name?: string }[];
   trip_id?: string;
   status: IndentStatus;
   remarks?: string;
@@ -38,7 +38,7 @@ const seedIndents: Indent[] = [
 ];
 
 export default function IndentModule() {
-  const { customers, vehicles, trips, quotations, addTrip } = useStore();
+  const { customers, vehicles, drivers, trips, quotations, addTrip } = useStore();
   const [indents, setIndents] = useState<Indent[]>(seedIndents);
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -139,11 +139,22 @@ export default function IndentModule() {
     }));
   };
 
+  const assignDriverToVehicle = (indentId: string, vehicleId: string, driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) return;
+    setIndents(indents.map(i => {
+      if (i.id !== indentId) return i;
+      const updated = i.allocated_vehicles.map(v => v.id === vehicleId ? { ...v, driver_id: driverId, driver_name: driver.name } : v);
+      return { ...i, allocated_vehicles: updated };
+    }));
+  };
+
   const convertToTrip = (indent: Indent) => {
     if (indent.allocated_vehicles.length === 0) return;
     // Create one trip per allocated vehicle
     indent.allocated_vehicles.forEach((allocVeh, idx) => {
       const vehicle = vehicles.find(v => v.id === allocVeh.id);
+      const driver = allocVeh.driver_id ? drivers.find(d => d.id === allocVeh.driver_id) : null;
       const trip = {
         id: 'trip_' + generateId(),
         company_id: 'comp_garud_001',
@@ -153,9 +164,9 @@ export default function IndentModule() {
         customer_name: indent.customer_name,
         vehicle_id: allocVeh.id,
         vehicle_reg: allocVeh.reg,
-        driver_id: vehicle?.driver_id || '',
-        driver_name: vehicle?.driver_name || '',
-        driver_phone: '',
+        driver_id: allocVeh.driver_id || vehicle?.driver_id || '',
+        driver_name: allocVeh.driver_name || vehicle?.driver_name || '',
+        driver_phone: driver?.phone || '',
         origin: indent.origin,
         destination: indent.destination,
         distance_km: 0,
@@ -258,17 +269,29 @@ export default function IndentModule() {
             </div>
             {/* Allocated Vehicles */}
             {indent.allocated_vehicles.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="space-y-2 mt-2">
                 {indent.allocated_vehicles.map(v => (
-                  <span key={v.id} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700">
-                    <Truck className="w-3 h-3" /> {v.reg}
-                    {(indent.status === 'pending' || indent.status === 'allocated') && (
-                      <button onClick={() => removeAllocatedVehicle(indent.id, v.id)} className="ml-1 hover:text-red-600">×</button>
+                  <div key={v.id} className="flex items-center gap-2 flex-wrap p-2 rounded-lg bg-blue-50" style={{ border: '1px solid var(--border-color)' }}>
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                      <Truck className="w-3 h-3" /> {v.reg}
+                    </span>
+                    {v.driver_name ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">
+                        👤 {v.driver_name}
+                      </span>
+                    ) : (
+                      <select onChange={(e) => { if (e.target.value) assignDriverToVehicle(indent.id, v.id, e.target.value); }} className="px-2 py-1 border rounded text-xs" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                        <option value="">+ Assign Driver</option>
+                        {drivers.map(d => <option key={d.id} value={d.id}>{d.name} {d.status !== 'available' ? `(${d.status})` : '✓'}</option>)}
+                      </select>
                     )}
-                  </span>
+                    {(indent.status === 'pending' || indent.status === 'allocated') && (
+                      <button onClick={() => removeAllocatedVehicle(indent.id, v.id)} className="ml-auto text-red-400 hover:text-red-600 text-xs">✕</button>
+                    )}
+                  </div>
                 ))}
-                <span className="text-xs self-center" style={{ color: 'var(--text-tertiary)' }}>
-                  ({indent.allocated_vehicles.length}/{indent.num_vehicles} allocated)
+                <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  ({indent.allocated_vehicles.length}/{indent.num_vehicles} vehicles, {indent.allocated_vehicles.filter(v => v.driver_name).length} drivers assigned)
                 </span>
               </div>
             )}
