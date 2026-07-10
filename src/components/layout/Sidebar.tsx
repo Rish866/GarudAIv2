@@ -120,7 +120,7 @@ const navSections: NavSection[] = [
   },
   {
     id: 'reports_settings',
-    label: 'Reports',
+    label: 'Reports & Admin',
     icon: BarChart3,
     items: [
       { id: 'reports', label: 'Reports', icon: BarChart3 },
@@ -128,7 +128,7 @@ const navSections: NavSection[] = [
       { id: 'portal', label: 'Customer Portal', icon: Globe },
       { id: 'restapi', label: 'REST API', icon: Globe },
       { id: 'mobileapp', label: 'Mobile App', icon: Bell },
-      { id: 'settings', label: 'Settings', icon: Settings },
+      { id: 'settings', label: '⚙ Settings & Users', icon: Settings },
     ],
   },
 ];
@@ -148,7 +148,7 @@ export default function Sidebar() {
   } = useStore();
 
   const [branchOpen, setBranchOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<string[]>(['overview', 'operations']);
+  const [expandedSections, setExpandedSections] = useState<string[]>(['overview', 'operations', 'reports_settings']);
 
   const userRole = user.role;
 
