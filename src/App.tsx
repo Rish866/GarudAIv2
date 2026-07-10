@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Truck, BarChart3, Shield, Zap, Loader2 } from 'lucide-react';
 import { useStore } from './store/useStore';
@@ -392,8 +392,36 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
 }
 
 function MainLayout() {
-  const { activeModule, sidebarCollapsed } = useStore();
+  const { activeModule, sidebarCollapsed, setActiveModule } = useStore();
   useSupabaseSync();
+
+  // Browser history management — prevents back button from leaving the app
+  useEffect(() => {
+    // Push initial state
+    window.history.pushState({ module: activeModule }, '', `#${activeModule}`);
+  }, []);
+
+  useEffect(() => {
+    // Push state when module changes (but not on popstate)
+    const currentHash = window.location.hash.replace('#', '');
+    if (currentHash !== activeModule) {
+      window.history.pushState({ module: activeModule }, '', `#${activeModule}`);
+    }
+  }, [activeModule]);
+
+  useEffect(() => {
+    // Listen for back/forward button
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state?.module) {
+        setActiveModule(event.state.module);
+      } else {
+        // If no state, push current state to prevent leaving
+        window.history.pushState({ module: activeModule }, '', `#${activeModule}`);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activeModule, setActiveModule]);
 
   const ActiveComponent = moduleComponents[activeModule];
 
