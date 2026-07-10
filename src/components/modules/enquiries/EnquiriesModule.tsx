@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
+import { generateQuotationPDF } from '../../../lib/pdf';
 import { ArrowRight, FileText, Send, Truck, Package, MapPin, Calendar, Weight, IndianRupee, Plus, X } from 'lucide-react';
 import type { Enquiry, Quotation, VehicleType } from '../../../types';
 
@@ -9,7 +10,7 @@ type Tab = 'enquiries' | 'quotations';
 export default function EnquiriesModule() {
   const [activeTab, setActiveTab] = useState<Tab>('enquiries');
   const [showAddModal, setShowAddModal] = useState(false);
-  const { enquiries, quotations, customers, convertEnquiryToQuotation, convertQuotationToTrip, updateQuotation, addEnquiry } = useStore();
+  const { enquiries, quotations, customers, company, convertEnquiryToQuotation, convertQuotationToTrip, updateQuotation, addEnquiry } = useStore();
 
   const steps = [
     { label: 'Enquiry', color: 'bg-purple-500', active: activeTab === 'enquiries' },
@@ -244,6 +245,13 @@ export default function EnquiriesModule() {
                         Convert to Trip
                       </button>
                     )}
+                    <button
+                      onClick={() => generateQuotationPDF(quotation, company)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-slate-600 border border-slate-200 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Print
+                    </button>
                   </div>
                 </div>
               ))}

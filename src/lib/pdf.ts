@@ -439,3 +439,166 @@ export function generateTripReportPDF(trips: Trip[], company: Company, title: st
     printWindow.document.close();
   }
 }
+
+
+/**
+ * Generates and opens a printable Quotation PDF in a new window
+ */
+export function generateQuotationPDF(quotation: { quotation_number: string; customer_name: string; origin: string; destination: string; vehicle_type: string; material: string; weight_tons: number; rate_type: string; rate: number; total_amount: number; gst_percent: number; validity_days: number; terms?: string; created_at: string; }, company: { name: string; address: string; city: string; state: string; gstin: string; pan: string; phone: string; email: string; }) {
+  const gstAmount = Math.round(quotation.rate * quotation.gst_percent / 100);
+  const grandTotal = quotation.rate + gstAmount;
+  const validUntil = new Date(new Date(quotation.created_at).getTime() + quotation.validity_days * 86400000).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Quotation ${quotation.quotation_number}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; font-size: 12px; color: #1e293b; padding: 40px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #4f46e5; }
+    .company-name { font-size: 22px; font-weight: 800; color: #4f46e5; }
+    .company-details { font-size: 11px; color: #64748b; margin-top: 4px; line-height: 1.6; }
+    .quote-title { text-align: right; }
+    .quote-title h1 { font-size: 28px; font-weight: 800; color: #0f172a; }
+    .quote-title .number { font-size: 14px; font-weight: 600; color: #4f46e5; margin-top: 4px; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    .meta-box { padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .meta-box h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; margin-bottom: 8px; }
+    .meta-box p { font-size: 12px; line-height: 1.8; color: #334155; }
+    .meta-box .bold { font-weight: 600; color: #0f172a; }
+    .route-box { padding: 20px; background: #eef2ff; border-radius: 8px; border: 1px solid #c7d2fe; margin-bottom: 24px; }
+    .route-box h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #4338ca; font-weight: 700; margin-bottom: 12px; }
+    .route { display: flex; align-items: center; gap: 12px; }
+    .route-point { font-size: 14px; font-weight: 700; color: #0f172a; }
+    .route-line { flex: 1; height: 2px; background: repeating-linear-gradient(90deg, #4f46e5 0, #4f46e5 8px, transparent 8px, transparent 12px); }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th { background: #f1f5f9; padding: 10px 12px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700; border-bottom: 2px solid #e2e8f0; }
+    td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
+    .totals { margin-left: auto; width: 300px; margin-top: 20px; }
+    .totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+    .totals-row.grand { border-top: 2px solid #0f172a; border-bottom: none; padding-top: 12px; margin-top: 8px; }
+    .totals-row.grand span { font-size: 16px; font-weight: 800; color: #0f172a; }
+    .validity { margin-top: 24px; padding: 12px 16px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; font-size: 11px; color: #92400e; font-weight: 600; }
+    .terms { margin-top: 24px; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
+    .terms h4 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; margin-bottom: 8px; }
+    .terms p { font-size: 11px; color: #64748b; line-height: 1.8; }
+    .footer { margin-top: 48px; display: flex; justify-content: space-between; }
+    .footer-section h4 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; margin-bottom: 8px; }
+    .footer-section p { font-size: 11px; color: #64748b; line-height: 1.6; }
+    .print-btn { position: fixed; top: 20px; right: 20px; padding: 12px 24px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .print-btn:hover { background: #4338ca; }
+    @media print { .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <button class="print-btn no-print" onclick="window.print()">Print / Save PDF</button>
+
+  <div class="header">
+    <div>
+      <div class="company-name">${company.name}</div>
+      <div class="company-details">
+        ${company.address}, ${company.city}, ${company.state}<br>
+        GSTIN: ${company.gstin} | PAN: ${company.pan}<br>
+        Phone: ${company.phone} | Email: ${company.email}
+      </div>
+    </div>
+    <div class="quote-title">
+      <h1>QUOTATION</h1>
+      <div class="number">${quotation.quotation_number}</div>
+    </div>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-box">
+      <h3>Quotation To</h3>
+      <p class="bold">${quotation.customer_name}</p>
+    </div>
+    <div class="meta-box">
+      <h3>Quotation Details</h3>
+      <p><span class="bold">Date:</span> ${new Date(quotation.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+      <p><span class="bold">Valid Until:</span> ${validUntil}</p>
+      <p><span class="bold">Vehicle Type:</span> ${quotation.vehicle_type}</p>
+    </div>
+  </div>
+
+  <div class="route-box">
+    <h3>Route</h3>
+    <div class="route">
+      <div class="route-point">${quotation.origin}</div>
+      <div class="route-line"></div>
+      <div class="route-point">${quotation.destination}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Material</th>
+        <th>Weight</th>
+        <th>Rate Type</th>
+        <th style="text-align:right">Rate</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-weight:600">Freight Charges</td>
+        <td>${quotation.material}</td>
+        <td>${quotation.weight_tons} Tons</td>
+        <td style="text-transform:capitalize">${quotation.rate_type.replace('_', ' ')}</td>
+        <td style="text-align:right; font-weight:600">₹${quotation.rate.toLocaleString('en-IN')}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-row">
+      <span>Subtotal</span>
+      <span style="font-weight:600">₹${quotation.rate.toLocaleString('en-IN')}</span>
+    </div>
+    <div class="totals-row">
+      <span>GST (${quotation.gst_percent}%)</span>
+      <span style="font-weight:600">₹${gstAmount.toLocaleString('en-IN')}</span>
+    </div>
+    <div class="totals-row grand">
+      <span>Total Amount</span>
+      <span>₹${grandTotal.toLocaleString('en-IN')}</span>
+    </div>
+  </div>
+
+  <div class="validity">
+    ⏰ This quotation is valid for ${quotation.validity_days} days from the date of issue (until ${validUntil})
+  </div>
+
+  ${quotation.terms ? `
+  <div class="terms">
+    <h4>Terms & Conditions</h4>
+    <p>${quotation.terms}</p>
+  </div>
+  ` : ''}
+
+  <div class="footer">
+    <div class="footer-section">
+      <h4>Notes</h4>
+      <p>- Rates are subject to fuel price variation clause<br>
+      - Loading/unloading at party's scope unless specified<br>
+      - Transit insurance not included unless requested</p>
+    </div>
+    <div class="footer-section" style="text-align: right;">
+      <h4>Authorized Signatory</h4>
+      <p style="margin-top: 40px; border-top: 1px solid #94a3b8; padding-top: 8px;">
+        For ${company.name}
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+  }
+}

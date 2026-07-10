@@ -7,6 +7,7 @@ import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
 import { useSupabaseSync } from './lib/useSupabaseSync';
 import LandingPage from './components/LandingPage';
+import OnboardingWizard from './components/ui/OnboardingWizard';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -381,6 +382,9 @@ function MainLayout() {
       >
         {/* Topbar */}
         <Topbar />
+
+        {/* Onboarding Wizard */}
+        <OnboardingWizard />
 
         {/* Page Content */}
         <main
