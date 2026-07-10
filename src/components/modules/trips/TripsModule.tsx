@@ -954,6 +954,19 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            {/* P0.5 Pre-dispatch margin alert */}
+            {Number(form.freight_amount) > 0 && Number(form.distance_km) > 0 && (() => {
+              const freight = Number(form.freight_amount);
+              const estCost = Math.round(Number(form.distance_km) * 3.5 * 95 / 4.5) + Math.round(Number(form.distance_km) * 2.8) + Math.round(Number(form.distance_km) * 1.5) + 2000;
+              const margin = Math.round((freight - estCost) / freight * 100);
+              if (margin < 15) return (
+                <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+                  <span className="text-red-500 font-bold">⚠️</span>
+                  <span>Low margin alert: ~{margin}% (est. cost ₹{estCost.toLocaleString()} vs freight ₹{freight.toLocaleString()}). Min recommended: 15%</span>
+                </div>
+              );
+              return null;
+            })()}
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">
               Cancel
             </button>

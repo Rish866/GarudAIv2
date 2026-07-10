@@ -67,6 +67,9 @@ const moduleLabels: Record<ModuleName, string> = {
   approvals: 'Approvals',
   trackinglinks: 'Tracking Links',
   expiry: 'Doc Expiry',
+  claims: 'Claims & Insurance',
+  vendorportal: 'Vendor Portal',
+  profitability: 'Profitability',
 };
 
 const notificationIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {

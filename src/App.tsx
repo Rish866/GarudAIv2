@@ -8,6 +8,7 @@ import Topbar from './components/layout/Topbar';
 import { useSupabaseSync } from './lib/useSupabaseSync';
 import LandingPage from './components/LandingPage';
 import OnboardingWizard from './components/ui/OnboardingWizard';
+import ToastContainer from './components/ui/Toast';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -55,6 +56,9 @@ const MobileAppModule = lazy(() => import('./components/modules/mobileapp/Mobile
 const ApprovalsModule = lazy(() => import('./components/modules/approvals/ApprovalsModule'));
 const TrackingLinkModule = lazy(() => import('./components/modules/tracking/TrackingLinkModule'));
 const ExpiryDashboardModule = lazy(() => import('./components/modules/expiry/ExpiryDashboardModule'));
+const ClaimsModule = lazy(() => import('./components/modules/claims/ClaimsModule'));
+const VendorPortalModule = lazy(() => import('./components/modules/vendorportal/VendorPortalModule'));
+const ProfitabilityModule = lazy(() => import('./components/modules/profitability/ProfitabilityModule'));
 
 const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<React.ComponentType>>> = {
   dashboard: DashboardModule,
@@ -102,6 +106,9 @@ const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<Rea
   approvals: ApprovalsModule,
   trackinglinks: TrackingLinkModule,
   expiry: ExpiryDashboardModule,
+  claims: ClaimsModule,
+  vendorportal: VendorPortalModule,
+  profitability: ProfitabilityModule,
 };
 
 function LoadingFallback() {
@@ -488,6 +495,7 @@ export default function App() {
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
       <MainLayout />
+      <ToastContainer />
     </div>
   );
 }

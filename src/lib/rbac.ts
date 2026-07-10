@@ -11,7 +11,7 @@ const ROLE_PERMISSIONS: Record<UserRole, ModuleName[]> = {
     'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders',
     'ewaybill', 'audittrail', 'portal', 'pnl', 'gstreports', 'vendors', 'routes', 'indents',
     'attendance', 'creditblock', 'transfers', 'restapi', 'predictive', 'mobileapp',
-    'approvals', 'trackinglinks', 'expiry'
+    'approvals', 'trackinglinks', 'expiry', 'claims', 'vendorportal', 'profitability'
   ],
   admin: [
     'dashboard', 'fleet', 'trips', 'drivers', 'customers', 'billing',
@@ -20,7 +20,7 @@ const ROLE_PERMISSIONS: Record<UserRole, ModuleName[]> = {
     'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders',
     'ewaybill', 'audittrail', 'portal', 'pnl', 'gstreports', 'vendors', 'routes', 'indents',
     'attendance', 'creditblock', 'transfers', 'restapi', 'predictive', 'mobileapp',
-    'approvals', 'trackinglinks', 'expiry'
+    'approvals', 'trackinglinks', 'expiry', 'claims', 'vendorportal', 'profitability'
   ],
   operations: [
     'dashboard', 'fleet', 'trips', 'drivers', 'fuel', 'maintenance',

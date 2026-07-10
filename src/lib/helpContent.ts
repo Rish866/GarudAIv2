@@ -233,4 +233,19 @@ export const MODULE_HELP: Record<ModuleName, HelpInfo> = {
     content: 'Monitor all vehicle and driver document expiry dates with color-coded urgency alerts.',
     steps: ['Red = Expired (action needed immediately)', 'Orange = Expiring within 7 days', 'Yellow = Expiring within 30 days', 'Green = Valid for 30+ days', 'Click "Renew Now" or "Set Reminder" to take action', 'Export report for compliance audits'],
   },
+  claims: {
+    title: 'Claims & Insurance',
+    content: 'Track shortage, damage, theft, accidents — full workflow from incident report to settlement.',
+    steps: ['Click "File Claim" to report an incident', 'Select claim type: shortage, damage, theft, accident, breakdown, delay penalty', 'Link to the related trip for auto-fill', 'Progress through stages: Reported → Investigation → Evidence → Filed → Settled', 'Track claim amounts, approved amounts, and liability assignment'],
+  },
+  vendorportal: {
+    title: 'Vendor Portal',
+    content: 'Self-service portal for your hired vehicle vendors — accept loads, track payments, upload documents.',
+    steps: ['Load Offers: View and accept/reject available loads', 'Payments: Track payment status and references', 'Scorecard: View your performance metrics', 'Documents: Upload compliance documents (RC, Insurance, etc.)'],
+  },
+  profitability: {
+    title: 'Profitability Analysis',
+    content: 'Analyze profit margins grouped by customer, vehicle, route, branch, or month.',
+    steps: ['Select grouping: Customer / Vehicle / Route / Branch / Month', 'View revenue vs cost vs profit for each group', 'Color-coded margins: Green (>25%), Yellow (10-25%), Red (<10%)', 'Export data as CSV for further analysis', 'Identify loss-making routes or customers'],
+  },
 };
