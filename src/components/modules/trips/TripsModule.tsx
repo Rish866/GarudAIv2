@@ -4,6 +4,7 @@ import { useBranchData } from '../../../hooks/useBranchData';
 import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
+import { exportTrips } from '../../../lib/excel';
 import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download, Eye, Upload, Calendar, Phone, CreditCard, CheckCircle, Circle, Clock } from 'lucide-react';
 import DriverAdvanceTracker from './DriverAdvanceTracker';
 import SendNotificationModal from '../../ui/SendNotificationModal';
@@ -119,6 +120,28 @@ export default function TripsModule() {
   };
 
 
+  const handleDuplicateTrip = (trip: Trip) => {
+    const newTrip: Trip = {
+      ...trip,
+      id: generateId(),
+      trip_number: generateTripNumber(),
+      lr_number: generateLRNumber(),
+      eway_bill: 'EWB-' + Date.now().toString().slice(-9),
+      status: 'booked',
+      booking_date: new Date().toISOString().split('T')[0],
+      loading_date: undefined,
+      departure_date: undefined,
+      expected_delivery: undefined,
+      actual_delivery: undefined,
+      pod_url: undefined,
+      pod_date: undefined,
+      pod_details: undefined,
+      remarks: `Duplicated from ${trip.trip_number}`,
+      created_at: new Date().toISOString(),
+    };
+    addTrip(newTrip);
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -134,6 +157,12 @@ export default function TripsModule() {
           >
             <Download size={18} />
             Export PDF
+          </button>
+          <button
+            onClick={() => exportTrips(filteredTrips)}
+            className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium"
+          >
+            Export Excel
           </button>
           <button
             onClick={() => setShowModal(true)}
@@ -202,6 +231,13 @@ export default function TripsModule() {
                 >
                   <Eye size={14} />
                   View
+                </button>
+                <button
+                  onClick={() => handleDuplicateTrip(trip)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors"
+                  title="Duplicate Trip"
+                >
+                  Duplicate
                 </button>
                 {trip.status === 'pod_pending' && (
                   <button

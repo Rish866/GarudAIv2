@@ -4,6 +4,7 @@ import { useBranchData } from '../../../hooks/useBranchData';
 import type { Invoice, Payment, Expense, ExpenseCategory } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateInvoiceNumber } from '../../../lib/utils';
 import { generateInvoicePDF } from '../../../lib/pdf';
+import { exportInvoices, exportExpenses } from '../../../lib/excel';
 
 type BillingTab = 'invoices' | 'payments' | 'expenses';
 
@@ -163,15 +164,21 @@ export default function BillingModule() {
             </button>
           ))}
         </div>
-        <div>
+        <div className="flex items-center gap-2">
           {activeTab === 'invoices' && (
-            <button onClick={() => setShowInvoiceModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Create Invoice</button>
+            <>
+              <button onClick={() => exportInvoices(invoices)} className="px-3 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">Export</button>
+              <button onClick={() => setShowInvoiceModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Create Invoice</button>
+            </>
           )}
           {activeTab === 'payments' && (
             <button onClick={() => setShowPaymentModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Record Payment</button>
           )}
           {activeTab === 'expenses' && (
-            <button onClick={() => setShowExpenseModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Add Expense</button>
+            <>
+              <button onClick={() => exportExpenses(expenses)} className="px-3 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">Export</button>
+              <button onClick={() => setShowExpenseModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Add Expense</button>
+            </>
           )}
         </div>
       </div>
@@ -192,6 +199,23 @@ export default function BillingModule() {
         </div>
       </div>
 
+      {/* Credit Limit Warnings */}
+      {customers.filter(c => c.outstanding > c.credit_limit * 0.8).length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <h3 className="text-sm font-semibold text-amber-800 mb-2">⚠️ Credit Limit Alerts</h3>
+          <div className="space-y-2">
+            {customers.filter(c => c.outstanding > c.credit_limit * 0.8).map(c => (
+              <div key={c.id} className="flex items-center justify-between text-sm">
+                <span className="text-amber-700">{c.name}</span>
+                <span className="font-medium text-amber-900">
+                  Outstanding: {formatCurrency(c.outstanding)} / Limit: {formatCurrency(c.credit_limit)}
+                  {c.outstanding > c.credit_limit && <span className="ml-2 text-red-600 font-bold">EXCEEDED</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Invoices Tab */}
       {activeTab === 'invoices' && (
