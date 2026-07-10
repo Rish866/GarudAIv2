@@ -323,41 +323,104 @@ export default function BillingModule() {
       {showInvoiceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowInvoiceModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6">
+          <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Create Invoice</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Customer</label>
-                <select value={invForm.customer_id} onChange={(e) => setInvForm({ ...invForm, customer_id: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select value={invForm.customer_id} onChange={(e) => setInvForm({ ...invForm, customer_id: e.target.value, trip_id: '' })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="">Select customer</option>
                   {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Trip</label>
-                <select value={invForm.trip_id} onChange={(e) => setInvForm({ ...invForm, trip_id: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Select trip (optional)</option>
-                  {trips.map((t) => <option key={t.id} value={t.id}>{t.trip_number} - {t.customer_name}</option>)}
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Trip (auto-fills amounts)</label>
+                <select value={invForm.trip_id} onChange={(e) => {
+                  const tripId = e.target.value;
+                  const trip = trips.find(t => t.id === tripId);
+                  if (trip) {
+                    setInvForm({
+                      ...invForm,
+                      trip_id: tripId,
+                      customer_id: trip.customer_id,
+                      freight_total: trip.freight_amount,
+                      detention_total: trip.detention_charges,
+                      other_charges: trip.other_charges,
+                    });
+                  } else {
+                    setInvForm({ ...invForm, trip_id: '' });
+                  }
+                }} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Select trip</option>
+                  {trips.filter(t => !invForm.customer_id || t.customer_id === invForm.customer_id).filter(t => ['completed', 'pod_pending', 'reached'].includes(t.status) || t.status === 'in_transit').map((t) => (
+                    <option key={t.id} value={t.id}>{t.trip_number} • {t.lr_number} • {t.origin}→{t.destination} • ₹{t.freight_amount.toLocaleString()}</option>
+                  ))}
                 </select>
               </div>
+
+              {/* Trip Details (auto-filled) */}
+              {invForm.trip_id && (() => {
+                const trip = trips.find(t => t.id === invForm.trip_id);
+                return trip ? (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs space-y-1">
+                    <p className="font-semibold text-blue-800">📋 Trip Details (auto-fetched)</p>
+                    <div className="grid grid-cols-2 gap-2 text-blue-700">
+                      <span>LR: <b>{trip.lr_number}</b></span>
+                      <span>Vehicle: <b>{trip.vehicle_reg}</b></span>
+                      <span>Route: <b>{trip.origin} → {trip.destination}</b></span>
+                      <span>Distance: <b>{trip.distance_km} km</b></span>
+                      <span>Material: <b>{trip.material}</b></span>
+                      <span>Weight: <b>{trip.weight_tons} T</b></span>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Freight</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Freight (₹)</label>
                   <input type="number" value={invForm.freight_total} onChange={(e) => setInvForm({ ...invForm, freight_total: Number(e.target.value) })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Detention</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Detention (₹)</label>
                   <input type="number" value={invForm.detention_total} onChange={(e) => setInvForm({ ...invForm, detention_total: Number(e.target.value) })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Other</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Other (₹)</label>
                   <input type="number" value={invForm.other_charges} onChange={(e) => setInvForm({ ...invForm, other_charges: Number(e.target.value) })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">GST %</label>
+                  <select value={invForm.gst_percent} onChange={(e) => setInvForm({ ...invForm, gst_percent: Number(e.target.value) })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value={5}>5% (GTA - Forward Charge)</option>
+                    <option value={12}>12% (GTA - With ITC)</option>
+                    <option value={18}>18% (Other Services)</option>
+                    <option value={0}>0% (Exempt / RCM)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">TDS Applicable</label>
+                  <select value={invForm.gst_percent === 0 ? 'no' : 'yes'} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
+                    <option value="yes">Yes (2% u/s 194C)</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Auto-calculated Summary */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm space-y-1.5">
+                <div className="flex justify-between"><span className="text-slate-600">Subtotal</span><span className="font-medium">₹{(invForm.freight_total + invForm.detention_total + invForm.other_charges).toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-slate-600">GST ({invForm.gst_percent}%)</span><span className="font-medium">₹{Math.round((invForm.freight_total + invForm.detention_total + invForm.other_charges) * invForm.gst_percent / 100).toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-slate-600">TDS (2%)</span><span className="font-medium text-red-600">- ₹{Math.round((invForm.freight_total + invForm.detention_total + invForm.other_charges) * 0.02).toLocaleString()}</span></div>
+                <div className="flex justify-between pt-2 border-t border-slate-200"><span className="font-semibold text-slate-900">Total Payable</span><span className="font-bold text-lg text-slate-900">₹{Math.round((invForm.freight_total + invForm.detention_total + invForm.other_charges) * (1 + invForm.gst_percent / 100) - (invForm.freight_total + invForm.detention_total + invForm.other_charges) * 0.02).toLocaleString()}</span></div>
               </div>
             </div>
             <div className="flex justify-end space-x-3 mt-6">
               <button onClick={() => setShowInvoiceModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
-              <button onClick={handleCreateInvoice} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Create</button>
+              <button onClick={handleCreateInvoice} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Create Invoice</button>
             </div>
           </div>
         </div>
