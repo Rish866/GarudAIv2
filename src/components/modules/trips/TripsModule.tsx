@@ -652,8 +652,8 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
 
 function NewTripModal({ onClose }: { onClose: () => void }) {
   const { customers, vehicles, drivers, addTrip } = useStore();
-  const availableVehicles = vehicles.filter((v) => v.status === 'available');
-  const availableDrivers = drivers.filter((d) => d.status === 'available');
+  const availableVehicles = vehicles; // Show all vehicles, mark status in dropdown
+  const availableDrivers = drivers; // Show all drivers, mark status in dropdown
 
   const [form, setForm] = useState({
     customer_id: '',
@@ -743,14 +743,14 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
               <label className="block text-sm font-medium text-slate-700 mb-1">Vehicle</label>
               <select name="vehicle_id" value={form.vehicle_id} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="">Select vehicle</option>
-                {availableVehicles.map((v) => (<option key={v.id} value={v.id}>{v.reg_number}</option>))}
+                {availableVehicles.map((v) => (<option key={v.id} value={v.id}>{v.reg_number} ({v.vehicle_type}) {v.status !== 'available' ? `— ${v.status}` : ''}</option>))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Driver</label>
               <select name="driver_id" value={form.driver_id} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="">Select driver</option>
-                {availableDrivers.map((d) => (<option key={d.id} value={d.id}>{d.name}</option>))}
+                {availableDrivers.map((d) => (<option key={d.id} value={d.id}>{d.name} {d.status !== 'available' ? `— ${d.status}` : ''}</option>))}
               </select>
             </div>
           </div>

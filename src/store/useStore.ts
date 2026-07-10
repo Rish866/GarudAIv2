@@ -407,6 +407,8 @@ export const useStore = create<StoreState>()(
         activityLog: state.activityLog,
         theme: state.theme,
         company: state.company,
+        isLoggedIn: state.isLoggedIn,
+        user: state.user,
       }),
     }
   )
