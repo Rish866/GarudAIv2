@@ -59,6 +59,9 @@ const moduleLabels: Record<ModuleName, string> = {
   attendance: 'Attendance & Leave',
   creditblock: 'Credit Control',
   transfers: 'Branch Transfers',
+  restapi: 'REST API',
+  predictive: 'AI Analytics',
+  mobileapp: 'Mobile App',
 };
 
 const notificationIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {

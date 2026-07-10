@@ -115,6 +115,7 @@ const navSections: NavSection[] = [
       { id: 'sla', label: 'SLA Monitor', icon: Target },
       { id: 'dashcam', label: 'AI Dashcam', icon: Camera },
       { id: 'fueltheft', label: 'Fuel Alerts', icon: AlertTriangle },
+      { id: 'predictive', label: 'AI Analytics', icon: Target },
     ],
   },
   {
@@ -125,6 +126,8 @@ const navSections: NavSection[] = [
       { id: 'reports', label: 'Reports', icon: BarChart3 },
       { id: 'audittrail', label: 'Audit Trail', icon: Shield },
       { id: 'portal', label: 'Customer Portal', icon: Globe },
+      { id: 'restapi', label: 'REST API', icon: Globe },
+      { id: 'mobileapp', label: 'Mobile App', icon: Bell },
       { id: 'settings', label: 'Settings', icon: Settings },
     ],
   },

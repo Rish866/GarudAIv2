@@ -49,6 +49,9 @@ const IndentModule = lazy(() => import('./components/modules/indents/IndentModul
 const AttendanceModule = lazy(() => import('./components/modules/attendance/AttendanceModule'));
 const CreditBlockModule = lazy(() => import('./components/modules/creditblock/CreditBlockModule'));
 const TransferModule = lazy(() => import('./components/modules/transfers/TransferModule'));
+const APIModule = lazy(() => import('./components/modules/api/APIModule'));
+const PredictiveModule = lazy(() => import('./components/modules/analytics/PredictiveModule'));
+const MobileAppModule = lazy(() => import('./components/modules/mobileapp/MobileAppModule'));
 
 const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<React.ComponentType>>> = {
   dashboard: DashboardModule,
@@ -90,6 +93,9 @@ const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<Rea
   attendance: AttendanceModule,
   creditblock: CreditBlockModule,
   transfers: TransferModule,
+  restapi: APIModule,
+  predictive: PredictiveModule,
+  mobileapp: MobileAppModule,
 };
 
 function LoadingFallback() {
