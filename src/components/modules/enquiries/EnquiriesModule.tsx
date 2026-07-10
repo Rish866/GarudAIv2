@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { generateQuotationPDF } from '../../../lib/pdf';
-import { ArrowRight, FileText, Send, Truck, Package, MapPin, Calendar, Weight, IndianRupee, Plus, X } from 'lucide-react';
+import { ArrowRight, FileText, Send, Truck, Package, MapPin, Calendar, Weight, IndianRupee, Plus, X, Edit } from 'lucide-react';
 import type { Enquiry, Quotation, VehicleType } from '../../../types';
 
 type Tab = 'enquiries' | 'quotations';
@@ -10,6 +10,7 @@ type Tab = 'enquiries' | 'quotations';
 export default function EnquiriesModule() {
   const [activeTab, setActiveTab] = useState<Tab>('enquiries');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null);
   const { enquiries, quotations, customers, company, convertEnquiryToQuotation, convertQuotationToTrip, updateQuotation, addEnquiry } = useStore();
 
   const steps = [
@@ -227,6 +228,13 @@ export default function EnquiriesModule() {
                   )}
 
                   <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-700">
+                    <button
+                      onClick={() => setEditingQuotation(quotation)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-slate-600 border border-slate-200 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
                     {quotation.status === 'draft' && (
                       <button
                         onClick={() => updateQuotation(quotation.id, { status: 'sent' })}
@@ -258,6 +266,11 @@ export default function EnquiriesModule() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Edit Quotation Modal */}
+      {editingQuotation && (
+        <EditQuotationModal quotation={editingQuotation} onClose={() => setEditingQuotation(null)} />
       )}
 
       {/* Add Enquiry Modal */}
@@ -385,6 +398,125 @@ function AddEnquiryModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+
+function EditQuotationModal({ quotation, onClose }: { quotation: Quotation; onClose: () => void }) {
+  const { updateQuotation } = useStore();
+  const [form, setForm] = useState({
+    origin: quotation.origin,
+    destination: quotation.destination,
+    material: quotation.material,
+    weight_tons: String(quotation.weight_tons),
+    rate_type: quotation.rate_type,
+    rate: String(quotation.rate),
+    gst_percent: String(quotation.gst_percent),
+    validity_days: String(quotation.validity_days),
+    terms: quotation.terms || '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSave = () => {
+    const rate = Number(form.rate) || 0;
+    const gst = Number(form.gst_percent) || 5;
+    const totalAmount = Math.round(rate * (1 + gst / 100));
+    updateQuotation(quotation.id, {
+      origin: form.origin,
+      destination: form.destination,
+      material: form.material,
+      weight_tons: Number(form.weight_tons) || 0,
+      rate_type: form.rate_type as Quotation['rate_type'],
+      rate,
+      gst_percent: gst,
+      total_amount: totalAmount,
+      validity_days: Number(form.validity_days) || 7,
+      terms: form.terms || undefined,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Edit Quotation</h2>
+            <p className="text-xs text-slate-500">{quotation.quotation_number} • {quotation.customer_name}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
+            <X size={18} className="text-slate-500" />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Origin</label>
+              <input type="text" name="origin" value={form.origin} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Destination</label>
+              <input type="text" name="destination" value={form.destination} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
+              <input type="text" name="material" value={form.material} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Weight (Tons)</label>
+              <input type="number" name="weight_tons" value={form.weight_tons} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Rate Type</label>
+              <select name="rate_type" value={form.rate_type} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="per_trip">Per Trip</option>
+                <option value="per_ton">Per Ton</option>
+                <option value="per_km">Per KM</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Rate (₹)</label>
+              <input type="number" name="rate" value={form.rate} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">GST %</label>
+              <select name="gst_percent" value={form.gst_percent} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="5">5%</option>
+                <option value="12">12%</option>
+                <option value="18">18%</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Validity (Days)</label>
+            <input type="number" name="validity_days" value={form.validity_days} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Terms & Conditions</label>
+            <textarea name="terms" value={form.terms} onChange={handleChange} rows={3} placeholder="e.g., Loading/unloading at party scope. Detention ₹2000/day after 24hrs." className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none resize-none" />
+          </div>
+          <div className="bg-slate-50 rounded-lg p-3 text-sm">
+            <span className="text-slate-500">Total Amount (auto-calculated): </span>
+            <span className="font-bold text-slate-900">{formatCurrency(Math.round((Number(form.rate) || 0) * (1 + (Number(form.gst_percent) || 5) / 100)))}</span>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">
+              Cancel
+            </button>
+            <button onClick={handleSave} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700">
+              Save Changes
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
