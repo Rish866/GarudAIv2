@@ -49,7 +49,6 @@ async function deleteRecord(table: string, id: string): Promise<boolean> {
 export async function syncVehicles(vehicles: Vehicle[]): Promise<boolean> {
   const records = vehicles.map(v => ({
     id: v.id,
-    branch_id: v.branch_id || null,
     reg_number: v.reg_number,
     vehicle_type: v.vehicle_type,
     make: v.make,

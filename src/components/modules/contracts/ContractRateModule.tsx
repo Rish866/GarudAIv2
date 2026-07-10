@@ -91,12 +91,13 @@ export default function ContractRateModule() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Contract Rate Master</h1>
-          <p className="text-slate-500 mt-1">Fixed rates per customer per route</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Contract Rate Master</h1>
+          <p className="mt-1" style={{ color: 'var(--text-tertiary)' }}>Fixed rates per customer per route</p>
         </div>
         <button
           onClick={() => setShowBulkUpload(true)}
-          className="flex items-center gap-2 px-4 py-2 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:opacity-80 transition-colors"
+          style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}
         >
           Bulk Upload
         </button>
@@ -111,79 +112,79 @@ export default function ContractRateModule() {
 
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="rounded-2xl border p-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-lg">
               <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Total Contracts</p>
-              <p className="text-2xl font-bold text-slate-900">{contracts.length}</p>
+              <p className="text-sm text-[var(--text-tertiary)]">Total Contracts</p>
+              <p className="text-2xl font-bold text-[var(--text-primary)]">{contracts.length}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="rounded-2xl border p-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-50 rounded-lg">
               <FileText className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Active Contracts</p>
-              <p className="text-2xl font-bold text-slate-900">{contracts.filter((c) => c.status === 'active').length}</p>
+              <p className="text-sm text-[var(--text-tertiary)]">Active Contracts</p>
+              <p className="text-2xl font-bold text-[var(--text-primary)]">{contracts.filter((c) => c.status === 'active').length}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="rounded-2xl border p-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-50 rounded-lg">
               <AlertTriangle className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Expired Contracts</p>
-              <p className="text-2xl font-bold text-slate-900">{contracts.filter((c) => c.status === 'expired').length}</p>
+              <p className="text-sm text-[var(--text-tertiary)]">Expired Contracts</p>
+              <p className="text-2xl font-bold text-[var(--text-primary)]">{contracts.filter((c) => c.status === 'expired').length}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Contract Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="rounded-2xl border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50">
+            <thead className="bg-[var(--bg-secondary)]">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Customer</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Origin</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Destination</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Vehicle Type</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Rate Type</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Rate</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Effective From</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Effective To</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Trips Done</th>
-                <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Customer</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Origin</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Destination</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Vehicle Type</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Rate Type</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Rate</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Effective From</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Effective To</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Trips Done</th>
+                <th className="text-center px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-[var(--border-color)]">
               {contracts.map((contract) => (
                 <tr
                   key={contract.id}
                   className={classNames(
-                    'hover:bg-slate-50',
+                    'hover:bg-[var(--bg-secondary)]',
                     contract.status === 'expired' ? 'bg-red-50' : ''
                   )}
                 >
-                  <td className="px-4 py-3 text-sm font-medium text-slate-900">{contract.customer_name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{contract.origin}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{contract.destination}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 capitalize">{contract.vehicle_type}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{getRateTypeLabel(contract.rate_type)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right">
+                  <td className="px-4 py-3 text-sm font-medium text-[var(--text-primary)]">{contract.customer_name}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{contract.origin}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{contract.destination}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)] capitalize">{contract.vehicle_type}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{getRateTypeLabel(contract.rate_type)}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)] text-right">
                     {contract.rate_type === 'per_km' ? `₹${contract.rate}/km` : formatCurrency(contract.rate)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{formatDate(contract.effective_from)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{formatDate(contract.effective_to)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right">{getTripsForContract(contract)}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{formatDate(contract.effective_from)}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{formatDate(contract.effective_to)}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)] text-right">{getTripsForContract(contract)}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={classNames('px-2 py-1 rounded-full text-xs font-medium', contract.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')}>
                       {contract.status}
@@ -228,16 +229,16 @@ export default function ContractRateModule() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 m-4">
+          <div className="relative bg-[var(--bg-primary)] rounded-2xl shadow-xl w-full max-w-lg p-6 m-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-900">Add Contract Rate</h2>
+              <h2 className="text-lg font-bold text-[var(--text-primary)]">Add Contract Rate</h2>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-500" />
+                <X className="w-5 h-5 text-[var(--text-tertiary)]" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Customer</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Customer</label>
                 <select
                   value={form.customer_id}
                   onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
@@ -251,7 +252,7 @@ export default function ContractRateModule() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Origin</label>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Origin</label>
                   <input
                     type="text"
                     value={form.origin}
@@ -261,7 +262,7 @@ export default function ContractRateModule() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Destination</label>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Destination</label>
                   <input
                     type="text"
                     value={form.destination}
@@ -273,7 +274,7 @@ export default function ContractRateModule() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Vehicle Type</label>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Vehicle Type</label>
                   <select
                     value={form.vehicle_type}
                     onChange={(e) => setForm({ ...form, vehicle_type: e.target.value })}
@@ -289,7 +290,7 @@ export default function ContractRateModule() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Rate Type</label>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Rate Type</label>
                   <select
                     value={form.rate_type}
                     onChange={(e) => setForm({ ...form, rate_type: e.target.value as ContractRate['rate_type'] })}
@@ -302,7 +303,7 @@ export default function ContractRateModule() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Rate (₹)</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Rate (₹)</label>
                 <input
                   type="number"
                   value={form.rate}
@@ -313,7 +314,7 @@ export default function ContractRateModule() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Effective From</label>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Effective From</label>
                   <input
                     type="date"
                     value={form.effective_from}
@@ -322,7 +323,7 @@ export default function ContractRateModule() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Effective To</label>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Effective To</label>
                   <input
                     type="date"
                     value={form.effective_to}

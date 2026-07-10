@@ -79,8 +79,8 @@ export default function MarketHireModule() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Market / Hire Vehicles</h1>
-          <p className="text-slate-500 mt-1">Manage externally hired vehicles and commissions</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Market / Hire Vehicles</h1>
+          <p className="mt-1" style={{ color: 'var(--text-tertiary)' }}>Manage externally hired vehicles and commissions</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
@@ -93,70 +93,70 @@ export default function MarketHireModule() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="rounded-2xl border p-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-lg">
               <Truck className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Total Hire Trips</p>
-              <p className="text-2xl font-bold text-slate-900">{totalHireTrips}</p>
+              <p className="text-sm text-[var(--text-tertiary)]">Total Hire Trips</p>
+              <p className="text-2xl font-bold text-[var(--text-primary)]">{totalHireTrips}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="rounded-2xl border p-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-50 rounded-lg">
               <IndianRupee className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Total Hire Amount</p>
-              <p className="text-2xl font-bold text-slate-900">{formatCurrency(totalHireAmount)}</p>
+              <p className="text-sm text-[var(--text-tertiary)]">Total Hire Amount</p>
+              <p className="text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(totalHireAmount)}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="rounded-2xl border p-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-50 rounded-lg">
               <TrendingUp className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Commission Earned</p>
-              <p className="text-2xl font-bold text-slate-900">{formatCurrency(totalCommission)}</p>
+              <p className="text-sm text-[var(--text-tertiary)]">Commission Earned</p>
+              <p className="text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(totalCommission)}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Hire Records Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="rounded-2xl border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50">
+            <thead className="bg-[var(--bg-secondary)]">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Trip No.</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Vehicle Reg</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Owner</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Phone</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Hire Amount</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Advance Paid</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Balance Due</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Freight Charged</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Commission</th>
-                <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase">Payment</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Trip No.</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Vehicle Reg</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Owner</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Phone</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Hire Amount</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Advance Paid</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Balance Due</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Freight Charged</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Commission</th>
+                <th className="text-center px-4 py-3 text-xs font-medium text-[var(--text-tertiary)] uppercase">Payment</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-[var(--border-color)]">
               {hires.map((hire) => (
-                <tr key={hire.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm font-medium text-slate-900">{hire.trip_number}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{hire.market_vehicle_reg}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{hire.owner_name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{hire.owner_phone}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right">{formatCurrency(hire.hire_amount)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right">{formatCurrency(hire.advance_paid)}</td>
+                <tr key={hire.id} className="hover:bg-[var(--bg-secondary)]">
+                  <td className="px-4 py-3 text-sm font-medium text-[var(--text-primary)]">{hire.trip_number}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{hire.market_vehicle_reg}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{hire.owner_name}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{hire.owner_phone}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)] text-right">{formatCurrency(hire.hire_amount)}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)] text-right">{formatCurrency(hire.advance_paid)}</td>
                   <td className="px-4 py-3 text-sm text-red-600 font-medium text-right">{formatCurrency(hire.balance_due)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right">{formatCurrency(hire.freight_charged)}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-secondary)] text-right">{formatCurrency(hire.freight_charged)}</td>
                   <td className="px-4 py-3 text-sm text-green-700 font-medium text-right">{formatCurrency(hire.commission)}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={classNames('px-2 py-1 rounded-full text-xs font-medium', getPaymentStatusBadge(hire.payment_status))}>
@@ -174,16 +174,16 @@ export default function MarketHireModule() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 m-4">
+          <div className="relative bg-[var(--bg-primary)] rounded-2xl shadow-xl w-full max-w-lg p-6 m-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-900">Add Market Hire</h2>
+              <h2 className="text-lg font-bold text-[var(--text-primary)]">Add Market Hire</h2>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-500" />
+                <X className="w-5 h-5 text-[var(--text-tertiary)]" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Trip Number</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Trip Number</label>
                 <input
                   type="text"
                   value={form.trip_number}
@@ -193,7 +193,7 @@ export default function MarketHireModule() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Market Vehicle Reg</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Market Vehicle Reg</label>
                 <input
                   type="text"
                   value={form.market_vehicle_reg}
@@ -204,7 +204,7 @@ export default function MarketHireModule() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Owner Name</label>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Owner Name</label>
                   <input
                     type="text"
                     value={form.owner_name}
@@ -213,7 +213,7 @@ export default function MarketHireModule() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Owner Phone</label>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Owner Phone</label>
                   <input
                     type="text"
                     value={form.owner_phone}
@@ -224,7 +224,7 @@ export default function MarketHireModule() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Hire Amount (₹)</label>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Hire Amount (₹)</label>
                   <input
                     type="number"
                     value={form.hire_amount}
@@ -233,7 +233,7 @@ export default function MarketHireModule() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Advance Paid (₹)</label>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Advance Paid (₹)</label>
                   <input
                     type="number"
                     value={form.advance_paid}
@@ -243,7 +243,7 @@ export default function MarketHireModule() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Freight Charged to Customer (₹)</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Freight Charged to Customer (₹)</label>
                 <input
                   type="number"
                   value={form.freight_charged}
