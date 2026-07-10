@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
+import { useBranchData } from '../../../hooks/useBranchData';
 import type { Vehicle, VehicleType, VehicleStatus, OwnershipType } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
 import { exportVehicles } from '../../../lib/excel';
@@ -60,7 +61,8 @@ const emptyForm: VehicleForm = {
 
 
 export default function FleetModule() {
-  const { vehicles, addVehicle, updateVehicle, deleteVehicle } = useStore();
+  const { addVehicle, updateVehicle, deleteVehicle } = useStore();
+  const { vehicles } = useBranchData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
   const [view, setView] = useState<'grid' | 'list'>('grid');

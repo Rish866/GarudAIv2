@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
+import { useBranchData } from '../../../hooks/useBranchData';
 import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
@@ -28,7 +29,8 @@ function getNextStatuses(current: TripStatus): TripStatus[] {
 
 
 export default function TripsModule() {
-  const { trips, customers, vehicles, drivers, company, addTrip, updateTripStatus, updateTrip, addInvoice, addNotification } = useStore();
+  const { company, addTrip, updateTripStatus, updateTrip, addInvoice, addNotification } = useStore();
+  const { trips, customers, vehicles, drivers } = useBranchData();
   const [showModal, setShowModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');

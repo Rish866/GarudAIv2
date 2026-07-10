@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
+import { useBranchData } from '../../../hooks/useBranchData';
 import type { Driver } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
 import { exportDrivers } from '../../../lib/excel';
@@ -7,7 +8,8 @@ import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle } from 
 import BulkUpload from '../../ui/BulkUpload';
 
 export default function DriversModule() {
-  const { drivers, addDriver } = useStore();
+  const { addDriver } = useStore();
+  const { drivers } = useBranchData();
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showBulkUpload, setShowBulkUpload] = useState(false);

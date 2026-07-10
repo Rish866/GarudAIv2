@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
+import { useBranchData } from '../../../hooks/useBranchData';
 import type { Customer } from '../../../types';
 import { formatCurrency, getStatusColor, classNames } from '../../../lib/utils';
 import { exportCustomers } from '../../../lib/excel';
@@ -8,7 +9,8 @@ import CustomerTrackingPortal from '../tracking/CustomerTrackingPortal';
 import BulkUpload from '../../ui/BulkUpload';
 
 export default function CustomersModule() {
-  const { customers, addCustomer } = useStore();
+  const { addCustomer } = useStore();
+  const { customers } = useBranchData();
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showTracking, setShowTracking] = useState(false);
