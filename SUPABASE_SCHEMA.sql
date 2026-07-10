@@ -1,44 +1,23 @@
 -- ============================================================
--- GARUD AI TRANSPORT ERP — Full Supabase Schema
+-- GARUD AI TRANSPORT ERP — Full Supabase Schema (Fixed)
 -- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New Query)
+-- 
+-- NOTE: This script does NOT recreate tenants/users/vehicles/events
+-- tables if they already exist. It only creates the NEW tables.
+-- All tenant_id columns are TEXT to match your existing setup.
+-- Foreign key constraints to tenants are REMOVED to avoid type conflicts.
 -- ============================================================
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================
--- CORE TABLES
+-- BRANCHES
 -- ============================================================
 
--- Tenants (already exists, ensure columns match)
-CREATE TABLE IF NOT EXISTS tenants (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  domain TEXT,
-  industry TEXT DEFAULT 'Logistics & Freight',
-  total_trips INTEGER DEFAULT 0,
-  safety_score INTEGER DEFAULT 92,
-  billing_due TEXT DEFAULT '₹0',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Users
-CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::TEXT,
-  tenant_id TEXT REFERENCES tenants(id),
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  password TEXT DEFAULT 'admin123',
-  role TEXT DEFAULT 'admin',
-  phone TEXT,
-  status TEXT DEFAULT 'active',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Branches
 CREATE TABLE IF NOT EXISTS branches (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   name TEXT NOT NULL,
   code TEXT,
   city TEXT,
@@ -50,49 +29,13 @@ CREATE TABLE IF NOT EXISTS branches (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-
 -- ============================================================
--- FLEET & DRIVERS
+-- DRIVERS
 -- ============================================================
 
--- Vehicles (enhanced from existing)
-CREATE TABLE IF NOT EXISTS vehicles (
-  id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
-  branch_id TEXT,
-  reg_number TEXT NOT NULL,
-  vehicle_type TEXT DEFAULT 'truck',
-  make TEXT,
-  model TEXT,
-  year INTEGER,
-  ownership_type TEXT DEFAULT 'owned',
-  owner_name TEXT,
-  owner_phone TEXT,
-  capacity_tons NUMERIC DEFAULT 0,
-  fitness_expiry DATE,
-  insurance_expiry DATE,
-  puc_expiry DATE,
-  permit_expiry DATE,
-  driver_id TEXT,
-  driver_name TEXT,
-  status TEXT DEFAULT 'available',
-  odometer INTEGER DEFAULT 0,
-  lat TEXT,
-  lng TEXT,
-  speed NUMERIC DEFAULT 0,
-  last_location TEXT,
-  last_gps_update TIMESTAMPTZ,
-  ignition BOOLEAN DEFAULT FALSE,
-  cameras_active INTEGER DEFAULT 0,
-  route TEXT,
-  last_update TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Drivers
 CREATE TABLE IF NOT EXISTS drivers (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   branch_id TEXT,
   name TEXT NOT NULL,
   phone TEXT,
@@ -116,12 +59,12 @@ CREATE TABLE IF NOT EXISTS drivers (
 );
 
 -- ============================================================
--- CUSTOMERS & VENDORS
+-- CUSTOMERS
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS customers (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   branch_id TEXT,
   name TEXT NOT NULL,
   contact_person TEXT,
@@ -137,14 +80,13 @@ CREATE TABLE IF NOT EXISTS customers (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-
 -- ============================================================
--- OPERATIONS (TRIPS, ENQUIRIES, QUOTATIONS)
+-- TRIPS
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS trips (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   branch_id TEXT,
   trip_number TEXT,
   lr_number TEXT,
@@ -184,9 +126,13 @@ CREATE TABLE IF NOT EXISTS trips (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- ENQUIRIES
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS enquiries (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   branch_id TEXT,
   enquiry_number TEXT,
   customer_id TEXT,
@@ -203,9 +149,13 @@ CREATE TABLE IF NOT EXISTS enquiries (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- QUOTATIONS
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS quotations (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   quotation_number TEXT,
   enquiry_id TEXT,
   customer_id TEXT,
@@ -225,14 +175,13 @@ CREATE TABLE IF NOT EXISTS quotations (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-
 -- ============================================================
--- FINANCE (INVOICES, PAYMENTS, EXPENSES)
+-- INVOICES
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS invoices (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   branch_id TEXT,
   invoice_number TEXT,
   customer_id TEXT,
@@ -254,9 +203,13 @@ CREATE TABLE IF NOT EXISTS invoices (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- PAYMENTS
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS payments (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   branch_id TEXT,
   invoice_id TEXT,
   customer_id TEXT,
@@ -270,9 +223,13 @@ CREATE TABLE IF NOT EXISTS payments (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- EXPENSES
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS expenses (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   branch_id TEXT,
   trip_id TEXT,
   vehicle_id TEXT,
@@ -288,12 +245,12 @@ CREATE TABLE IF NOT EXISTS expenses (
 );
 
 -- ============================================================
--- FLEET OPS (FUEL, MAINTENANCE)
+-- FUEL ENTRIES
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS fuel_entries (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   branch_id TEXT,
   vehicle_id TEXT,
   vehicle_reg TEXT,
@@ -310,9 +267,13 @@ CREATE TABLE IF NOT EXISTS fuel_entries (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- MAINTENANCE RECORDS
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS maintenance_records (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   branch_id TEXT,
   vehicle_id TEXT,
   vehicle_reg TEXT,
@@ -326,14 +287,13 @@ CREATE TABLE IF NOT EXISTS maintenance_records (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-
 -- ============================================================
--- TYRES, AUDIT, NOTIFICATIONS, EVENTS
+-- TYRES
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS tyres (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   serial_number TEXT,
   vehicle_id TEXT,
   vehicle_reg TEXT,
@@ -347,9 +307,13 @@ CREATE TABLE IF NOT EXISTS tyres (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- ACTIVITY LOG (Audit Trail)
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS activity_log (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   user_name TEXT,
   action TEXT,
   entity_type TEXT,
@@ -358,9 +322,13 @@ CREATE TABLE IF NOT EXISTS activity_log (
   timestamp TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- NOTIFICATIONS
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS notifications (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   type TEXT,
   title TEXT,
   message TEXT,
@@ -370,27 +338,13 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Events (system alerts, already partially exists)
-CREATE TABLE IF NOT EXISTS events (
-  id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
-  timestamp TEXT,
-  vehicle_reg TEXT,
-  type TEXT,
-  description TEXT,
-  severity TEXT,
-  location TEXT,
-  checked BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
 -- ============================================================
 -- E-WAY BILLS
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS eway_bills (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT REFERENCES tenants(id),
+  tenant_id TEXT NOT NULL,
   ewb_number TEXT,
   trip_id TEXT,
   trip_number TEXT,
@@ -416,11 +370,32 @@ CREATE TABLE IF NOT EXISTS eway_bills (
 );
 
 -- ============================================================
--- ROW LEVEL SECURITY (RLS)
+-- INDEXES (for performance)
 -- ============================================================
 
--- Enable RLS on all tables
-ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_drivers_tenant ON drivers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_trips_tenant ON trips(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_trips_status ON trips(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_invoices_tenant ON invoices(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(tenant_id, customer_id);
+CREATE INDEX IF NOT EXISTS idx_payments_tenant ON payments(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_tenant ON expenses(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_fuel_tenant ON fuel_entries(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_tenant ON maintenance_records(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_activity_tenant ON activity_log(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_eway_tenant ON eway_bills(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tyres_tenant ON tyres(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_quotations_tenant ON quotations(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_enquiries_tenant ON enquiries(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_branches_tenant ON branches(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_tenant ON notifications(tenant_id);
+
+-- ============================================================
+-- ENABLE RLS (Row Level Security) on all new tables
+-- ============================================================
+
+ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE drivers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trips ENABLE ROW LEVEL SECURITY;
@@ -436,41 +411,28 @@ ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE eway_bills ENABLE ROW LEVEL SECURITY;
 
--- Create policies for anon access (for demo — restrict in production)
-CREATE POLICY "Allow all for anon" ON vehicles FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON drivers FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON customers FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON trips FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON enquiries FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON quotations FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON invoices FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON payments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON expenses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON fuel_entries FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON maintenance_records FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON tyres FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON activity_log FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON notifications FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON eway_bills FOR ALL USING (true) WITH CHECK (true);
-
 -- ============================================================
--- INDEXES
+-- RLS POLICIES — Allow anon key full access (for demo/MVP)
+-- In production, restrict by tenant_id using JWT claims
 -- ============================================================
 
-CREATE INDEX IF NOT EXISTS idx_vehicles_tenant ON vehicles(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_drivers_tenant ON drivers(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_trips_tenant ON trips(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_trips_status ON trips(tenant_id, status);
-CREATE INDEX IF NOT EXISTS idx_invoices_tenant ON invoices(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(tenant_id, customer_id);
-CREATE INDEX IF NOT EXISTS idx_payments_tenant ON payments(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_expenses_tenant ON expenses(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_fuel_tenant ON fuel_entries(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_tenant ON maintenance_records(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_activity_tenant ON activity_log(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_eway_tenant ON eway_bills(tenant_id);
+CREATE POLICY "anon_full_access" ON branches FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON drivers FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON customers FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON trips FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON enquiries FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON quotations FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON invoices FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON payments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON expenses FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON fuel_entries FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON maintenance_records FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON tyres FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON activity_log FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON notifications FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "anon_full_access" ON eway_bills FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================================
--- DONE! Your Garud AI ERP is now fully backed by Supabase.
+-- DONE! All tables created successfully.
+-- Your Garud AI ERP is now fully backed by Supabase.
 -- ============================================================
