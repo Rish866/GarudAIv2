@@ -41,6 +41,11 @@ const WorkOrderModule = lazy(() => import('./components/modules/workorders/WorkO
 const EWayBillModule = lazy(() => import('./components/modules/ewaybill/EWayBillModule'));
 const AuditTrailModule = lazy(() => import('./components/modules/audittrail/AuditTrailModule'));
 const CustomerPortalModule = lazy(() => import('./components/modules/portal/CustomerPortalModule'));
+const PnLModule = lazy(() => import('./components/modules/pnl/PnLModule'));
+const GSTReportsModule = lazy(() => import('./components/modules/gst/GSTReportsModule'));
+const VendorModule = lazy(() => import('./components/modules/vendors/VendorModule'));
+const RouteModule = lazy(() => import('./components/modules/routes/RouteModule'));
+const IndentModule = lazy(() => import('./components/modules/indents/IndentModule'));
 
 const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<React.ComponentType>>> = {
   dashboard: DashboardModule,
@@ -74,6 +79,11 @@ const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<Rea
   ewaybill: EWayBillModule,
   audittrail: AuditTrailModule,
   portal: CustomerPortalModule,
+  pnl: PnLModule,
+  gstreports: GSTReportsModule,
+  vendors: VendorModule,
+  routes: RouteModule,
+  indents: IndentModule,
 };
 
 function LoadingFallback() {

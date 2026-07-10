@@ -51,6 +51,11 @@ const moduleLabels: Record<ModuleName, string> = {
   ewaybill: 'E-Way Bill',
   audittrail: 'Audit Trail',
   portal: 'Customer Portal',
+  pnl: 'P&L / Balance Sheet',
+  gstreports: 'GST Reports',
+  vendors: 'Vendors',
+  routes: 'Routes',
+  indents: 'Indents / Orders',
 };
 
 const notificationIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
