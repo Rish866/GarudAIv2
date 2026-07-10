@@ -64,6 +64,9 @@ const moduleLabels: Record<ModuleName, string> = {
   restapi: 'REST API',
   predictive: 'AI Analytics',
   mobileapp: 'Mobile App',
+  approvals: 'Approvals',
+  trackinglinks: 'Tracking Links',
+  expiry: 'Doc Expiry',
 };
 
 const notificationIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {

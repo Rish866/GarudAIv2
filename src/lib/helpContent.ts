@@ -218,4 +218,19 @@ export const MODULE_HELP: Record<ModuleName, HelpInfo> = {
     content: 'Deploy and manage the driver mobile app — monitor devices, configure features, and view driver activity.',
     steps: ['Overview: See online/offline drivers with QR download', 'Driver Devices: Monitor app version, GPS, battery', 'App Config: Set GPS interval, speed alerts, SOS toggle', 'Activity: View driver app actions (POD uploads, trips accepted)', 'Share QR code with drivers to download the app'],
   },
+  approvals: {
+    title: 'Approvals (Maker-Checker)',
+    content: 'Review and approve/reject requests that exceed defined thresholds. Ensures financial control.',
+    steps: ['View pending approvals ordered by urgency', 'Check request details, amount, and who requested', 'Click Approve or Reject (with reason)', 'Approval rules auto-trigger for expenses >₹10K, rate changes, credit limits >₹5L', 'All decisions are logged in audit trail'],
+  },
+  trackinglinks: {
+    title: 'Customer Tracking Links',
+    content: 'Generate shareable URLs for customers to track their shipment live — no login needed.',
+    steps: ['Find the active trip you want to share', 'Click "Copy Link" to get the tracking URL', 'Click "WhatsApp" to share directly with customer', 'Customer opens link — sees live status, vehicle, ETA', 'Link auto-expires when trip is delivered'],
+  },
+  expiry: {
+    title: 'Document Expiry Dashboard',
+    content: 'Monitor all vehicle and driver document expiry dates with color-coded urgency alerts.',
+    steps: ['Red = Expired (action needed immediately)', 'Orange = Expiring within 7 days', 'Yellow = Expiring within 30 days', 'Green = Valid for 30+ days', 'Click "Renew Now" or "Set Reminder" to take action', 'Export report for compliance audits'],
+  },
 };

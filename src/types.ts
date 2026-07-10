@@ -14,7 +14,7 @@ export type AlertSeverity = 'critical' | 'warning' | 'info';
 export type Theme = 'light' | 'dark';
 
 // Module names - expanded
-export type ModuleName = 'dashboard' | 'fleet' | 'trips' | 'drivers' | 'customers' | 'billing' | 'fuel' | 'maintenance' | 'reports' | 'settings' | 'notifications' | 'enquiries' | 'tyres' | 'payroll' | 'contracts' | 'market' | 'documents' | 'gps' | 'accounts' | 'purchases' | 'sales' | 'inventory' | 'geofencing' | 'sla' | 'dashcam' | 'fueltheft' | 'challans' | 'workorders' | 'ewaybill' | 'audittrail' | 'portal' | 'pnl' | 'gstreports' | 'vendors' | 'routes' | 'indents' | 'attendance' | 'creditblock' | 'transfers' | 'restapi' | 'predictive' | 'mobileapp';
+export type ModuleName = 'dashboard' | 'fleet' | 'trips' | 'drivers' | 'customers' | 'billing' | 'fuel' | 'maintenance' | 'reports' | 'settings' | 'notifications' | 'enquiries' | 'tyres' | 'payroll' | 'contracts' | 'market' | 'documents' | 'gps' | 'accounts' | 'purchases' | 'sales' | 'inventory' | 'geofencing' | 'sla' | 'dashcam' | 'fueltheft' | 'challans' | 'workorders' | 'ewaybill' | 'audittrail' | 'portal' | 'pnl' | 'gstreports' | 'vendors' | 'routes' | 'indents' | 'attendance' | 'creditblock' | 'transfers' | 'restapi' | 'predictive' | 'mobileapp' | 'approvals' | 'trackinglinks' | 'expiry';
 
 // Branch (multi-branch support)
 export interface Branch {

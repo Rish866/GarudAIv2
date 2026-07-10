@@ -52,6 +52,9 @@ const TransferModule = lazy(() => import('./components/modules/transfers/Transfe
 const APIModule = lazy(() => import('./components/modules/api/APIModule'));
 const PredictiveModule = lazy(() => import('./components/modules/analytics/PredictiveModule'));
 const MobileAppModule = lazy(() => import('./components/modules/mobileapp/MobileAppModule'));
+const ApprovalsModule = lazy(() => import('./components/modules/approvals/ApprovalsModule'));
+const TrackingLinkModule = lazy(() => import('./components/modules/tracking/TrackingLinkModule'));
+const ExpiryDashboardModule = lazy(() => import('./components/modules/expiry/ExpiryDashboardModule'));
 
 const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<React.ComponentType>>> = {
   dashboard: DashboardModule,
@@ -96,6 +99,9 @@ const moduleComponents: Partial<Record<ModuleName, React.LazyExoticComponent<Rea
   restapi: APIModule,
   predictive: PredictiveModule,
   mobileapp: MobileAppModule,
+  approvals: ApprovalsModule,
+  trackinglinks: TrackingLinkModule,
+  expiry: ExpiryDashboardModule,
 };
 
 function LoadingFallback() {

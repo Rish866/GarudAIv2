@@ -124,6 +124,9 @@ const navSections: NavSection[] = [
     icon: BarChart3,
     items: [
       { id: 'reports', label: 'Reports', icon: BarChart3 },
+      { id: 'approvals', label: 'Approvals', icon: Shield },
+      { id: 'trackinglinks', label: 'Tracking Links', icon: Globe },
+      { id: 'expiry', label: 'Doc Expiry', icon: AlertTriangle },
       { id: 'audittrail', label: 'Audit Trail', icon: Shield },
       { id: 'portal', label: 'Customer Portal', icon: Globe },
       { id: 'restapi', label: 'REST API', icon: Globe },

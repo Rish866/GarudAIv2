@@ -10,7 +10,8 @@ const ROLE_PERMISSIONS: Record<UserRole, ModuleName[]> = {
     'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps',
     'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders',
     'ewaybill', 'audittrail', 'portal', 'pnl', 'gstreports', 'vendors', 'routes', 'indents',
-    'attendance', 'creditblock', 'transfers', 'restapi', 'predictive', 'mobileapp'
+    'attendance', 'creditblock', 'transfers', 'restapi', 'predictive', 'mobileapp',
+    'approvals', 'trackinglinks', 'expiry'
   ],
   admin: [
     'dashboard', 'fleet', 'trips', 'drivers', 'customers', 'billing',
@@ -18,7 +19,8 @@ const ROLE_PERMISSIONS: Record<UserRole, ModuleName[]> = {
     'enquiries', 'tyres', 'payroll', 'contracts', 'market', 'documents', 'gps',
     'accounts', 'purchases', 'sales', 'inventory', 'geofencing', 'sla', 'dashcam', 'fueltheft', 'challans', 'workorders',
     'ewaybill', 'audittrail', 'portal', 'pnl', 'gstreports', 'vendors', 'routes', 'indents',
-    'attendance', 'creditblock', 'transfers', 'restapi', 'predictive', 'mobileapp'
+    'attendance', 'creditblock', 'transfers', 'restapi', 'predictive', 'mobileapp',
+    'approvals', 'trackinglinks', 'expiry'
   ],
   operations: [
     'dashboard', 'fleet', 'trips', 'drivers', 'fuel', 'maintenance',

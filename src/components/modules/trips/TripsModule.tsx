@@ -455,8 +455,29 @@ function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) 
 
 
 function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
-  const { company } = useStore();
+  const { company, expenses, fuelEntries, invoices, payments, quotations, enquiries } = useStore();
   const currentIdx = STATUS_FLOW.indexOf(trip.status);
+
+  // P0.1 — Trip-Level Profitability Calculation
+  const tripExpenses = expenses.filter(e => e.trip_id === trip.id || e.vehicle_id === trip.vehicle_id);
+  const tripFuel = fuelEntries.filter(f => f.vehicle_id === trip.vehicle_id);
+  const fuelCostEstimate = trip.distance_km > 0 ? Math.round(trip.distance_km * 3.5 * 95 / 4.5) : 0; // ~3.5km/l at ₹95/l avg
+  const tollEstimate = Math.round(trip.distance_km * 2.8); // ~₹2.8/km average toll
+  const driverBata = tripExpenses.filter(e => e.category === 'driver_bata').reduce((s, e) => s + e.amount, 0) || Math.round(trip.distance_km * 1.5);
+  const loadingUnloading = tripExpenses.filter(e => e.category === 'loading' || e.category === 'unloading').reduce((s, e) => s + e.amount, 0) || 2000;
+  const repairCost = tripExpenses.filter(e => e.category === 'repair').reduce((s, e) => s + e.amount, 0);
+  const miscExpenses = tripExpenses.filter(e => e.category === 'misc' || e.category === 'office').reduce((s, e) => s + e.amount, 0);
+  
+  const totalCost = fuelCostEstimate + tollEstimate + driverBata + loadingUnloading + repairCost + trip.detention_charges + miscExpenses;
+  const totalRevenue = trip.freight_amount + trip.detention_charges + trip.other_charges;
+  const tripProfit = totalRevenue - totalCost;
+  const profitMargin = totalRevenue > 0 ? Math.round((tripProfit / totalRevenue) * 100) : 0;
+
+  // P0.2 — Linked Document Chain
+  const linkedInvoice = invoices.find(i => i.trip_ids.includes(trip.id));
+  const linkedPayment = linkedInvoice ? payments.find(p => p.invoice_id === linkedInvoice.id) : undefined;
+  const linkedQuotation = quotations.find(q => q.customer_id === trip.customer_id && q.origin === trip.origin && q.destination === trip.destination);
+  const linkedEnquiry = linkedQuotation?.enquiry_id ? enquiries.find(e => e.id === linkedQuotation.enquiry_id) : undefined;
 
   const getStatusDate = (status: TripStatus): string | null => {
     switch (status) {
@@ -618,6 +639,88 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
               )}
             </div>
           )}
+
+          {/* P0.1 — TRIP PROFITABILITY */}
+          <div className={classNames('rounded-xl p-4 border', profitMargin >= 20 ? 'bg-green-50 border-green-200' : profitMargin >= 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200')}>
+            <h3 className="text-sm font-semibold mb-3 flex items-center justify-between">
+              <span className={profitMargin >= 20 ? 'text-green-900' : profitMargin >= 0 ? 'text-yellow-900' : 'text-red-900'}>
+                📊 Trip Profitability
+              </span>
+              <span className={classNames('px-3 py-1 rounded-full text-xs font-bold', profitMargin >= 20 ? 'bg-green-200 text-green-800' : profitMargin >= 0 ? 'bg-yellow-200 text-yellow-800' : 'bg-red-200 text-red-800')}>
+                {profitMargin}% Margin
+              </span>
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Revenue Side */}
+              <div>
+                <p className="text-xs font-semibold text-green-700 mb-2 uppercase">Revenue</p>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between"><span className="text-slate-600">Freight</span><span className="font-medium text-green-700">{formatCurrency(trip.freight_amount)}</span></div>
+                  {trip.detention_charges > 0 && <div className="flex justify-between"><span className="text-slate-600">Detention</span><span className="font-medium text-green-700">{formatCurrency(trip.detention_charges)}</span></div>}
+                  {trip.other_charges > 0 && <div className="flex justify-between"><span className="text-slate-600">Other</span><span className="font-medium text-green-700">{formatCurrency(trip.other_charges)}</span></div>}
+                  <div className="flex justify-between border-t border-green-200 pt-1"><span className="font-semibold">Total Revenue</span><span className="font-bold text-green-800">{formatCurrency(totalRevenue)}</span></div>
+                </div>
+              </div>
+              {/* Cost Side */}
+              <div>
+                <p className="text-xs font-semibold text-red-700 mb-2 uppercase">Costs</p>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between"><span className="text-slate-600">Fuel (est.)</span><span className="font-medium text-red-700">{formatCurrency(fuelCostEstimate)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-600">Toll (est.)</span><span className="font-medium text-red-700">{formatCurrency(tollEstimate)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-600">Driver Bata</span><span className="font-medium text-red-700">{formatCurrency(driverBata)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-600">Loading/Unloading</span><span className="font-medium text-red-700">{formatCurrency(loadingUnloading)}</span></div>
+                  {repairCost > 0 && <div className="flex justify-between"><span className="text-slate-600">Repairs</span><span className="font-medium text-red-700">{formatCurrency(repairCost)}</span></div>}
+                  <div className="flex justify-between border-t border-red-200 pt-1"><span className="font-semibold">Total Cost</span><span className="font-bold text-red-800">{formatCurrency(totalCost)}</span></div>
+                </div>
+              </div>
+            </div>
+            {/* Profit Line */}
+            <div className="mt-3 pt-3 border-t flex justify-between items-center" style={{ borderColor: profitMargin >= 0 ? '#86efac' : '#fca5a5' }}>
+              <span className="font-bold text-sm">NET PROFIT / (LOSS)</span>
+              <span className={classNames('text-lg font-bold', tripProfit >= 0 ? 'text-green-700' : 'text-red-700')}>
+                {tripProfit >= 0 ? '' : '('}{formatCurrency(Math.abs(tripProfit))}{tripProfit < 0 ? ')' : ''}
+              </span>
+            </div>
+          </div>
+
+          {/* P0.2 — LINKED DOCUMENT CHAIN */}
+          <div className="bg-slate-50 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+              🔗 Document Chain (End-to-End Traceability)
+            </h3>
+            <div className="flex items-center gap-1 flex-wrap">
+              {/* Enquiry */}
+              <div className={classNames('px-3 py-2 rounded-lg text-xs font-medium border', linkedEnquiry ? 'bg-purple-50 border-purple-200 text-purple-800' : 'bg-slate-100 border-slate-200 text-slate-400')}>
+                {linkedEnquiry ? `📋 Enquiry: ${linkedEnquiry.customer_name}` : '📋 Enquiry: —'}
+              </div>
+              <span className="text-slate-300">→</span>
+              {/* Quotation */}
+              <div className={classNames('px-3 py-2 rounded-lg text-xs font-medium border', linkedQuotation ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-slate-100 border-slate-200 text-slate-400')}>
+                {linkedQuotation ? `📄 ${linkedQuotation.quotation_number} (₹${linkedQuotation.rate.toLocaleString()})` : '📄 Quotation: —'}
+              </div>
+              <span className="text-slate-300">→</span>
+              {/* Trip (current) */}
+              <div className="px-3 py-2 rounded-lg text-xs font-medium border-2 border-blue-500 bg-blue-100 text-blue-900">
+                🚛 {trip.trip_number}
+              </div>
+              <span className="text-slate-300">→</span>
+              {/* Invoice */}
+              <div className={classNames('px-3 py-2 rounded-lg text-xs font-medium border', linkedInvoice ? 'bg-green-50 border-green-200 text-green-800' : 'bg-slate-100 border-slate-200 text-slate-400')}>
+                {linkedInvoice ? `🧾 ${linkedInvoice.invoice_number} (₹${linkedInvoice.total_amount.toLocaleString()})` : '🧾 Invoice: Pending'}
+              </div>
+              <span className="text-slate-300">→</span>
+              {/* Payment */}
+              <div className={classNames('px-3 py-2 rounded-lg text-xs font-medium border', linkedPayment ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-100 border-slate-200 text-slate-400')}>
+                {linkedPayment ? `💰 ₹${linkedPayment.amount.toLocaleString()} (${linkedPayment.payment_mode})` : '💰 Payment: Pending'}
+              </div>
+            </div>
+            {linkedInvoice && (
+              <div className="mt-2 text-xs text-slate-500">
+                Invoice Status: <span className="font-medium">{linkedInvoice.status}</span> | 
+                Balance: <span className="font-medium text-orange-600">{formatCurrency(linkedInvoice.balance_amount)}</span>
+              </div>
+            )}
+          </div>
 
 
           {/* Documents */}
