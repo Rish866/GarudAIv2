@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { ModuleName } from '../../types';
+import HelpButton from '../ui/HelpButton';
+import { MODULE_HELP } from '../../lib/helpContent';
 
 const moduleLabels: Record<ModuleName, string> = {
   dashboard: 'Dashboard',
@@ -155,6 +157,11 @@ export default function Topbar() {
         <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
           {moduleLabels[activeModule] || 'Dashboard'}
         </h2>
+        <HelpButton
+          title={MODULE_HELP[activeModule]?.title || 'Help'}
+          content={MODULE_HELP[activeModule]?.content || 'No help available for this module yet.'}
+          steps={MODULE_HELP[activeModule]?.steps}
+        />
       </div>
 
       {/* Center - Search */}
