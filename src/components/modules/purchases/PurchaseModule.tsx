@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Plus, X, ShoppingCart, Banknote, CreditCard } from 'lucide-react';
 
@@ -17,14 +17,7 @@ interface PurchaseEntry {
 
 
 export default function PurchaseModule() {
-  const [purchases, setPurchases] = useState<PurchaseEntry[]>(isDemoTenant() ? [
-    { id: 'pur_001', date: '2025-07-01', invoice_number: 'IOCL-7845', supplier_name: 'Indian Oil Corporation (IOCL)', items: 'Diesel - 500 litres', amount: 12000, type: 'cash', status: 'paid', narration: 'Diesel for fleet vehicles' },
-    { id: 'pur_002', date: '2025-07-02', invoice_number: 'MRF-INV-2234', supplier_name: 'MRF Tyre Dealer - Pune', items: 'Tyres 295/80 R22.5 x 2', amount: 42000, type: 'credit', status: 'pending', narration: 'Replacement tyres for MH-12-CD-5678' },
-    { id: 'pur_003', date: '2025-07-03', invoice_number: 'AZ-8891', supplier_name: 'Auto Zone Spare Parts', items: 'Brake pads, air filters, fan belts', amount: 8500, type: 'credit', status: 'pending', narration: 'Spare parts for workshop inventory' },
-    { id: 'pur_004', date: '2025-07-04', invoice_number: 'OS-1123', supplier_name: 'Office Mart Pune', items: 'Printer cartridges, A4 paper, files', amount: 3200, type: 'cash', status: 'paid', narration: 'Monthly office supplies' },
-    { id: 'pur_005', date: '2025-07-05', invoice_number: 'NIA-POL-9922', supplier_name: 'New India Assurance', items: 'Vehicle insurance - RJ-14-JK-7890', amount: 45000, type: 'bank', status: 'paid', narration: 'Annual comprehensive insurance' },
-    { id: 'pur_006', date: '2025-07-07', invoice_number: 'SAW-4456', supplier_name: 'Sharma Auto Works', items: 'Engine overhaul + clutch plate', amount: 35000, type: 'credit', status: 'pending', narration: 'Major repair for RJ-14-JK-7890' },
-  ] : []);
+    const { data: purchases, create: createPurchase } = useModuleData<PurchaseEntry>('purchases');
 
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ date: '', supplier_name: '', invoice_number: '', items: '', amount: '', type: 'cash' as PurchaseEntry['type'], narration: '' });

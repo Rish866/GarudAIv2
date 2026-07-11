@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Plus, X, TrendingUp, Banknote, CreditCard } from 'lucide-react';
 
@@ -17,14 +17,7 @@ interface SalesEntry {
 
 
 export default function SalesModule() {
-  const [sales, setSales] = useState<SalesEntry[]>(isDemoTenant() ? [
-    { id: 'sal_001', date: '2025-07-01', invoice_number: 'INV-2025-0090', customer_name: 'Tata Motors Ltd', description: 'Freight - Pune to Mumbai (Auto Parts)', amount: 47000, type: 'credit', status: 'pending', narration: 'Trip TRP-2025-0142' },
-    { id: 'sal_002', date: '2025-07-02', invoice_number: 'INV-2025-0091', customer_name: 'Reliance Industries', description: 'Freight - Mumbai to Hyderabad (Chemicals)', amount: 88500, type: 'credit', status: 'pending', narration: 'Trip TRP-2025-0141' },
-    { id: 'sal_003', date: '2025-07-03', invoice_number: 'INV-2025-0092', customer_name: 'Ganesh Traders', description: 'Local delivery service - Pune city', amount: 15000, type: 'cash', status: 'received', narration: 'Same-day local delivery' },
-    { id: 'sal_004', date: '2025-07-05', invoice_number: 'INV-2025-0093', customer_name: 'Mahindra Logistics', description: 'Warehouse rental - July month', amount: 25000, type: 'credit', status: 'pending', narration: 'Godown space rental at Transport Nagar' },
-    { id: 'sal_005', date: '2025-07-06', invoice_number: 'INV-2025-0094', customer_name: 'APM Terminals', description: 'Container handling at JNPT', amount: 8000, type: 'cash', status: 'received', narration: 'Container stuffing/destuffing' },
-    { id: 'sal_006', date: '2025-07-08', invoice_number: 'INV-2025-0095', customer_name: 'UltraTech Cement', description: 'Freight - Bangalore to Goa (Cement)', amount: 66500, type: 'credit', status: 'pending', narration: 'Trip TRP-2025-0139' },
-  ] : []);
+    const { data: sales, create: createSale } = useModuleData<SalesEntry>('sales');
 
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ date: '', customer_name: '', invoice_number: '', description: '', amount: '', type: 'credit' as SalesEntry['type'], narration: '' });

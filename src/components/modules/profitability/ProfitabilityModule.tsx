@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, classNames } from '../../../lib/utils';
 import { TrendingUp, TrendingDown, BarChart3, Filter, Download } from 'lucide-react';

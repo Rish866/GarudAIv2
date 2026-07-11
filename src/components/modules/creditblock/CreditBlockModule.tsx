@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { ShieldAlert, ShieldCheck, AlertTriangle, Lock, Unlock, Search, Ban } from 'lucide-react';

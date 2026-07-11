@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Plus, X, BookOpen, Building2, Landmark, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
@@ -36,40 +36,13 @@ interface LedgerAccount {
 export default function AccountsModule() {
   const [activeTab, setActiveTab] = useState<'cash' | 'bank' | 'ledger'>('cash');
 
-  const [cashEntries, setCashEntries] = useState<CashEntry[]>(isDemoTenant() ? [
-    { id: 'ce_001', date: '2025-07-01', voucher_number: 'CV-001', particulars: 'Received freight from Tata Motors', type: 'receipt', amount: 47000, narration: 'Trip TRP-2025-0142 freight' },
-    { id: 'ce_002', date: '2025-07-02', voucher_number: 'CV-002', particulars: 'Paid driver salary - Suresh Kumar', type: 'payment', amount: 25000, narration: 'Monthly salary July' },
-    { id: 'ce_003', date: '2025-07-03', voucher_number: 'CV-003', particulars: 'Paid diesel - HP Pump Lonavala', type: 'payment', amount: 12000, narration: 'Diesel for MH-12-AB-1234' },
-    { id: 'ce_004', date: '2025-07-04', voucher_number: 'CV-004', particulars: 'Received local delivery charges', type: 'receipt', amount: 15000, narration: 'Cash delivery service' },
-    { id: 'ce_005', date: '2025-07-05', voucher_number: 'CV-005', particulars: 'Paid toll charges', type: 'payment', amount: 4500, narration: 'Toll NH-44 Mumbai-Hyd' },
-    { id: 'ce_006', date: '2025-07-06', voucher_number: 'CV-006', particulars: 'Paid office supplies', type: 'payment', amount: 3200, narration: 'Stationery & printer ink' },
-    { id: 'ce_007', date: '2025-07-07', voucher_number: 'CV-007', particulars: 'Received container handling charges', type: 'receipt', amount: 8000, narration: 'Container handling at port' },
-    { id: 'ce_008', date: '2025-07-08', voucher_number: 'CV-008', particulars: 'Paid vehicle repair advance', type: 'payment', amount: 10000, narration: 'Advance to Sharma Auto Works' },
-  ] : []);
+    const { data: cashEntries, create: createCashEntry, update: updateCashEntry, remove: removeCashEntry } = useModuleData<CashEntry>('cash_entries');
 
 
-  const [bankEntries, setBankEntries] = useState<BankEntry[]>(isDemoTenant() ? [
-    { id: 'be_001', date: '2025-07-01', voucher_number: 'BV-001', particulars: 'NEFT received from Reliance Industries', type: 'receipt', amount: 88500, reference: 'NEFT-20250701-56789', narration: 'Freight payment TRP-2025-0141' },
-    { id: 'be_002', date: '2025-07-02', voucher_number: 'BV-002', particulars: 'Paid vehicle EMI - HDFC Bank', type: 'payment', amount: 35000, reference: 'EMI-AUTO-072025', narration: 'EMI for MH-14-EF-9012' },
-    { id: 'be_003', date: '2025-07-03', voucher_number: 'BV-003', particulars: 'RTGS received from Maruti Suzuki', type: 'receipt', amount: 188490, reference: 'RTGS-20250703-12345', narration: 'Invoice INV-2025-0088 full payment' },
-    { id: 'be_004', date: '2025-07-05', voucher_number: 'BV-004', particulars: 'Paid insurance premium - New India Assurance', type: 'payment', amount: 45000, reference: 'CHQ-445567', narration: 'Vehicle insurance RJ-14-JK-7890' },
-    { id: 'be_005', date: '2025-07-07', voucher_number: 'BV-005', particulars: 'Paid driver salaries (bulk NEFT)', type: 'payment', amount: 125000, reference: 'NEFT-BULK-070725', narration: 'Monthly driver salaries July' },
-    { id: 'be_006', date: '2025-07-08', voucher_number: 'BV-006', particulars: 'NEFT received from Asian Paints', type: 'receipt', amount: 50000, reference: 'NEFT-20250708-99012', narration: 'Part payment INV-2025-0087' },
-  ] : []);
+    const { data: bankEntries, create: createBankEntry, update: updateBankEntry, remove: removeBankEntry } = useModuleData<BankEntry>('bank_entries');
 
 
-  const [ledgerAccounts, setLedgerAccounts] = useState<LedgerAccount[]>(isDemoTenant() ? [
-    { id: 'la_001', name: 'Cash', group: 'Assets', balance: 125300, balance_type: 'Dr' },
-    { id: 'la_002', name: 'Bank (SBI Current A/c)', group: 'Assets', balance: 485000, balance_type: 'Dr' },
-    { id: 'la_003', name: 'Sundry Debtors', group: 'Assets', balance: 2895000, balance_type: 'Dr' },
-    { id: 'la_004', name: 'Sundry Creditors', group: 'Liabilities', balance: 320000, balance_type: 'Cr' },
-    { id: 'la_005', name: 'Diesel Expense', group: 'Expense', balance: 245000, balance_type: 'Dr' },
-    { id: 'la_006', name: 'Toll Expense', group: 'Expense', balance: 87000, balance_type: 'Dr' },
-    { id: 'la_007', name: 'Salary', group: 'Expense', balance: 350000, balance_type: 'Dr' },
-    { id: 'la_008', name: 'Freight Income', group: 'Income', balance: 1850000, balance_type: 'Cr' },
-    { id: 'la_009', name: 'Vehicle Repairs', group: 'Expense', balance: 135000, balance_type: 'Dr' },
-    { id: 'la_010', name: 'Office Expense', group: 'Expense', balance: 42000, balance_type: 'Dr' },
-  ] : []);
+    const { data: ledgerAccounts, create: createLedgerAccount, remove: removeLedgerAccount } = useModuleData<LedgerAccount>('ledger_accounts');
 
   const [showCashModal, setShowCashModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
@@ -81,19 +54,19 @@ export default function AccountsModule() {
   const [ledgerForm, setLedgerForm] = useState({ name: '', group: 'Assets' as LedgerAccount['group'], balance: '', balance_type: 'Dr' as 'Dr' | 'Cr' });
 
   // Editable opening balances
-  const [openingCashBalance, setOpeningCashBalance] = useState(isDemoTenant() ? 100000 : 0);
-  const [openingBankBalance, setOpeningBankBalance] = useState(isDemoTenant() ? 350000 : 0);
+  const [openingCashBalance, setOpeningCashBalance] = useState(0);
+  const [openingBankBalance, setOpeningBankBalance] = useState(0);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
-  const [balanceForm, setBalanceForm] = useState({ cash: String(isDemoTenant() ? 100000 : 0), bank: String(isDemoTenant() ? 350000 : 0) });
+  const [balanceForm, setBalanceForm] = useState({ cash: String(0), bank: String(0) });
 
   // Edit state
   const [editingCashId, setEditingCashId] = useState<string | null>(null);
   const [editingBankId, setEditingBankId] = useState<string | null>(null);
 
   // Delete functions
-  const deleteCashEntry = (id: string) => setCashEntries(cashEntries.filter(e => e.id !== id));
-  const deleteBankEntry = (id: string) => setBankEntries(bankEntries.filter(e => e.id !== id));
-  const deleteLedgerAccount = (id: string) => setLedgerAccounts(ledgerAccounts.filter(a => a.id !== id));
+  const deleteCashEntry = (id: string) => removeCashEntry(id);
+  const deleteBankEntry = (id: string) => removeBankEntry(id);
+  const deleteLedgerAccount = (id: string) => removeLedgerAccount(id);
 
   // Edit cash entry
   const startEditCash = (entry: CashEntry) => {
@@ -141,7 +114,7 @@ export default function AccountsModule() {
   const handleAddCash = () => {
     if (!cashForm.date || !cashForm.amount || !cashForm.particulars) return;
     if (editingCashId) {
-      setCashEntries(cashEntries.map(e => e.id === editingCashId ? { ...e, date: cashForm.date, type: cashForm.type, amount: parseFloat(cashForm.amount), particulars: cashForm.particulars, narration: cashForm.narration } : e));
+      updateCashEntry(editingCashId!, { date: cashForm.date, type: cashForm.type, amount: parseFloat(cashForm.amount), particulars: cashForm.particulars, narration: cashForm.narration });
       setEditingCashId(null);
     } else {
       const newEntry: CashEntry = {
@@ -153,7 +126,7 @@ export default function AccountsModule() {
         amount: parseFloat(cashForm.amount),
         narration: cashForm.narration,
       };
-      setCashEntries([...cashEntries, newEntry]);
+      createCashEntry(newEntry);
     }
     setShowCashModal(false);
     setCashForm({ date: '', type: 'receipt', amount: '', particulars: '', narration: '' });
@@ -175,7 +148,7 @@ export default function AccountsModule() {
         reference: bankForm.reference,
         narration: bankForm.narration,
       };
-      setBankEntries([...bankEntries, newEntry]);
+      createBankEntry(newEntry);
     }
     setShowBankModal(false);
     setBankForm({ date: '', type: 'receipt', amount: '', particulars: '', reference: '', narration: '' });
@@ -191,7 +164,7 @@ export default function AccountsModule() {
       balance: parseFloat(ledgerForm.balance),
       balance_type: ledgerForm.balance_type,
     };
-    setLedgerAccounts([...ledgerAccounts, newAccount]);
+    createLedgerAccount(newAccount);
     setShowLedgerModal(false);
     setLedgerForm({ name: '', group: 'Assets', balance: '', balance_type: 'Dr' });
   };
