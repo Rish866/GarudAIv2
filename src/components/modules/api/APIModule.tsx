@@ -68,16 +68,9 @@ const WEBHOOK_EVENTS = [
 const generateKey = () => 'grd_' + Array.from({ length: 32 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
-const seedAPIKeys: APIKey[] = [
-  { id: 'key_001', name: 'Production GPS Integration', key: 'grd_k8f2m9x1a7b3c4d5e6f7g8h9i0j1k2l3', created_at: '2025-06-15', last_used: '2025-07-09', status: 'active', permissions: ['read:vehicles', 'write:location', 'read:trips'] },
-  { id: 'key_002', name: 'Customer Portal Widget', key: 'grd_p4q5r6s7t8u9v0w1x2y3z4a5b6c7d8e9', created_at: '2025-07-01', last_used: '2025-07-09', status: 'active', permissions: ['read:trips', 'read:invoices', 'read:tracking'] },
-  { id: 'key_003', name: 'Test Key (Staging)', key: 'grd_test_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6', created_at: '2025-07-05', status: 'active', permissions: ['read:all', 'write:all'] },
-];
+const seedAPIKeys: APIKey[] = [];
 
-const seedWebhooks: WebhookConfig[] = [
-  { id: 'wh_001', url: 'https://erp.customer.com/webhooks/garud', events: ['trip.completed', 'invoice.generated', 'payment.received'], status: 'active', last_triggered: '2025-07-09T10:30:00Z', success_count: 142, fail_count: 3 },
-  { id: 'wh_002', url: 'https://gps-provider.com/api/events', events: ['vehicle.geofence_breach', 'vehicle.location_updated'], status: 'active', last_triggered: '2025-07-09T10:25:00Z', success_count: 8934, fail_count: 12 },
-];
+const seedWebhooks: WebhookConfig[] = [];
 
 export default function APIModule() {
   const { company } = useStore();

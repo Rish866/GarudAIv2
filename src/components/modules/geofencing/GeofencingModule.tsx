@@ -28,13 +28,7 @@ interface GeofenceAlert {
 }
 
 
-const seedAlerts: GeofenceAlert[] = [
-  { id: 'ga_001', vehicle_reg: 'MH-12-AB-1234', zone_name: 'Pune Transport Hub', event: 'exit', timestamp: '2025-07-09T10:30:00Z' },
-  { id: 'ga_002', vehicle_reg: 'GJ-05-GH-3456', zone_name: 'Ahmedabad Depot', event: 'entry', timestamp: '2025-07-09T10:15:00Z' },
-  { id: 'ga_003', vehicle_reg: 'MH-12-CD-5678', zone_name: 'Mumbai JNPT Port', event: 'exit', timestamp: '2025-07-09T09:45:00Z' },
-  { id: 'ga_004', vehicle_reg: 'KA-01-LM-2345', zone_name: 'Customer: Tata Motors Pimpri', event: 'entry', timestamp: '2025-07-09T08:20:00Z' },
-  { id: 'ga_005', vehicle_reg: 'MH-14-EF-9012', zone_name: 'Delhi NCR Zone', event: 'entry', timestamp: '2025-07-08T22:10:00Z' },
-];
+const seedAlerts: GeofenceAlert[] = [];
 
 function getGeofenceColor(type: GeofenceType): string {
   switch (type) {

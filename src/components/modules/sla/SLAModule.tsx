@@ -1,5 +1,6 @@
 import { Clock, AlertTriangle, CheckCircle, TrendingDown, Target, ArrowRight } from 'lucide-react';
 // SLA uses store data directly
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 

@@ -27,23 +27,9 @@ interface AppActivity {
 }
 
 
-const seedDriverApps: DriverAppStatus[] = [
-  { driver_id: 'drv_001', driver_name: 'Suresh Kumar', app_version: '2.4.1', last_active: '2025-07-09T10:30:00Z', gps_enabled: true, notification_enabled: true, battery_level: 78, os: 'android', status: 'online' },
-  { driver_id: 'drv_002', driver_name: 'Ramesh Yadav', app_version: '2.4.1', last_active: '2025-07-09T10:25:00Z', gps_enabled: true, notification_enabled: true, battery_level: 45, os: 'android', status: 'online' },
-  { driver_id: 'drv_003', driver_name: 'Vikram Singh', app_version: '2.4.0', last_active: '2025-07-09T08:00:00Z', gps_enabled: true, notification_enabled: false, battery_level: 92, os: 'android', status: 'background' },
-  { driver_id: 'drv_004', driver_name: 'Ajay Chauhan', app_version: '2.4.1', last_active: '2025-07-09T10:15:00Z', gps_enabled: true, notification_enabled: true, battery_level: 23, os: 'ios', status: 'online' },
-  { driver_id: 'drv_005', driver_name: 'Manoj Reddy', app_version: '2.3.9', last_active: '2025-07-09T09:45:00Z', gps_enabled: false, notification_enabled: true, battery_level: 61, os: 'android', status: 'offline' },
-  { driver_id: 'drv_006', driver_name: 'Dinesh Verma', app_version: '2.4.1', last_active: '2025-07-08T18:00:00Z', gps_enabled: true, notification_enabled: true, battery_level: 0, os: 'android', status: 'offline' },
-];
+const seedDriverApps: DriverAppStatus[] = [];
 
-const seedActivity: AppActivity[] = [
-  { id: 'aa_001', driver_name: 'Suresh Kumar', action: 'location_shared', timestamp: '2025-07-09T10:30:00Z', details: 'GPS location updated: NH-44, near Aurangabad' },
-  { id: 'aa_002', driver_name: 'Ramesh Yadav', action: 'trip_accepted', timestamp: '2025-07-09T10:25:00Z', details: 'Accepted trip TRP-2025-0141' },
-  { id: 'aa_003', driver_name: 'Ajay Chauhan', action: 'pod_uploaded', timestamp: '2025-07-09T10:15:00Z', details: 'POD uploaded for trip TRP-2025-0140' },
-  { id: 'aa_004', driver_name: 'Vikram Singh', action: 'document_uploaded', timestamp: '2025-07-09T08:00:00Z', details: 'Uploaded driving license renewal' },
-  { id: 'aa_005', driver_name: 'Suresh Kumar', action: 'sos_triggered', timestamp: '2025-07-08T23:15:00Z', details: 'SOS alert — Vehicle breakdown near Solapur' },
-  { id: 'aa_006', driver_name: 'Manoj Reddy', action: 'expense_claimed', timestamp: '2025-07-08T20:00:00Z', details: 'Fuel expense ₹4,500 claimed at HP Pump, Bangalore' },
-];
+const seedActivity: AppActivity[] = [];
 
 export default function MobileAppModule() {
   const { drivers } = useStore();

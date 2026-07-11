@@ -9,18 +9,9 @@ type PortalView = 'indents' | 'payments' | 'scorecard' | 'documents';
 interface VendorIndent { id: string; indent_number: string; origin: string; destination: string; material: string; weight: number; rate: number; loading_date: string; status: 'offered' | 'accepted' | 'rejected' | 'completed'; }
 interface VendorPayment { id: string; trip_number: string; amount: number; date: string; status: 'pending' | 'processed' | 'paid'; reference?: string; }
 
-const seedVendorIndents: VendorIndent[] = [
-  { id: 'vi_001', indent_number: 'IND-2025-0050', origin: 'Pune', destination: 'Mumbai', material: 'Steel Bars', weight: 22, rate: 38000, loading_date: '2025-07-12', status: 'offered' },
-  { id: 'vi_002', indent_number: 'IND-2025-0048', origin: 'Mumbai', destination: 'Ahmedabad', material: 'FMCG Goods', weight: 18, rate: 52000, loading_date: '2025-07-11', status: 'offered' },
-  { id: 'vi_003', indent_number: 'IND-2025-0045', origin: 'Pune', destination: 'Chennai', material: 'Auto Parts', weight: 22, rate: 95000, loading_date: '2025-07-10', status: 'accepted' },
-  { id: 'vi_004', indent_number: 'IND-2025-0040', origin: 'Delhi', destination: 'Jaipur', material: 'Textiles', weight: 15, rate: 28000, loading_date: '2025-07-05', status: 'completed' },
-];
+const seedVendorIndents: VendorIndent[] = [];
 
-const seedVendorPayments: VendorPayment[] = [
-  { id: 'vp_001', trip_number: 'TRP-2025-0135', amount: 72000, date: '2025-07-08', status: 'pending' },
-  { id: 'vp_002', trip_number: 'TRP-2025-0133', amount: 95000, date: '2025-07-05', status: 'paid', reference: 'NEFT-789012' },
-  { id: 'vp_003', trip_number: 'TRP-2025-0131', amount: 55000, date: '2025-07-02', status: 'paid', reference: 'NEFT-789010' },
-];
+const seedVendorPayments: VendorPayment[] = [];
 
 export default function VendorPortalModule() {
   const [view, setView] = useState<PortalView>('indents');

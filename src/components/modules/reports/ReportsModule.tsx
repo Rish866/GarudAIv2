@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { useBranchData } from '../../../hooks/useBranchData';
 import { formatCurrency } from '../../../lib/utils';

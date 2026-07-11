@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Shield, Search, Filter, Download, User, Truck, Route, Receipt, FileText, Settings, Clock } from 'lucide-react';

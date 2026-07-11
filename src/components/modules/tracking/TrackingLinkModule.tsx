@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Link, Copy, CheckCircle, MapPin, Truck, Clock, Share2, ExternalLink } from 'lucide-react';
