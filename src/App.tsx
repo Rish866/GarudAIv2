@@ -574,42 +574,6 @@ function MainLayout() {
 export default function App() {
   const { isLoggedIn, theme, user, login, logout } = useStore();
   const [showLanding, setShowLanding] = useState(true);
-  const [sessionChecked, setSessionChecked] = useState(false);
-
-  // Check for existing Supabase session on load (with timeout)
-  useEffect(() => {
-    const timeout = setTimeout(() => setSessionChecked(true), 3000); // Max 3s wait
-    getSession()
-      .then(authUser => {
-        clearTimeout(timeout);
-        if (authUser) {
-          login({
-            id: authUser.id,
-            company_id: authUser.tenant_id,
-            name: authUser.name,
-            email: authUser.email,
-            role: authUser.role,
-            phone: authUser.phone,
-            status: 'active',
-          });
-        }
-        setSessionChecked(true);
-      })
-      .catch(() => {
-        clearTimeout(timeout);
-        setSessionChecked(true);
-      });
-    return () => clearTimeout(timeout);
-  }, []);
-
-  // Don't render until session check is done
-  if (!sessionChecked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
-        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
 
   if (!isLoggedIn) {
     if (showLanding) {
