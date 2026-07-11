@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Circle, Plus, X, RotateCcw, Trash2, Truck } from 'lucide-react';
@@ -21,7 +22,7 @@ interface TyreRecord {
 export default function TyreModule() {
   const { vehicles } = useStore();
 
-  const [tyres, setTyres] = useState<TyreRecord[]>([
+  const [tyres, setTyres] = useState<TyreRecord[]>(isDemoTenant() ? [
     { id: 'tyr_001', serial_number: 'MRF-2024-A1001', vehicle_id: 'veh_001', vehicle_reg: 'MH-12-AB-1234', position: 'FL', make: 'MRF', km_run: 42000, status: 'active', retread_count: 0, purchase_date: '2024-03-15', cost: 18500 },
     { id: 'tyr_002', serial_number: 'MRF-2024-A1002', vehicle_id: 'veh_001', vehicle_reg: 'MH-12-AB-1234', position: 'FR', make: 'MRF', km_run: 42000, status: 'active', retread_count: 0, purchase_date: '2024-03-15', cost: 18500 },
     { id: 'tyr_003', serial_number: 'APL-2023-B2001', vehicle_id: 'veh_002', vehicle_reg: 'MH-12-CD-5678', position: 'RL', make: 'Apollo', km_run: 68000, status: 'retreaded', retread_count: 1, purchase_date: '2023-06-20', cost: 21000 },
@@ -32,7 +33,7 @@ export default function TyreModule() {
     { id: 'tyr_008', serial_number: 'CEAT-2025-C3002', vehicle_id: 'veh_006', vehicle_reg: 'KA-01-LM-2345', position: 'FR', make: 'CEAT', km_run: 12000, status: 'active', retread_count: 0, purchase_date: '2025-01-20', cost: 17200 },
     { id: 'tyr_009', serial_number: 'APL-2024-B2003', vehicle_id: 'veh_007', vehicle_reg: 'MP-09-NP-6789', position: 'FL', make: 'Apollo', km_run: 38000, status: 'active', retread_count: 0, purchase_date: '2024-05-08', cost: 19800 },
     { id: 'tyr_010', serial_number: 'JK-2024-D4002', vehicle_id: 'veh_008', vehicle_reg: 'TN-07-QR-4567', position: 'RR', make: 'JK', km_run: 8000, status: 'active', retread_count: 0, purchase_date: '2025-02-14', cost: 15500 },
-  ]);
+  ] : []);
 
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);

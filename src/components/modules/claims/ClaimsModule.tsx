@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { AlertTriangle, Plus, X, Search, Download, FileText, Shield, Clock, CheckCircle, Camera } from 'lucide-react';
@@ -39,7 +40,7 @@ const seedClaims: Claim[] = [
 
 export default function ClaimsModule() {
   const { trips } = useStore();
-  const [claims, setClaims] = useState<Claim[]>(seedClaims);
+  const [claims, setClaims] = useState<Claim[]>(isDemoTenant() ? seedClaims : []);
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | ClaimStatus>('all');
   const [search, setSearch] = useState('');

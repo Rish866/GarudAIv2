@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Code, Key, Copy, Plus, X, Trash2, CheckCircle, Globe, Webhook, RefreshCw, Eye, EyeOff } from 'lucide-react';
@@ -81,8 +82,8 @@ const seedWebhooks: WebhookConfig[] = [
 export default function APIModule() {
   const { company } = useStore();
   const [tab, setTab] = useState<'endpoints' | 'keys' | 'webhooks'>('endpoints');
-  const [apiKeys, setApiKeys] = useState<APIKey[]>(seedAPIKeys);
-  const [webhooks, setWebhooks] = useState<WebhookConfig[]>(seedWebhooks);
+  const [apiKeys, setApiKeys] = useState<APIKey[]>(isDemoTenant() ? seedAPIKeys : []);
+  const [webhooks, setWebhooks] = useState<WebhookConfig[]>(isDemoTenant() ? seedWebhooks : []);
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [showWebhookModal, setShowWebhookModal] = useState(false);
   const [keyForm, setKeyForm] = useState({ name: '', permissions: ['read:all'] as string[] });

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Users, Plus, X, Search, Download, Edit, Trash2, Phone, Mail } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
@@ -39,7 +40,7 @@ const seedVendors: Vendor[] = [
 ];
 
 export default function VendorModule() {
-  const [vendors, setVendors] = useState<Vendor[]>(seedVendors);
+  const [vendors, setVendors] = useState<Vendor[]>(isDemoTenant() ? seedVendors : []);
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');

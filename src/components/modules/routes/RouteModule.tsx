@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, classNames } from '../../../lib/utils';
 import { MapPin, Plus, X, Search, Download, TrendingUp, Clock, Fuel } from 'lucide-react';
@@ -36,7 +37,7 @@ const seedRoutes: RouteRecord[] = [
 
 export default function RouteModule() {
   const { trips } = useStore();
-  const [routes, setRoutes] = useState<RouteRecord[]>(seedRoutes);
+  const [routes, setRoutes] = useState<RouteRecord[]>(isDemoTenant() ? seedRoutes : []);
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');

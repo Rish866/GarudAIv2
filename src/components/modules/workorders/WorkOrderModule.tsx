@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Wrench, Clock, CheckCircle2, IndianRupee, Plus, X, Filter } from 'lucide-react';
@@ -148,7 +149,7 @@ const seedWorkOrders: WorkOrder[] = [
 
 export default function WorkOrderModule() {
   const { vehicles } = useStore();
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(seedWorkOrders);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(isDemoTenant() ? seedWorkOrders : []);
   const [showModal, setShowModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | WOStatus>('all');
 

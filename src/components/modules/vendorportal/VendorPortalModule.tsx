@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Users, Truck, FileText, CheckCircle, Clock, Star, Download, Package, CreditCard } from 'lucide-react';
@@ -23,7 +24,7 @@ const seedVendorPayments: VendorPayment[] = [
 
 export default function VendorPortalModule() {
   const [view, setView] = useState<PortalView>('indents');
-  const [indents, setIndents] = useState(seedVendorIndents);
+  const [indents, setIndents] = useState(isDemoTenant() ? seedVendorIndents : []);
 
   const acceptIndent = (id: string) => setIndents(indents.map(i => i.id === id ? { ...i, status: 'accepted' } : i));
   const rejectIndent = (id: string) => setIndents(indents.map(i => i.id === id ? { ...i, status: 'rejected' } : i));

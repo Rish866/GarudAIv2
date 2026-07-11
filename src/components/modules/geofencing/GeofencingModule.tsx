@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { MapPin, Plus, Bell, Shield, X, Circle as CircleIcon, Warehouse, Users, AlertTriangle } from 'lucide-react';
 import { MapContainer, TileLayer, Circle, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -76,7 +77,7 @@ function getTypeIcon(type: GeofenceType) {
 
 export default function GeofencingModule() {
   const { vehicles } = useStore();
-  const [geofences, setGeofences] = useState<Geofence[]>(seedGeofences);
+  const [geofences, setGeofences] = useState<Geofence[]>(isDemoTenant() ? seedGeofences : []);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newGeofence, setNewGeofence] = useState<{ name: string; type: GeofenceType; lat: string; lng: string; radius: string }>({
     name: '',

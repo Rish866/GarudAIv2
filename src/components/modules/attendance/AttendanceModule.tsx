@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Calendar, Clock, UserCheck, UserX, Plus, X, Download, Filter } from 'lucide-react';
@@ -59,8 +60,8 @@ type TabView = 'attendance' | 'leaves' | 'summary';
 
 export default function AttendanceModule() {
   const { drivers } = useStore();
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>(seedAttendance);
-  const [leaves, setLeaves] = useState<LeaveRequest[]>(seedLeaves);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>(isDemoTenant() ? seedAttendance : []);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>(isDemoTenant() ? seedLeaves : []);
   const [tab, setTab] = useState<TabView>('attendance');
   const [selectedDate, setSelectedDate] = useState(today);
   const [showLeaveModal, setShowLeaveModal] = useState(false);

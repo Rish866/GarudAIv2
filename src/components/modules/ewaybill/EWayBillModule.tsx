@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { FileText, Plus, X, Download, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
@@ -32,12 +33,12 @@ interface EWayBillRecord {
 
 export default function EWayBillModule() {
   const { trips, vehicles, company } = useStore();
-  const [bills, setBills] = useState<EWayBillRecord[]>([
+  const [bills, setBills] = useState<EWayBillRecord[]>(isDemoTenant() ? [
     { id: 'ewb_001', ewb_number: '3714 0987 6543', trip_id: 'trip_001', trip_number: 'TRP-2025-0142', lr_number: 'LR-7843', customer_name: 'Maruti Suzuki India', origin: 'Pune, Maharashtra', destination: 'Gurgaon, Haryana', distance_km: 1450, vehicle_reg: 'MH-12-AB-1234', transporter_id: '27AABCG1234A1Z5', hsn_code: '8703', goods_description: 'Auto Parts & Components', goods_value: 485000, cgst: 0, sgst: 0, igst: 43650, total_value: 528650, generated_date: '2025-07-08', valid_until: '2025-07-12', status: 'active', part_b_updated: true },
     { id: 'ewb_002', ewb_number: '3714 1234 5678', trip_id: 'trip_002', trip_number: 'TRP-2025-0141', lr_number: 'LR-7844', customer_name: 'Reliance Industries', origin: 'Jamnagar, Gujarat', destination: 'Mumbai, Maharashtra', distance_km: 670, vehicle_reg: 'GJ-05-GH-3456', transporter_id: '27AABCG1234A1Z5', hsn_code: '2710', goods_description: 'Petroleum Products', goods_value: 1250000, cgst: 0, sgst: 0, igst: 225000, total_value: 1475000, generated_date: '2025-07-07', valid_until: '2025-07-10', status: 'active', part_b_updated: true },
     { id: 'ewb_003', ewb_number: '3714 9876 5432', trip_id: 'trip_003', trip_number: 'TRP-2025-0138', lr_number: 'LR-7840', customer_name: 'Tata Steel', origin: 'Jamshedpur, Jharkhand', destination: 'Chennai, Tamil Nadu', distance_km: 1890, vehicle_reg: 'MH-12-CD-5678', transporter_id: '27AABCG1234A1Z5', hsn_code: '7208', goods_description: 'Steel Coils', goods_value: 2100000, cgst: 0, sgst: 0, igst: 378000, total_value: 2478000, generated_date: '2025-07-03', valid_until: '2025-07-07', status: 'expired', part_b_updated: true },
     { id: 'ewb_004', ewb_number: '3714 5555 1234', trip_id: 'trip_004', trip_number: 'TRP-2025-0140', lr_number: 'LR-7842', customer_name: 'UltraTech Cement', origin: 'Rajashree Nagar, Karnataka', destination: 'Hyderabad, Telangana', distance_km: 520, vehicle_reg: 'KA-01-LM-2345', transporter_id: '27AABCG1234A1Z5', hsn_code: '2523', goods_description: 'Portland Cement 53 Grade', goods_value: 375000, cgst: 0, sgst: 0, igst: 18750, total_value: 393750, generated_date: '2025-07-06', valid_until: '2025-07-09', status: 'active', part_b_updated: false },
-  ]);
+  ] : []);
 
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);

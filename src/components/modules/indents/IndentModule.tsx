@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Package, Plus, X, Search, Download, Truck, CheckCircle, Clock, ArrowRight } from 'lucide-react';
@@ -39,7 +40,7 @@ const seedIndents: Indent[] = [
 
 export default function IndentModule() {
   const { customers, vehicles, drivers, trips, quotations, addTrip } = useStore();
-  const [indents, setIndents] = useState<Indent[]>(seedIndents);
+  const [indents, setIndents] = useState<Indent[]>(isDemoTenant() ? seedIndents : []);
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');

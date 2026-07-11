@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { ArrowLeftRight, Plus, X, Truck, Package, Search, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
@@ -32,7 +33,7 @@ const seedTransfers: Transfer[] = [
 
 export default function TransferModule() {
   const { branches, vehicles, drivers } = useStore();
-  const [transfers, setTransfers] = useState<Transfer[]>(seedTransfers);
+  const [transfers, setTransfers] = useState<Transfer[]>(isDemoTenant() ? seedTransfers : []);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');

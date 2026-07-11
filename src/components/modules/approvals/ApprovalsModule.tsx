@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { CheckCircle, XCircle, Clock, Shield, AlertTriangle, User } from 'lucide-react';
@@ -41,7 +42,7 @@ const seedApprovals: ApprovalRequest[] = [
 
 export default function ApprovalsModule() {
   const { user } = useStore();
-  const [approvals, setApprovals] = useState<ApprovalRequest[]>(seedApprovals);
+  const [approvals, setApprovals] = useState<ApprovalRequest[]>(isDemoTenant() ? seedApprovals : []);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [rejectReason, setRejectReason] = useState('');
   const [rejectingId, setRejectingId] = useState<string | null>(null);

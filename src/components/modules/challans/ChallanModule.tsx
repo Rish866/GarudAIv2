@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { FileWarning, IndianRupee, Clock, Plus, X, Filter } from 'lucide-react';
@@ -106,7 +107,7 @@ const seedChallans: Challan[] = [
 
 export default function ChallanModule() {
   const { vehicles } = useStore();
-  const [challans, setChallans] = useState<Challan[]>(seedChallans);
+  const [challans, setChallans] = useState<Challan[]>(isDemoTenant() ? seedChallans : []);
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | PaymentStatus>('all');
 
