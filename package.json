@@ -9,7 +9,12 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "echo \"No linter configured yet\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:rls": "vitest run tests/rls/",
+    "test:integration": "vitest run tests/integration/",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",
@@ -29,12 +34,16 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "esbuild": "^0.25.0",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "vitest": "^4.1.10"
   }
 }
