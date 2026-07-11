@@ -80,8 +80,44 @@ export default function AccountsModule() {
   const [bankForm, setBankForm] = useState({ date: '', type: 'receipt' as 'receipt' | 'payment', amount: '', particulars: '', reference: '', narration: '' });
   const [ledgerForm, setLedgerForm] = useState({ name: '', group: 'Assets' as LedgerAccount['group'], balance: '', balance_type: 'Dr' as 'Dr' | 'Cr' });
 
-  const openingCashBalance = 100000;
-  const openingBankBalance = 350000;
+  // Editable opening balances
+  const [openingCashBalance, setOpeningCashBalance] = useState(isDemoTenant() ? 100000 : 0);
+  const [openingBankBalance, setOpeningBankBalance] = useState(isDemoTenant() ? 350000 : 0);
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [balanceForm, setBalanceForm] = useState({ cash: String(isDemoTenant() ? 100000 : 0), bank: String(isDemoTenant() ? 350000 : 0) });
+
+  // Edit state
+  const [editingCashId, setEditingCashId] = useState<string | null>(null);
+  const [editingBankId, setEditingBankId] = useState<string | null>(null);
+
+  // Delete functions
+  const deleteCashEntry = (id: string) => setCashEntries(cashEntries.filter(e => e.id !== id));
+  const deleteBankEntry = (id: string) => setBankEntries(bankEntries.filter(e => e.id !== id));
+  const deleteLedgerAccount = (id: string) => setLedgerAccounts(ledgerAccounts.filter(a => a.id !== id));
+
+  // Edit cash entry
+  const startEditCash = (entry: CashEntry) => {
+    setEditingCashId(entry.id);
+    setCashForm({ date: entry.date, type: entry.type, amount: String(entry.amount), particulars: entry.particulars, narration: entry.narration });
+    setShowCashModal(true);
+  };
+
+  // Edit bank entry
+  const startEditBank = (entry: BankEntry) => {
+    setEditingBankId(entry.id);
+    setBankForm({ date: entry.date, type: entry.type, amount: String(entry.amount), particulars: entry.particulars, reference: entry.reference, narration: entry.narration });
+    setShowBankModal(true);
+  };
+
+  // Save opening balances
+  const saveBalances = () => {
+    setOpeningCashBalance(parseFloat(balanceForm.cash) || 0);
+    setOpeningBankBalance(parseFloat(balanceForm.bank) || 0);
+    setShowBalanceModal(false);
+  };
+
+  const openingCashBalanceVal = openingCashBalance;
+  const openingBankBalanceVal = openingBankBalance;
 
   const computeCashRunning = () => {
     let balance = openingCashBalance;
@@ -104,33 +140,43 @@ export default function AccountsModule() {
 
   const handleAddCash = () => {
     if (!cashForm.date || !cashForm.amount || !cashForm.particulars) return;
-    const newEntry: CashEntry = {
-      id: 'ce_' + Date.now().toString(36),
-      date: cashForm.date,
-      voucher_number: `CV-${String(cashEntries.length + 1).padStart(3, '0')}`,
-      particulars: cashForm.particulars,
-      type: cashForm.type,
-      amount: parseFloat(cashForm.amount),
-      narration: cashForm.narration,
-    };
-    setCashEntries([...cashEntries, newEntry]);
+    if (editingCashId) {
+      setCashEntries(cashEntries.map(e => e.id === editingCashId ? { ...e, date: cashForm.date, type: cashForm.type, amount: parseFloat(cashForm.amount), particulars: cashForm.particulars, narration: cashForm.narration } : e));
+      setEditingCashId(null);
+    } else {
+      const newEntry: CashEntry = {
+        id: 'ce_' + Date.now().toString(36),
+        date: cashForm.date,
+        voucher_number: `CV-${String(cashEntries.length + 1).padStart(3, '0')}`,
+        particulars: cashForm.particulars,
+        type: cashForm.type,
+        amount: parseFloat(cashForm.amount),
+        narration: cashForm.narration,
+      };
+      setCashEntries([...cashEntries, newEntry]);
+    }
     setShowCashModal(false);
     setCashForm({ date: '', type: 'receipt', amount: '', particulars: '', narration: '' });
   };
 
   const handleAddBank = () => {
     if (!bankForm.date || !bankForm.amount || !bankForm.particulars) return;
-    const newEntry: BankEntry = {
-      id: 'be_' + Date.now().toString(36),
-      date: bankForm.date,
-      voucher_number: `BV-${String(bankEntries.length + 1).padStart(3, '0')}`,
-      particulars: bankForm.particulars,
-      type: bankForm.type,
-      amount: parseFloat(bankForm.amount),
-      reference: bankForm.reference,
-      narration: bankForm.narration,
-    };
-    setBankEntries([...bankEntries, newEntry]);
+    if (editingBankId) {
+      setBankEntries(bankEntries.map(e => e.id === editingBankId ? { ...e, date: bankForm.date, type: bankForm.type, amount: parseFloat(bankForm.amount), particulars: bankForm.particulars, reference: bankForm.reference, narration: bankForm.narration } : e));
+      setEditingBankId(null);
+    } else {
+      const newEntry: BankEntry = {
+        id: 'be_' + Date.now().toString(36),
+        date: bankForm.date,
+        voucher_number: `BV-${String(bankEntries.length + 1).padStart(3, '0')}`,
+        particulars: bankForm.particulars,
+        type: bankForm.type,
+        amount: parseFloat(bankForm.amount),
+        reference: bankForm.reference,
+        narration: bankForm.narration,
+      };
+      setBankEntries([...bankEntries, newEntry]);
+    }
     setShowBankModal(false);
     setBankForm({ date: '', type: 'receipt', amount: '', particulars: '', reference: '', narration: '' });
   };
@@ -199,10 +245,13 @@ export default function AccountsModule() {
                 <p className="text-lg font-bold text-slate-900">{formatCurrency(openingCashBalance)}</p>
               </div>
             </div>
-            <button onClick={() => setShowCashModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <Plus className="w-4 h-4" />
-              New Entry
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => { setBalanceForm({ cash: String(openingCashBalance), bank: String(openingBankBalance) }); setShowBalanceModal(true); }} className="px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">Set Balance</button>
+              <button onClick={() => setShowCashModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <Plus className="w-4 h-4" />
+                New Entry
+              </button>
+            </div>
           </div>
 
 
@@ -217,6 +266,7 @@ export default function AccountsModule() {
                     <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Receipt (Dr)</th>
                     <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Payment (Cr)</th>
                     <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Balance</th>
+                    <th className="text-center px-4 py-3 text-xs font-medium text-slate-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -232,6 +282,10 @@ export default function AccountsModule() {
                         {entry.type === 'payment' ? formatCurrency(entry.amount) : ''}
                       </td>
                       <td className="px-4 py-3 text-sm text-right font-bold text-slate-900">{formatCurrency(entry.running_balance)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <button onClick={() => startEditCash(entry)} className="text-xs text-blue-600 hover:underline mr-2">Edit</button>
+                        <button onClick={() => deleteCashEntry(entry.id)} className="text-xs text-red-500 hover:underline">Del</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -255,10 +309,13 @@ export default function AccountsModule() {
                 <p className="text-lg font-bold text-slate-900">{formatCurrency(openingBankBalance)}</p>
               </div>
             </div>
-            <button onClick={() => setShowBankModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <Plus className="w-4 h-4" />
-              New Entry
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => { setBalanceForm({ cash: String(openingCashBalance), bank: String(openingBankBalance) }); setShowBalanceModal(true); }} className="px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">Set Balance</button>
+              <button onClick={() => setShowBankModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <Plus className="w-4 h-4" />
+                New Entry
+              </button>
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -469,6 +526,29 @@ export default function AccountsModule() {
                 </select>
               </div>
               <button onClick={handleAddLedger} className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">Add Account</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Balance Setting Modal */}
+      {showBalanceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowBalanceModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 m-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-900">Set Opening Balances</h2>
+              <button onClick={() => setShowBalanceModal(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Cash Opening Balance (₹)</label>
+                <input type="number" value={balanceForm.cash} onChange={(e) => setBalanceForm({...balanceForm, cash: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="100000" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Bank Opening Balance (₹)</label>
+                <input type="number" value={balanceForm.bank} onChange={(e) => setBalanceForm({...balanceForm, bank: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="350000" />
+              </div>
+              <button onClick={saveBalances} className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Save Balances</button>
             </div>
           </div>
         </div>
