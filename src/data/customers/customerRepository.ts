@@ -22,3 +22,4 @@ export const customerRepository = {
     return base.update(organizationId, customerId, { branch_id: branchId } as any);
   },
 };
+export type CustomerRecord = Customer;

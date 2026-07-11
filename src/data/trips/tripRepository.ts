@@ -64,3 +64,4 @@ export const tripRepository = {
     } as any);
   },
 };
+export type TripRecord = Trip;

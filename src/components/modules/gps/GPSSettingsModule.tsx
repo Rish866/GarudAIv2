@@ -21,6 +21,7 @@ interface GPSConfig {
 }
 
 interface MappedVehicle {
+  id: string;
   vehicle_id: string;
   vehicle_reg: string;
   device_id: string;

@@ -87,7 +87,7 @@ export default function GeofencingModule() {
       status: 'active',
       alerts_count: 0,
     };
-    setGeofences([...geofences, gf]);
+    createGeofence(gf);
     setNewGeofence({ name: '', type: 'depot', lat: '', lng: '', radius: '1000' });
     setShowAddModal(false);
   };

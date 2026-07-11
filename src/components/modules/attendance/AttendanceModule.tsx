@@ -107,8 +107,8 @@ export default function AttendanceModule() {
     setLeaveForm({ employee_id: '', leave_type: 'casual', from_date: '', to_date: '', reason: '' });
   };
 
-  const approveLeave = (id: string) => setLeaves(leaves.map(l => l.id === id ? { ...l, status: 'approved' } : l));
-  const rejectLeave = (id: string) => setLeaves(leaves.map(l => l.id === id ? { ...l, status: 'rejected' } : l));
+  const approveLeave = (id: string) => updateLeave(id, { status: 'approved' });
+  const rejectLeave = (id: string) => updateLeave(id, { status: 'rejected' });
 
 
   return (

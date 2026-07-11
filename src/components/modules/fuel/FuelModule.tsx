@@ -50,7 +50,6 @@ export default function FuelModule() {
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
     const entry: FuelEntry = {
       id: generateId(),
-      company_id: company.id,
       vehicle_id: form.vehicle_id,
       vehicle_reg: vehicle?.reg_number || '',
       driver_id: form.driver_id,

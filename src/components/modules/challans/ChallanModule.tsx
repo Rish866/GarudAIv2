@@ -82,7 +82,7 @@ export default function ChallanModule() {
       fine_amount: form.fine_amount,
       payment_status: 'pending',
     };
-    setChallans([newChallan, ...challans]);
+    createChallan(newChallan);
     setShowModal(false);
     setForm({
       date: new Date().toISOString().split('T')[0],

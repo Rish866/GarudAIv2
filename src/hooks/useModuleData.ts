@@ -94,9 +94,10 @@ export function useModuleData<T extends { id: string }>(
   const create = useCallback(async (record: Partial<T>): Promise<{ data: T | null; error: string | null }> => {
     if (!organizationId) return { data: null, error: 'No organization' };
 
+    const row: Record<string, unknown> = { ...record, organization_id: organizationId };
     const { data: created, error: createError } = await supabase
       .from(tableName)
-      .insert({ ...record, organization_id: organizationId })
+      .insert(row)
       .select()
       .single();
 
@@ -110,9 +111,10 @@ export function useModuleData<T extends { id: string }>(
   const update = useCallback(async (id: string, updates: Partial<T>): Promise<{ error: string | null }> => {
     if (!organizationId) return { error: 'No organization' };
 
+    const patch: Record<string, unknown> = { ...updates };
     const { error: updateError } = await supabase
       .from(tableName)
-      .update(updates)
+      .update(patch)
       .eq('id', id)
       .eq('organization_id', organizationId);
 

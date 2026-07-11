@@ -75,31 +75,37 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 -- ============================================================
 -- STEP 1: Add composite unique constraints
 -- These enable composite foreign keys
+-- Guarded with IF NOT EXISTS check (PostgreSQL doesn't support
+-- ADD CONSTRAINT IF NOT EXISTS natively)
 -- ============================================================
 
--- Vehicles: unique on (organization_id, id)
-ALTER TABLE public.vehicles 
-  ADD CONSTRAINT vehicles_org_id_unique UNIQUE (organization_id, id);
-
--- Drivers: unique on (organization_id, id)
-ALTER TABLE public.drivers 
-  ADD CONSTRAINT drivers_org_id_unique UNIQUE (organization_id, id);
-
--- Customers: unique on (organization_id, id)
-ALTER TABLE public.customers 
-  ADD CONSTRAINT customers_org_id_unique UNIQUE (organization_id, id);
-
--- Trips: unique on (organization_id, id)
-ALTER TABLE public.trips 
-  ADD CONSTRAINT trips_org_id_unique UNIQUE (organization_id, id);
-
--- Invoices: unique on (organization_id, id)
-ALTER TABLE public.invoices 
-  ADD CONSTRAINT invoices_org_id_unique UNIQUE (organization_id, id);
-
--- Branches: unique on (organization_id, id)
-ALTER TABLE public.branches 
-  ADD CONSTRAINT branches_org_id_unique UNIQUE (organization_id, id);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'vehicles_org_id_unique' AND table_schema = 'public') THEN
+    ALTER TABLE public.vehicles ADD CONSTRAINT vehicles_org_id_unique UNIQUE (organization_id, id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'drivers_org_id_unique' AND table_schema = 'public') THEN
+    ALTER TABLE public.drivers ADD CONSTRAINT drivers_org_id_unique UNIQUE (organization_id, id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'customers_org_id_unique' AND table_schema = 'public') THEN
+    ALTER TABLE public.customers ADD CONSTRAINT customers_org_id_unique UNIQUE (organization_id, id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'trips_org_id_unique' AND table_schema = 'public') THEN
+    ALTER TABLE public.trips ADD CONSTRAINT trips_org_id_unique UNIQUE (organization_id, id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'invoices_org_id_unique' AND table_schema = 'public') THEN
+    ALTER TABLE public.invoices ADD CONSTRAINT invoices_org_id_unique UNIQUE (organization_id, id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'branches_org_id_unique' AND table_schema = 'public') THEN
+    ALTER TABLE public.branches ADD CONSTRAINT branches_org_id_unique UNIQUE (organization_id, id);
+  END IF;
+END $$;
 
 -- ============================================================
 -- STEP 2: Validation trigger to prevent cross-org references

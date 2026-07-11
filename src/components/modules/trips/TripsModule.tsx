@@ -36,6 +36,8 @@ export default function TripsModule() {
   const { data: customers } = useModuleData<any>('customers');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
+  const { create: addInvoice } = useModuleData<any>('invoices');
+  const { create: addNotification } = useModuleData<any>('notifications');
   const [showModal, setShowModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,7 +64,7 @@ export default function TripsModule() {
 
 
   const handleStatusUpdate = (tripId: string, newStatus: TripStatus) => {
-    updateTrip(tripId, newStatus);
+    updateTrip(tripId, { status: newStatus });
     setStatusDropdown(null);
 
     // Trigger notification modal
@@ -82,7 +84,6 @@ export default function TripsModule() {
 
         const invoice: Invoice = {
           id: generateId(),
-          company_id: trip.company_id,
           invoice_number: generateInvoiceNumber(),
           customer_id: trip.customer_id,
           customer_name: trip.customer_name,
@@ -105,12 +106,11 @@ export default function TripsModule() {
         addInvoice(invoice);
 
         // Also update trip to billed
-        updateTrip(tripId, 'billed');
+        updateTrip(tripId, { status: 'billed' });
 
         // Send notification
         addNotification({
           id: generateId(),
-          company_id: trip.company_id,
           type: 'invoice_generated',
           title: 'Invoice Auto-Generated',
           message: `Invoice ${invoice.invoice_number} created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,

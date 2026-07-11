@@ -44,11 +44,11 @@ export default function ApprovalsModule() {
   const totalPendingValue = approvals.filter(a => a.status === 'pending').reduce((s, a) => s + a.amount, 0);
 
   const handleApprove = (id: string) => {
-    setApprovals(approvals.map(a => a.id === id ? { ...a, status: 'approved', approved_by: user.name, approved_at: new Date().toISOString() } : a));
+    updateApproval(id, { status: 'approved', approved_by: user?.name || '', approved_at: new Date().toISOString() });
   };
 
   const handleReject = (id: string) => {
-    setApprovals(approvals.map(a => a.id === id ? { ...a, status: 'rejected', approved_by: user.name, approved_at: new Date().toISOString(), remarks: rejectReason } : a));
+    updateApproval(id, { status: 'rejected', approved_by: user?.name || '', approved_at: new Date().toISOString(), remarks: rejectReason });
     setRejectingId(null);
     setRejectReason('');
   };

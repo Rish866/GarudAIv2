@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
+
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 import { Users, Plus, X, Search, Download, Edit, Trash2, Phone, Mail } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
 

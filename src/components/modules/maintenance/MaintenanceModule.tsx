@@ -31,7 +31,6 @@ export default function MaintenanceModule() {
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
     const record: MaintenanceRecord = {
       id: generateId(),
-      company_id: company.id,
       vehicle_id: form.vehicle_id,
       vehicle_reg: vehicle?.reg_number || '',
       type: form.type,

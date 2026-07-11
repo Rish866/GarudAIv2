@@ -41,7 +41,7 @@ export default function PurchaseModule() {
       status: form.type === 'credit' ? 'pending' : 'paid',
       narration: form.narration,
     };
-    setPurchases([...purchases, newEntry]);
+    createPurchase(newEntry);
     setShowModal(false);
     setForm({ date: '', supplier_name: '', invoice_number: '', items: '', amount: '', type: 'cash', narration: '' });
   };

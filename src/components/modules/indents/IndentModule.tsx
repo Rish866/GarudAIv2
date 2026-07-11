@@ -119,33 +119,29 @@ export default function IndentModule() {
   const allocateVehicle = (indentId: string, vehicleId: string) => {
     const vehicle = vehicles.find(v => v.id === vehicleId);
     if (!vehicle) return;
-    setIndents(indents.map(i => {
-      if (i.id !== indentId) return i;
-      // Add to allocated_vehicles array (prevent duplicates)
-      const alreadyAllocated = i.allocated_vehicles.some(v => v.id === vehicleId);
-      if (alreadyAllocated) return i;
-      const updated = [...i.allocated_vehicles, { id: vehicleId, reg: vehicle.reg_number }];
-      const allAllocated = updated.length >= i.num_vehicles;
-      return { ...i, allocated_vehicles: updated, status: allAllocated ? 'allocated' as IndentStatus : i.status };
-    }));
+    const indent = indents.find(i => i.id === indentId);
+    if (!indent) return;
+    const alreadyAllocated = indent.allocated_vehicles.some(v => v.id === vehicleId);
+    if (alreadyAllocated) return;
+    const updated = [...indent.allocated_vehicles, { id: vehicleId, reg: vehicle.reg_number }];
+    const allAllocated = updated.length >= indent.num_vehicles;
+    updateIndent(indentId, { allocated_vehicles: updated, status: allAllocated ? 'allocated' : indent.status });
   };
 
   const removeAllocatedVehicle = (indentId: string, vehicleId: string) => {
-    setIndents(indents.map(i => {
-      if (i.id !== indentId) return i;
-      const updated = i.allocated_vehicles.filter(v => v.id !== vehicleId);
-      return { ...i, allocated_vehicles: updated, status: updated.length === 0 ? 'pending' as IndentStatus : i.status };
-    }));
+    const indent = indents.find(i => i.id === indentId);
+    if (!indent) return;
+    const updated = indent.allocated_vehicles.filter(v => v.id !== vehicleId);
+    updateIndent(indentId, { allocated_vehicles: updated, status: updated.length === 0 ? 'pending' : indent.status });
   };
 
   const assignDriverToVehicle = (indentId: string, vehicleId: string, driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
     if (!driver) return;
-    setIndents(indents.map(i => {
-      if (i.id !== indentId) return i;
-      const updated = i.allocated_vehicles.map(v => v.id === vehicleId ? { ...v, driver_id: driverId, driver_name: driver.name } : v);
-      return { ...i, allocated_vehicles: updated };
-    }));
+    const indent = indents.find(i => i.id === indentId);
+    if (!indent) return;
+    const updated = indent.allocated_vehicles.map(v => v.id === vehicleId ? { ...v, driver_id: driverId, driver_name: driver.name } : v);
+    updateIndent(indentId, { allocated_vehicles: updated });
   };
 
   const convertToTrip = (indent: Indent) => {
@@ -306,7 +302,7 @@ export default function IndentModule() {
             {indent.status === 'allocated' && indent.allocated_vehicles.length >= indent.num_vehicles && (
               <div className="mt-3 pt-3 border-t flex gap-2" style={{ borderColor: 'var(--border-color)' }}>
                 <button onClick={() => convertToTrip(indent)} className="px-4 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700">Convert to {indent.num_vehicles} Trip(s)</button>
-                <button onClick={() => setIndents(indents.map(i => i.id === indent.id ? { ...i, status: 'cancelled' } : i))} className="px-4 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50">Cancel</button>
+                <button onClick={() => updateIndent(indent.id, { status: 'cancelled' })} className="px-4 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50">Cancel</button>
               </div>
             )}
           </div>
@@ -387,7 +383,7 @@ export default function IndentModule() {
       )}
 
       {showBulkUpload && (
-        <BulkUpload title="Bulk Upload Indents" description="Import order indents from CSV" sampleFields={['customer_name', 'origin', 'destination', 'material', 'weight_tons', 'vehicle_type', 'loading_date', 'rate']} onUpload={(data) => { data.forEach(row => { const cust = customers.find(c => c.name === row.customer_name); setIndents(prev => [...prev, { id: 'ind_' + generateIndentId(), indent_number: `IND-2025-${String(prev.length + 46).padStart(4, '0')}`, customer_id: cust?.id || '', customer_name: row.customer_name || '', origin: row.origin || '', destination: row.destination || '', material: row.material || '', weight_tons: Number(row.weight_tons) || 0, vehicle_type: row.vehicle_type || 'truck', num_vehicles: 1, loading_date: row.loading_date || '', rate: Number(row.rate) || 0, status: 'pending', created_at: new Date().toISOString() }]); }); }} onClose={() => setShowBulkUpload(false)} />
+        <BulkUpload title="Bulk Upload Indents" description="Import order indents from CSV" sampleFields={['customer_name', 'origin', 'destination', 'material', 'weight_tons', 'vehicle_type', 'loading_date', 'rate']} onUpload={(data) => { data.forEach(row => { const cust = customers.find(c => c.name === row.customer_name); createIndent({ id: 'ind_' + generateIndentId(), indent_number: `IND-2025-${String(indents.length + 46).padStart(4, '0')}`, customer_id: cust?.id || '', customer_name: row.customer_name || '', origin: row.origin || '', destination: row.destination || '', material: row.material || '', weight_tons: Number(row.weight_tons) || 0, vehicle_type: row.vehicle_type || 'truck', num_vehicles: 1, loading_date: row.loading_date || '', rate: Number(row.rate) || 0, allocated_vehicles: [], status: 'pending', created_at: new Date().toISOString() }); }); }} onClose={() => setShowBulkUpload(false)} />
       )}
     </div>
   );

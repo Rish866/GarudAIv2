@@ -41,7 +41,7 @@ export default function SalesModule() {
       status: form.type === 'cash' ? 'received' : 'pending',
       narration: form.narration,
     };
-    setSales([...sales, newEntry]);
+    createSale(newEntry);
     setShowModal(false);
     setForm({ date: '', customer_name: '', invoice_number: '', description: '', amount: '', type: 'credit', narration: '' });
   };

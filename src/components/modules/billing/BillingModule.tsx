@@ -74,7 +74,6 @@ export default function BillingModule() {
     const total_amount = subtotal + gst_amount - tds_amount;
     const invoice: Invoice = {
       id: generateId(),
-      company_id: company.id,
       invoice_number: generateInvoiceNumber(),
       customer_id: customer.id,
       customer_name: customer.name,
@@ -105,7 +104,6 @@ export default function BillingModule() {
     if (!customer) return;
     const payment: Payment = {
       id: generateId(),
-      company_id: company.id,
       invoice_id: payForm.invoice_id || undefined,
       customer_id: customer.id,
       customer_name: customer.name,
@@ -126,7 +124,6 @@ export default function BillingModule() {
     const vehicle = vehicles.find((v) => v.id === expForm.vehicle_id);
     const expense: Expense = {
       id: generateId(),
-      company_id: company.id,
       trip_id: expForm.trip_id || undefined,
       vehicle_id: vehicle?.id,
       vehicle_reg: vehicle?.reg_number,

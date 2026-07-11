@@ -90,11 +90,11 @@ export default function TransferModule() {
   };
 
   const markReceived = (id: string) => {
-    setTransfers(transfers.map(t => t.id === id ? { ...t, status: 'received', received_date: new Date().toISOString().split('T')[0] } : t));
+    updateTransfer(id, { status: 'received', received_date: new Date().toISOString().split('T')[0] });
   };
 
   const markInTransit = (id: string) => {
-    setTransfers(transfers.map(t => t.id === id ? { ...t, status: 'in_transit' } : t));
+    updateTransfer(id, { status: 'in_transit' });
   };
 
 
@@ -181,7 +181,7 @@ export default function TransferModule() {
                   <button onClick={() => markReceived(transfer.id)} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium">Mark Received</button>
                 )}
                 {(transfer.status === 'initiated' || transfer.status === 'in_transit') && (
-                  <button onClick={() => setTransfers(transfers.map(t => t.id === transfer.id ? { ...t, status: 'cancelled' } : t))} className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium">Cancel</button>
+                  <button onClick={() => updateTransfer(transfer.id, { status: 'cancelled' })} className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium">Cancel</button>
                 )}
               </div>
             </div>

@@ -31,3 +31,4 @@ export const driverRepository = {
     return base.update(organizationId, driverId, { status: 'inactive' } as any);
   },
 };
+export type DriverRecord = Driver;

@@ -35,6 +35,7 @@ import {
   Package,
   Calendar,
   Bell,
+  Loader2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -126,10 +127,11 @@ const itemVariants = {
 };
 
 export default function DashboardModule() {
-  const { organizationId } = useOrganization();
+  const { organizationId, loading: orgLoading, error: orgError } = useOrganization();
+  const { user } = useStore();
 
   // Read ALL data from Supabase (org-scoped via useModuleData)
-  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: vehicles, loading: vehiclesLoading } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
   const { data: trips } = useModuleData<any>('trips');
   const { data: invoices } = useModuleData<any>('invoices');
@@ -139,7 +141,41 @@ export default function DashboardModule() {
   const { data: notifications } = useModuleData<any>('notifications');
   const { data: alerts } = useModuleData<any>('activity_log');
 
-  const { user } = state;
+  // Loading state — show spinner while org resolves or first data batch loads
+  if (orgLoading || vehiclesLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-3">
+        <Loader2 size={32} className="animate-spin text-blue-600" />
+        <p className="text-sm font-medium text-slate-500">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  // Error state — org context failed
+  if (orgError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-4 px-6">
+        <AlertTriangle size={40} className="text-orange-500" />
+        <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Organization Error</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 text-center max-w-md">
+          {orgError.message}
+        </p>
+      </div>
+    );
+  }
+
+  // No organization — prompt user to create one
+  if (!organizationId) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-4 px-6">
+        <Truck size={40} className="text-blue-500" />
+        <h2 className="text-lg font-semibold text-slate-800 dark:text-white">No Organization Found</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 text-center max-w-md">
+          Your account is not linked to any organization. Please create an organization or ask your admin to invite you.
+        </p>
+      </div>
+    );
+  }
 
   // Compute metrics from Supabase data (org-scoped, real zeros)
   const totalVehicles = vehicles.length;
@@ -155,13 +191,14 @@ export default function DashboardModule() {
   const totalOutstanding = invoices.reduce((sum: number, inv: any) => sum + (inv.balance_amount ?? 0), 0);
   const totalDrivers = drivers.length;
   const availableDrivers = drivers.filter((d: any) => d.status === 'available').length;
-  const unreadAlerts = (alerts || []).filter((a: any) => !a.is_read).length;
+  const unreadAlertItems = (alerts || []).filter((a: any) => !a.is_read);
+  const unreadAlertCount = unreadAlertItems.length;
 
   const metrics = {
     totalVehicles, activeVehicles, availableVehicles, maintenanceVehicles,
     totalTrips, activeTrips: activeTrips.length, completedTrips,
     totalRevenue, totalReceived, totalExpenses, totalOutstanding,
-    totalDrivers, availableDrivers, unreadAlerts
+    totalDrivers, availableDrivers, unreadAlerts: unreadAlertCount
   };
 
   const vehiclesWithLocation = vehicles.filter(
@@ -267,7 +304,7 @@ export default function DashboardModule() {
       >
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {greeting}, {user.name.split(' ')[0]} 👋
+            {greeting}, {user?.name?.split(' ')[0] || 'there'} 👋
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
             Here&apos;s what&apos;s happening with your fleet today
@@ -625,19 +662,19 @@ export default function DashboardModule() {
               <AlertTriangle className="w-4 h-4 text-orange-500" />
               Alerts
             </h3>
-            {unreadAlerts.length > 0 && (
+            {unreadAlertItems.length > 0 && (
               <span className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full">
-                {unreadAlerts.length} new
+                {unreadAlertItems.length} new
               </span>
             )}
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-700 max-h-[360px] overflow-y-auto">
-            {unreadAlerts.length === 0 ? (
+            {unreadAlertItems.length === 0 ? (
               <div className="px-6 py-8 text-center text-slate-400 text-sm">
                 No unread alerts
               </div>
             ) : (
-              unreadAlerts.map((alert) => {
+              unreadAlertItems.map((alert) => {
                 const severityDot =
                   alert.severity === 'critical'
                     ? 'bg-red-500'

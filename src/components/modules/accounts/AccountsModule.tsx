@@ -135,7 +135,7 @@ export default function AccountsModule() {
   const handleAddBank = () => {
     if (!bankForm.date || !bankForm.amount || !bankForm.particulars) return;
     if (editingBankId) {
-      setBankEntries(bankEntries.map(e => e.id === editingBankId ? { ...e, date: bankForm.date, type: bankForm.type, amount: parseFloat(bankForm.amount), particulars: bankForm.particulars, reference: bankForm.reference, narration: bankForm.narration } : e));
+      updateBankEntry(editingBankId!, { date: bankForm.date, type: bankForm.type, amount: parseFloat(bankForm.amount), particulars: bankForm.particulars, reference: bankForm.reference, narration: bankForm.narration });
       setEditingBankId(null);
     } else {
       const newEntry: BankEntry = {

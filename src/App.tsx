@@ -8,9 +8,11 @@ import Topbar from './components/layout/Topbar';
 import LandingPage from './components/LandingPage';
 import OnboardingWizard from './components/ui/OnboardingWizard';
 import ToastContainer from './components/ui/Toast';
-import { OrganizationProvider } from './contexts/OrganizationContext';
+import { OrganizationProvider, useOrganization } from './contexts/OrganizationContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
 import { signIn, isPlatformAdmin, getAllTenants, switchTenant } from './lib/auth';
+import { supabase } from './lib/supabase';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -170,7 +172,6 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
       if (result.success && result.user) {
         login({
           id: result.user.id,
-          company_id: result.user.tenant_id,
           name: result.user.name,
           email: result.user.email,
           role: result.user.role,
@@ -214,7 +215,7 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
         return;
       }
 
-      setRegSuccess('Account created! You can now login with your credentials.');
+      setRegSuccess('Account created! Please check your email to confirm your account, then log in.');
       setIsRegistering(false);
       setEmail(regForm.email);
       setRegForm({ name: '', email: '', password: '', company_name: '', phone: '' });
@@ -511,6 +512,7 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
 
 function MainLayout() {
   const { activeModule, sidebarCollapsed, setActiveModule } = useStore();
+  const { loading: orgLoading, error: orgError, organizationId } = useOrganization();
 
   // Browser history management — prevents back button from leaving the app
   useEffect(() => {
@@ -542,6 +544,64 @@ function MainLayout() {
 
   const ActiveComponent = moduleComponents[activeModule];
 
+  // Show loading state while organization is resolving
+  const renderContent = () => {
+    if (orgLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-3">
+          <Loader2 size={32} className="animate-spin text-blue-600" />
+          <p className="text-sm font-medium text-slate-500">Loading your organization...</p>
+        </div>
+      );
+    }
+
+    if (orgError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-4 px-6">
+          <div className="w-16 h-16 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
+            <Shield size={28} className="text-orange-500" />
+          </div>
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Organization Error</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 text-center max-w-md">
+            {orgError.message}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+
+    if (!organizationId) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-4 px-6">
+          <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+            <Truck size={28} className="text-blue-500" />
+          </div>
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">No Organization</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 text-center max-w-md">
+            Your account is not linked to any organization. Please create a company via Settings, or ask your administrator to invite you.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback />}>
+          {ActiveComponent ? (
+            <ActiveComponent />
+          ) : (
+            <PlaceholderModule name={activeModule} />
+          )}
+        </Suspense>
+      </ErrorBoundary>
+    );
+  };
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
@@ -564,13 +624,7 @@ function MainLayout() {
           className="flex-1 overflow-y-auto p-4 lg:p-6 bg-mesh noise"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
-          <Suspense fallback={<LoadingFallback />}>
-            {ActiveComponent ? (
-              <ActiveComponent />
-            ) : (
-              <PlaceholderModule name={activeModule} />
-            )}
-          </Suspense>
+          {renderContent()}
         </main>
       </div>
     </div>
@@ -580,6 +634,39 @@ function MainLayout() {
 export default function App() {
   const { isLoggedIn, theme, user, login, logout } = useStore();
   const [showLanding, setShowLanding] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  // Auth bootstrap: verify Supabase session on mount.
+  // If Zustand says logged in but Supabase session is gone, log out.
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session && isLoggedIn) {
+        // Supabase session expired/missing — force logout
+        logout();
+      }
+      setAuthChecking(false);
+    });
+
+    // Listen for auth state changes (e.g. token refresh, sign out from another tab)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' && isLoggedIn) {
+        logout();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Show loading while verifying auth
+  if (authChecking) {
+    return (
+      <div className={theme === 'dark' ? 'dark' : ''}>
+        <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+          <Loader2 size={32} className="animate-spin text-blue-600" />
+        </div>
+      </div>
+    );
+  }
 
   if (!isLoggedIn) {
     if (showLanding) {

@@ -19,7 +19,6 @@ export type ModuleName = 'dashboard' | 'fleet' | 'trips' | 'drivers' | 'customer
 // Branch (multi-branch support)
 export interface Branch {
   id: string;
-  company_id: string;
   name: string;
   code: string;
   city: string;
@@ -33,7 +32,6 @@ export interface Branch {
 // Notification
 export interface Notification {
   id: string;
-  company_id: string;
   type: 'trip_update' | 'payment_received' | 'document_expiry' | 'maintenance_due' | 'pod_received' | 'invoice_generated' | 'system';
   title: string;
   message: string;
@@ -46,7 +44,6 @@ export interface Notification {
 // Quotation (for enquiry to quotation to trip flow)
 export interface Quotation {
   id: string;
-  company_id: string;
   quotation_number: string;
   enquiry_id?: string;
   customer_id: string;
@@ -103,7 +100,6 @@ export interface GSTDetails {
 // Activity Log (for audit trail)
 export interface ActivityLog {
   id: string;
-  company_id: string;
   user_name: string;
   action: string;
   entity_type: string;
@@ -141,7 +137,6 @@ export interface Company {
 
 export interface User {
   id: string;
-  company_id: string;
   name: string;
   email: string;
   role: UserRole;
@@ -152,7 +147,6 @@ export interface User {
 
 export interface Vehicle {
   id: string;
-  company_id: string;
   branch_id?: string;
   reg_number: string;
   vehicle_type: VehicleType;
@@ -183,7 +177,6 @@ export interface Vehicle {
 
 export interface Driver {
   id: string;
-  company_id: string;
   branch_id?: string;
   name: string;
   phone: string;
@@ -208,7 +201,6 @@ export interface Driver {
 
 export interface Customer {
   id: string;
-  company_id: string;
   branch_id?: string;
   name: string;
   contact_person: string;
@@ -226,7 +218,6 @@ export interface Customer {
 
 export interface Trip {
   id: string;
-  company_id: string;
   branch_id?: string;
   trip_number: string;
   lr_number: string;
@@ -270,7 +261,6 @@ export interface Trip {
 
 export interface Invoice {
   id: string;
-  company_id: string;
   branch_id?: string;
   invoice_number: string;
   customer_id: string;
@@ -295,7 +285,6 @@ export interface Invoice {
 
 export interface Payment {
   id: string;
-  company_id: string;
   branch_id?: string;
   invoice_id?: string;
   customer_id: string;
@@ -311,7 +300,6 @@ export interface Payment {
 
 export interface Expense {
   id: string;
-  company_id: string;
   branch_id?: string;
   trip_id?: string;
   vehicle_id?: string;
@@ -328,7 +316,6 @@ export interface Expense {
 
 export interface FuelEntry {
   id: string;
-  company_id: string;
   branch_id?: string;
   vehicle_id: string;
   vehicle_reg: string;
@@ -347,7 +334,6 @@ export interface FuelEntry {
 
 export interface MaintenanceRecord {
   id: string;
-  company_id: string;
   branch_id?: string;
   vehicle_id: string;
   vehicle_reg: string;
@@ -365,7 +351,6 @@ export interface MaintenanceRecord {
 
 export interface SystemAlert {
   id: string;
-  company_id: string;
   type: string;
   title: string;
   description: string;
@@ -377,7 +362,6 @@ export interface SystemAlert {
 
 export interface Enquiry {
   id: string;
-  company_id: string;
   branch_id?: string;
   customer_id: string;
   customer_name: string;

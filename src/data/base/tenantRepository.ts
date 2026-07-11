@@ -15,7 +15,7 @@ export interface TenantQueryOptions {
 export interface TenantRecord {
   id: string;
   organization_id: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 /**
@@ -59,9 +59,10 @@ export class TenantRepository<T extends TenantRecord> {
    * Create a new record (organization_id is mandatory)
    */
   async create(record: Omit<T, 'id'>, organizationId: string): Promise<{ data: T | null; error: string | null }> {
+    const row: Record<string, unknown> = { ...record, organization_id: organizationId };
     const { data, error } = await supabase
       .from(this.tableName)
-      .insert({ ...record, organization_id: organizationId })
+      .insert(row)
       .select()
       .single();
     return { data: data as T | null, error: error?.message || null };
@@ -71,9 +72,10 @@ export class TenantRepository<T extends TenantRecord> {
    * Update a record (RLS ensures you can only update your org's records)
    */
   async update(id: string, updates: Partial<T>, organizationId: string): Promise<{ data: T | null; error: string | null }> {
+    const patch: Record<string, unknown> = { ...updates };
     const { data, error } = await supabase
       .from(this.tableName)
-      .update(updates)
+      .update(patch)
       .eq('id', id)
       .eq('organization_id', organizationId)
       .select()

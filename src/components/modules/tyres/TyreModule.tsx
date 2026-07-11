@@ -199,7 +199,7 @@ export default function TyreModule() {
           onUpload={(data) => {
             data.forEach(row => {
               const vehicle = vehicles.find(v => v.reg_number === row.vehicle_reg);
-              setTyres(prev => [...prev, {
+              createTyre({
                 id: 'tyr_' + generateId(),
                 serial_number: row.serial_number || '',
                 vehicle_id: vehicle?.id || '',
@@ -211,7 +211,7 @@ export default function TyreModule() {
                 retread_count: 0,
                 purchase_date: row.purchase_date || new Date().toISOString().split('T')[0],
                 cost: Number(row.cost) || 0,
-              }]);
+              });
             });
           }}
           onClose={() => setShowBulkUpload(false)}

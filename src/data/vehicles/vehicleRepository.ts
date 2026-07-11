@@ -31,3 +31,4 @@ export const vehicleRepository = {
     return base.update(organizationId, vehicleId, { branch_id: branchId } as any);
   },
 };
+export type VehicleRecord = Vehicle;

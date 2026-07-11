@@ -70,7 +70,7 @@ export default function ClaimsModule() {
     setForm({ type: 'damage', trip_id: '', incident_date: '', location: '', description: '', claim_amount: '', liability: 'company' });
   };
 
-  const updateStatus = (id: string, status: ClaimStatus) => setClaims(claims.map(c => c.id === id ? { ...c, status } : c));
+  const updateStatus = (id: string, status: ClaimStatus) => updateClaim(id, { status });
 
   return (
     <div className="p-6 space-y-6">

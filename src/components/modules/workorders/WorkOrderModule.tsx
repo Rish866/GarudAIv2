@@ -115,7 +115,7 @@ export default function WorkOrderModule() {
       status: 'open',
       parts_used: '',
     };
-    setWorkOrders([newOrder, ...workOrders]);
+    createWorkOrder(newOrder);
     setShowModal(false);
     setForm({
       vehicle_reg: '',
