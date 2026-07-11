@@ -26,7 +26,7 @@
 | 11 | Remove hardcoded seed data | ✅ Complete |
 | 12 | Realtime isolation | ✅ Complete |
 | 13 | Storage isolation | ✅ Complete |
-| 14 | API/service-role security | ⬜ Pending |
+| 14 | API/service-role security | ✅ Complete |
 | 15 | Relational tenant integrity | ⬜ Pending |
 | 16 | Dashboard correction | ⬜ Pending |
 | 17 | Role permissions | ⬜ Pending |
