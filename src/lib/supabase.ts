@@ -6,7 +6,8 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publisha
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const TENANT_ID = 'garud-erp-001';
+// DEPRECATED: Use organization_id from OrganizationContext instead
+const TENANT_ID = ''; // Legacy — will be removed
 
 // ============================================================
 // AUTH

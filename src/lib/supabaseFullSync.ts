@@ -3,7 +3,8 @@
 import { supabase } from './supabase';
 import type { Vehicle, Driver, Customer, Trip, Invoice, Payment, Expense, FuelEntry, MaintenanceRecord, Enquiry, Quotation, Notification, ActivityLog } from '../types';
 
-const TENANT_ID = 'garud-erp-001';
+// DEPRECATED: Use organization_id from OrganizationContext instead
+const TENANT_ID = ''; // Legacy — will be removed
 
 // ============================================================
 // GENERIC UPSERT HELPER

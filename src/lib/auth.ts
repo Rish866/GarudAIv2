@@ -197,13 +197,14 @@ export function getAllUsers(): { email: string; tenant_id: string; name: string 
 }
 
 export function switchTenant(tenantId: string): void {
-  localStorage.setItem('garud_current_tenant', tenantId);
+  // Tenant switching now handled by OrganizationContext
+  // No localStorage persistence needed
 }
 
 export function getCurrentTenantId(): string {
-  return localStorage.getItem('garud_current_tenant') || '';
+  return ''; // Deprecated — use useOrganization() hook instead
 }
 
 export function getStorageKeyForTenant(tenantId: string): string {
-  return `garud-erp-${tenantId}`;
+  return ''; // Deprecated — business data in Supabase, not localStorage
 }
