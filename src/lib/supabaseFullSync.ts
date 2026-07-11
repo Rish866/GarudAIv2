@@ -69,7 +69,6 @@ export async function syncVehicles(vehicles: Vehicle[]): Promise<boolean> {
     lat: v.lat ? String(v.lat) : null,
     lng: v.lng ? String(v.lng) : null,
     speed: v.speed || 0,
-    last_location: v.last_location || null,
     last_gps_update: v.last_gps_update || null,
     ignition: v.ignition || false,
   }));

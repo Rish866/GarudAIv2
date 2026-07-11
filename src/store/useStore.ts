@@ -29,6 +29,19 @@ export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 }
 
+// Helper to generate relative dates (days ago from today)
+function daysAgo(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString();
+}
+
+function dateAgo(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().split('T')[0];
+}
+
 // Store state interface
 interface StoreState {
   company: Company;
@@ -123,11 +136,11 @@ const seedBranches: Branch[] = [
 ];
 
 const seedNotifications: Notification[] = [
-  { id: 'notif_001', company_id: COMPANY_ID, type: 'trip_update', title: 'Trip Delivered', message: 'Trip TRP-2025-0142 has been delivered successfully', link_module: 'trips', link_id: 'trip_001', is_read: false, created_at: '2025-07-09T10:30:00Z' },
-  { id: 'notif_002', company_id: COMPANY_ID, type: 'payment_received', title: 'Payment Received', message: 'Payment of ₹1,88,490 received from Maruti Suzuki', link_module: 'billing', link_id: 'pay_001', is_read: false, created_at: '2025-07-09T09:15:00Z' },
-  { id: 'notif_003', company_id: COMPANY_ID, type: 'document_expiry', title: 'Insurance Expiring', message: 'Vehicle RJ-14-JK-7890 insurance expires in 22 days', link_module: 'fleet', link_id: 'veh_005', is_read: false, created_at: '2025-07-09T06:00:00Z' },
-  { id: 'notif_004', company_id: COMPANY_ID, type: 'maintenance_due', title: 'Maintenance Scheduled', message: 'Scheduled maintenance for MH-12-AB-1234 on Jul 15', link_module: 'maintenance', link_id: 'maint_002', is_read: true, created_at: '2025-07-08T14:00:00Z' },
-  { id: 'notif_005', company_id: COMPANY_ID, type: 'system', title: 'New Enquiry', message: 'New enquiry received from UltraTech Cement', link_module: 'enquiries', link_id: 'enq_001', is_read: true, created_at: '2025-07-08T09:00:00Z' },
+  { id: 'notif_001', company_id: COMPANY_ID, type: 'trip_update', title: 'Trip Delivered', message: 'Trip TRP-2025-0142 has been delivered successfully', link_module: 'trips', link_id: 'trip_001', is_read: false, created_at: daysAgo(0) },
+  { id: 'notif_002', company_id: COMPANY_ID, type: 'payment_received', title: 'Payment Received', message: 'Payment of ₹1,88,490 received from Maruti Suzuki', link_module: 'billing', link_id: 'pay_001', is_read: false, created_at: daysAgo(0) },
+  { id: 'notif_003', company_id: COMPANY_ID, type: 'document_expiry', title: 'Insurance Expiring', message: 'Vehicle RJ-14-JK-7890 insurance expires in 22 days', link_module: 'fleet', link_id: 'veh_005', is_read: false, created_at: daysAgo(0) },
+  { id: 'notif_004', company_id: COMPANY_ID, type: 'maintenance_due', title: 'Maintenance Scheduled', message: 'Scheduled maintenance for MH-12-AB-1234 on Jul 15', link_module: 'maintenance', link_id: 'maint_002', is_read: true, created_at: daysAgo(1) },
+  { id: 'notif_005', company_id: COMPANY_ID, type: 'system', title: 'New Enquiry', message: 'New enquiry received from UltraTech Cement', link_module: 'enquiries', link_id: 'enq_001', is_read: true, created_at: daysAgo(1) },
 ];
 
 const seedQuotations: Quotation[] = [
@@ -136,10 +149,10 @@ const seedQuotations: Quotation[] = [
 ];
 
 const seedActivityLog: ActivityLog[] = [
-  { id: 'act_001', company_id: COMPANY_ID, user_name: 'Rajesh Sharma', action: 'created', entity_type: 'trip', entity_id: 'trip_001', details: 'Rajesh Sharma created trip TRP-2025-0142', timestamp: '2025-07-09T10:20:00Z' },
-  { id: 'act_002', company_id: COMPANY_ID, user_name: 'System', action: 'generated', entity_type: 'invoice', entity_id: 'inv_001', details: 'System generated invoice INV-2025-0089', timestamp: '2025-07-09T08:00:00Z' },
-  { id: 'act_003', company_id: COMPANY_ID, user_name: 'Priya Mehta', action: 'added', entity_type: 'vehicle', entity_id: 'veh_001', details: 'Priya Mehta added vehicle MH-12-AB-1234', timestamp: '2025-07-08T14:30:00Z' },
-  { id: 'act_004', company_id: COMPANY_ID, user_name: 'System', action: 'recorded', entity_type: 'payment', entity_id: 'pay_001', details: 'Payment ₹1,88,490 recorded for Maruti Suzuki', timestamp: '2025-07-08T11:00:00Z' },
+  { id: 'act_001', company_id: COMPANY_ID, user_name: 'Rajesh Sharma', action: 'created', entity_type: 'trip', entity_id: 'trip_001', details: 'Rajesh Sharma created trip TRP-2025-0142', timestamp: daysAgo(0) },
+  { id: 'act_002', company_id: COMPANY_ID, user_name: 'System', action: 'generated', entity_type: 'invoice', entity_id: 'inv_001', details: 'System generated invoice INV-2025-0089', timestamp: daysAgo(0) },
+  { id: 'act_003', company_id: COMPANY_ID, user_name: 'Priya Mehta', action: 'added', entity_type: 'vehicle', entity_id: 'veh_001', details: 'Priya Mehta added vehicle MH-12-AB-1234', timestamp: daysAgo(1) },
+  { id: 'act_004', company_id: COMPANY_ID, user_name: 'System', action: 'recorded', entity_type: 'payment', entity_id: 'pay_001', details: 'Payment ₹1,88,490 recorded for Maruti Suzuki', timestamp: daysAgo(1) },
   { id: 'act_005', company_id: COMPANY_ID, user_name: 'Rajesh Sharma', action: 'scheduled', entity_type: 'maintenance', entity_id: 'maint_001', details: 'Maintenance scheduled for RJ-14-JK-7890', timestamp: '2025-07-07T09:00:00Z' },
 ];
 

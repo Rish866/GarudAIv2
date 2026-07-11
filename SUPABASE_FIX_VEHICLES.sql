@@ -18,6 +18,7 @@ ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS permit_expiry DATE;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS driver_id TEXT;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS odometer INTEGER DEFAULT 0;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS last_gps_update TIMESTAMPTZ;
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS last_location TEXT;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS ignition BOOLEAN DEFAULT FALSE;
 
 -- Done! The Fleet module will now sync without errors.

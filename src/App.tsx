@@ -9,7 +9,7 @@ import { useSupabaseSync } from './lib/useSupabaseSync';
 import LandingPage from './components/LandingPage';
 import OnboardingWizard from './components/ui/OnboardingWizard';
 import ToastContainer from './components/ui/Toast';
-import { authenticateUser, registerUser, isPlatformAdmin, getCurrentTenantId, getStorageKeyForTenant } from './lib/auth';
+import { authenticateUser, registerUser, isPlatformAdmin, getCurrentTenantId, getStorageKeyForTenant, getAllUsers } from './lib/auth';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -568,8 +568,20 @@ function MainLayout() {
 }
 
 export default function App() {
-  const { isLoggedIn, theme } = useStore();
+  const { isLoggedIn, theme, user, logout } = useStore();
   const [showLanding, setShowLanding] = useState(true);
+
+  // Session validation — force logout if user isn't in registered users
+  useEffect(() => {
+    if (isLoggedIn && user?.email) {
+      const users = getAllUsers();
+      const validUser = users.find(u => u.email.toLowerCase() === user.email.toLowerCase());
+      if (!validUser) {
+        // Cached login from old demo mode — force logout
+        logout();
+      }
+    }
+  }, []);
 
   if (!isLoggedIn) {
     if (showLanding) {
