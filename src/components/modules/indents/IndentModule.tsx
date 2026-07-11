@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Package, Plus, X, Search, Download, Truck, CheckCircle, Clock, ArrowRight } from 'lucide-react';
@@ -30,17 +30,10 @@ interface Indent {
 const generateIndentId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
 
-const seedIndents: Indent[] = [
-  { id: 'ind_001', indent_number: 'IND-2025-0045', customer_id: 'cust_001', customer_name: 'Tata Motors Ltd', origin: 'Pune, Maharashtra', destination: 'Chennai, Tamil Nadu', material: 'Auto Parts', weight_tons: 22, vehicle_type: 'trailer', num_vehicles: 2, loading_date: '2025-07-12', rate: 95000, allocated_vehicles: [{ id: 'veh_001', reg: 'MH-12-AB-1234' }], status: 'allocated', created_at: '2025-07-09T10:00:00Z' },
-  { id: 'ind_002', indent_number: 'IND-2025-0044', customer_id: 'cust_002', customer_name: 'Reliance Industries', origin: 'Jamnagar, Gujarat', destination: 'Mumbai, Maharashtra', material: 'Polymer Granules', weight_tons: 20, vehicle_type: 'container', num_vehicles: 1, loading_date: '2025-07-11', rate: 65000, allocated_vehicles: [], status: 'pending', created_at: '2025-07-09T08:30:00Z' },
-  { id: 'ind_003', indent_number: 'IND-2025-0043', customer_id: 'cust_004', customer_name: 'UltraTech Cement', origin: 'Rajashree Nagar, Karnataka', destination: 'Hyderabad, Telangana', material: 'Cement 53 Grade', weight_tons: 25, vehicle_type: 'truck', num_vehicles: 3, loading_date: '2025-07-10', rate: 55000, allocated_vehicles: [{ id: 'veh_003', reg: 'MH-14-EF-9012' }, { id: 'veh_006', reg: 'KA-01-LM-2345' }], status: 'confirmed', created_at: '2025-07-08T15:00:00Z' },
-  { id: 'ind_004', indent_number: 'IND-2025-0042', customer_id: 'cust_003', customer_name: 'Asian Paints Ltd', origin: 'Ankleshwar, Gujarat', destination: 'Pune, Maharashtra', material: 'Paint Drums', weight_tons: 18, vehicle_type: 'container', num_vehicles: 1, loading_date: '2025-07-09', rate: 42000, allocated_vehicles: [{ id: 'veh_004', reg: 'GJ-05-GH-3456' }], trip_id: 'trip_003', status: 'in_progress', created_at: '2025-07-07T12:00:00Z' },
-  { id: 'ind_005', indent_number: 'IND-2025-0041', customer_id: 'cust_005', customer_name: 'Maruti Suzuki India', origin: 'Manesar, Haryana', destination: 'Bangalore, Karnataka', material: 'Car Components', weight_tons: 20, vehicle_type: 'trailer', num_vehicles: 2, loading_date: '2025-07-06', rate: 125000, allocated_vehicles: [{ id: 'veh_007', reg: 'MP-09-NP-6789' }, { id: 'veh_008', reg: 'TN-07-QR-4567' }], trip_id: 'trip_006', status: 'completed', created_at: '2025-07-05T09:00:00Z' },
-];
 
 export default function IndentModule() {
   const { customers, vehicles, drivers, trips, quotations, addTrip } = useStore();
-  const [indents, setIndents] = useState<Indent[]>(isDemoTenant() ? seedIndents : []);
+  const { data: indents, create: createIndent, update: updateIndent, remove: removeIndent, loading: indentsLoading } = useModuleData<Indent>('indents');
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');
@@ -113,7 +106,7 @@ export default function IndentModule() {
       status: 'pending',
       created_at: new Date().toISOString(),
     };
-    setIndents([newIndent, ...indents]);
+    createIndent(newIndent);
     setShowModal(false);
     setForm({ quotation_id: '', customer_id: '', origin: '', destination: '', material: '', weight_tons: '', vehicle_type: 'truck', num_vehicles: '1', loading_date: '', rate: '', remarks: '' });
   };
@@ -186,7 +179,7 @@ export default function IndentModule() {
       };
       addTrip(trip);
     });
-    setIndents(indents.map(i => i.id === indent.id ? { ...i, status: 'in_progress' } : i));
+    updateIndent(indent.id, { status: 'in_progress' });
   };
 
 

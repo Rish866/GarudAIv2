@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { generateQuotationPDF } from '../../../lib/pdf';
 import { estimateDistance } from '../../../lib/distance';

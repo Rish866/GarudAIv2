@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useBranchData } from '../../../hooks/useBranchData';
 import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';

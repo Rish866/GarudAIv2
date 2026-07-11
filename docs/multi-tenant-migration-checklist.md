@@ -44,10 +44,10 @@
 | Drivers | Zustand+localStorage | drivers | ✅ | ✅ | ✅ | 🔄 | 🔄 | 🔄 | 🔄 | ⬜ | ⬜ | ⬜ | 🔄 |
 | Customers | Zustand+localStorage | customers | ✅ | ✅ | ✅ | 🔄 | 🔄 | 🔄 | 🔄 | ⬜ | ⬜ | ⬜ | 🔄 |
 | Vendors | useModuleData → Supabase | vendors | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ | ⬜ | ✅ |
-| Trips | Zustand+localStorage | trips | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Enquiries | Zustand+localStorage | enquiries | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Quotations | Zustand+localStorage | quotations | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Indents | useState(seed) | indents | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Trips | Zustand (import added) | trips | ✅ | ✅ | ✅ | 🔄 | 🔄 | 🔄 | 🔄 | ⬜ | ⬜ | ⬜ | 🔄 |
+| Enquiries | Zustand (import added) | enquiries | ✅ | ✅ | ✅ | 🔄 | 🔄 | 🔄 | 🔄 | ⬜ | ⬜ | ⬜ | 🔄 |
+| Quotations | Zustand (import added) | quotations | ✅ | ✅ | ✅ | 🔄 | 🔄 | 🔄 | 🔄 | ⬜ | ⬜ | ⬜ | 🔄 |
+| Indents | useModuleData → Supabase | indents | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ | ✅ |
 | Billing/Invoices | Zustand+localStorage | invoices | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Payments | Zustand+localStorage | payments | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Expenses | Zustand+localStorage | expenses | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -58,7 +58,7 @@
 | Attendance | useState(seed) | attendance | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Documents | Zustand+localStorage | documents | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Contracts | useModuleData → Supabase | contracts | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ✅ |
-| Market Hire | useState(seed) | market_hires | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Market Hire | useModuleData → Supabase | market_hires | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ✅ |
 | Routes | useModuleData → Supabase | routes | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ✅ |
 | Transfers | useState(seed) | transfers | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Branches | Zustand+localStorage | branches | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -69,7 +69,7 @@
 | Purchases | useState(seed) | purchases | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Sales | useState(seed) | sales | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Inventory | useState(seed) | inventory | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| E-Way Bill | useState(seed) | eway_bills | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| E-Way Bill | useModuleData → Supabase | eway_bills | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ✅ |
 | Challans | useState(seed) | challans | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Work Orders | useState(seed) | work_orders | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Geofencing | useState(seed) | geofences | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |

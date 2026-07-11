@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Truck, Plus, X, TrendingUp, IndianRupee, CreditCard } from 'lucide-react';
@@ -19,12 +19,7 @@ interface MarketHireRecord {
 }
 
 export default function MarketHireModule() {
-  const [hires, setHires] = useState<MarketHireRecord[]>(isDemoTenant() ? [
-    { id: 'mh_001', trip_number: 'TRP-2025-0135', market_vehicle_reg: 'UP-78-AT-4521', owner_name: 'Rajan Transport', owner_phone: '+91 94155 67890', hire_amount: 72000, advance_paid: 25000, balance_due: 47000, freight_charged: 88000, commission: 16000, payment_status: 'partial' },
-    { id: 'mh_002', trip_number: 'TRP-2025-0133', market_vehicle_reg: 'HR-55-BK-9012', owner_name: 'Sharma Carriers', owner_phone: '+91 98765 12340', hire_amount: 95000, advance_paid: 95000, balance_due: 0, freight_charged: 118000, commission: 23000, payment_status: 'paid' },
-    { id: 'mh_003', trip_number: 'TRP-2025-0131', market_vehicle_reg: 'RJ-19-GA-3456', owner_name: 'Gupta Logistics', owner_phone: '+91 93145 78900', hire_amount: 55000, advance_paid: 20000, balance_due: 35000, freight_charged: 68000, commission: 13000, payment_status: 'partial' },
-    { id: 'mh_004', trip_number: 'TRP-2025-0128', market_vehicle_reg: 'GJ-01-DP-7788', owner_name: 'Patel Brothers', owner_phone: '+91 97267 45612', hire_amount: 110000, advance_paid: 0, balance_due: 110000, freight_charged: 135000, commission: 25000, payment_status: 'pending' },
-  ] : []);
+    const { data: hires, create: createHire, loading: hiresLoading } = useModuleData<MarketHireRecord>('market_hires');
 
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
@@ -62,7 +57,7 @@ export default function MarketHireModule() {
       payment_status: advancePaid >= hireAmount ? 'paid' : advancePaid > 0 ? 'partial' : 'pending',
     };
 
-    setHires([...hires, newHire]);
+    createHire(newHire);
     setShowModal(false);
     setForm({ trip_number: '', market_vehicle_reg: '', owner_name: '', owner_phone: '', hire_amount: '', advance_paid: '', freight_charged: '' });
   };
