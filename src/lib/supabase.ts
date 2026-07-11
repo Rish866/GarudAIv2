@@ -1,8 +1,8 @@
 // Supabase Client & Sync Layer for Garud AI Transport ERP
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://emcynvexbauhohpwcqaw.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_MQxqdtD5HRHHsIxhmIjHrQ_XS4jyXWh';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://emcynvexbauhohpwcqaw.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 

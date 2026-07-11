@@ -1,17 +1,17 @@
 // Authentication & Multi-Tenant System for Garud AI ERP
-// Super Admin: rishkatiyar1@gmail.com / 123456789
+// Uses Supabase Auth (bcrypt hashed passwords, JWT sessions)
+// NO hardcoded passwords in source code
 
-export interface RegisteredUser {
+import { supabase } from './supabase';
+
+export interface AuthUser {
   id: string;
   email: string;
-  password: string;
   name: string;
   company_name: string;
   phone: string;
   role: 'super_admin' | 'admin' | 'operations' | 'fleet_manager' | 'accounts' | 'driver';
   tenant_id: string;
-  created_at: string;
-  status: 'active' | 'inactive';
 }
 
 export interface Tenant {
@@ -22,180 +22,183 @@ export interface Tenant {
   status: 'active' | 'trial' | 'suspended';
 }
 
-const USERS_STORAGE_KEY = 'garud_registered_users';
-const TENANTS_STORAGE_KEY = 'garud_tenants';
-const CURRENT_TENANT_KEY = 'garud_current_tenant';
+// Platform admin email from environment variable (not hardcoded)
+const PLATFORM_ADMIN_EMAIL = import.meta.env.VITE_PLATFORM_ADMIN_EMAIL || '';
 
-// Platform super admin (you)
-const PLATFORM_SUPER_ADMIN: RegisteredUser = {
-  id: 'platform_admin_001',
-  email: 'rishkatiyar1@gmail.com',
-  password: '123456789',
-  name: 'Rish Katiyar',
-  company_name: 'Garud AI (Platform)',
-  phone: '+91 00000 00000',
-  role: 'super_admin',
-  tenant_id: 'platform',
-  created_at: '2025-01-01T00:00:00Z',
-  status: 'active',
-};
+// ========== SUPABASE AUTH FUNCTIONS ==========
 
-// Demo user for testing
-const DEMO_USER: RegisteredUser = {
-  id: 'user_demo_001',
-  email: 'demo@garudai.in',
-  password: 'demo123',
-  name: 'Demo User',
-  company_name: 'Demo Transport Pvt Ltd',
-  phone: '+91 99999 99999',
-  role: 'super_admin',
-  tenant_id: 'tenant_demo',
-  created_at: '2025-07-01T00:00:00Z',
-  status: 'active',
-};
+/**
+ * Sign up a new user with Supabase Auth (password hashed server-side by Supabase)
+ */
+export async function signUp(data: {
+  email: string;
+  password: string;
+  name: string;
+  company_name: string;
+  phone: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    // 1. Create user in Supabase Auth (password hashed with bcrypt on server)
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          name: data.name,
+          company_name: data.company_name,
+          phone: data.phone,
+        },
+      },
+    });
 
-const DEMO_TENANT: Tenant = {
-  id: 'tenant_demo',
-  company_name: 'Demo Transport Pvt Ltd',
-  owner_email: 'demo@garudai.in',
-  created_at: '2025-07-01T00:00:00Z',
-  status: 'active',
-};
-
-// Initialize default users
-function initializeUsers(): RegisteredUser[] {
-  const stored = localStorage.getItem(USERS_STORAGE_KEY);
-  if (stored) {
-    const users = JSON.parse(stored) as RegisteredUser[];
-    // Ensure platform admin always exists
-    if (!users.find(u => u.email === PLATFORM_SUPER_ADMIN.email)) {
-      users.push(PLATFORM_SUPER_ADMIN);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    if (authError) {
+      return { success: false, error: authError.message };
     }
-    if (!users.find(u => u.email === DEMO_USER.email)) {
-      users.push(DEMO_USER);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+
+    if (!authData.user) {
+      return { success: false, error: 'Registration failed. Please try again.' };
     }
-    return users;
+
+    // 2. Create tenant record
+    const tenantId = 'tenant_' + authData.user.id.slice(0, 12);
+    await supabase.from('tenants').upsert({
+      id: tenantId,
+      name: data.company_name,
+      domain: data.email.split('@')[1],
+      industry: 'Logistics & Freight',
+      total_trips: 0,
+      safety_score: 0,
+      billing_due: '₹0',
+    });
+
+    // 3. Create user profile in users table
+    await supabase.from('users').upsert({
+      id: authData.user.id,
+      tenant_id: tenantId,
+      name: data.name,
+      email: data.email,
+      role: 'super_admin',
+      phone: data.phone,
+      status: 'active',
+    });
+
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Network error' };
   }
-  const defaultUsers = [PLATFORM_SUPER_ADMIN, DEMO_USER];
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(defaultUsers));
-  return defaultUsers;
 }
 
-function initializeTenants(): Tenant[] {
-  const stored = localStorage.getItem(TENANTS_STORAGE_KEY);
-  if (stored) {
-    const tenants = JSON.parse(stored) as Tenant[];
-    if (!tenants.find(t => t.id === DEMO_TENANT.id)) {
-      tenants.push(DEMO_TENANT);
-      localStorage.setItem(TENANTS_STORAGE_KEY, JSON.stringify(tenants));
+/**
+ * Sign in with Supabase Auth (server validates password hash)
+ */
+export async function signIn(email: string, password: string): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      // Provide user-friendly error messages
+      if (error.message.includes('Invalid login')) {
+        return { success: false, error: 'Invalid email or password. Please check and try again.' };
+      }
+      return { success: false, error: error.message };
     }
-    return tenants;
+
+    if (!data.user) {
+      return { success: false, error: 'Login failed. Please try again.' };
+    }
+
+    // Get user profile from users table
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+
+    const user: AuthUser = {
+      id: data.user.id,
+      email: data.user.email || email,
+      name: profile?.name || data.user.user_metadata?.name || email.split('@')[0],
+      company_name: profile?.company_name || data.user.user_metadata?.company_name || 'My Company',
+      phone: profile?.phone || data.user.user_metadata?.phone || '',
+      role: profile?.role || 'super_admin',
+      tenant_id: profile?.tenant_id || 'tenant_' + data.user.id.slice(0, 12),
+    };
+
+    return { success: true, user };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Network error. Please check your connection.' };
   }
-  const defaultTenants = [DEMO_TENANT];
-  localStorage.setItem(TENANTS_STORAGE_KEY, JSON.stringify(defaultTenants));
-  return defaultTenants;
 }
 
-// ========== AUTH FUNCTIONS ==========
-
-export function authenticateUser(email: string, password: string): { success: boolean; user?: RegisteredUser; error?: string } {
-  const users = initializeUsers();
-  const user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
-  
-  if (!user) {
-    return { success: false, error: 'No account found with this email. Please register first.' };
-  }
-  
-  if (user.password !== password) {
-    return { success: false, error: 'Incorrect password. Please try again.' };
-  }
-
-  if (user.status === 'inactive') {
-    return { success: false, error: 'Your account has been deactivated. Contact support.' };
-  }
-
-  // Set current tenant
-  localStorage.setItem(CURRENT_TENANT_KEY, user.tenant_id);
-  
-  return { success: true, user };
+/**
+ * Sign out — clears Supabase session
+ */
+export async function signOut(): Promise<void> {
+  await supabase.auth.signOut();
 }
 
-export function registerUser(data: { email: string; password: string; name: string; company_name: string; phone: string }): { success: boolean; user?: RegisteredUser; error?: string } {
-  const users = initializeUsers();
-  
-  // Check if email already exists
-  if (users.find(u => u.email.toLowerCase() === data.email.toLowerCase().trim())) {
-    return { success: false, error: 'An account with this email already exists. Please login.' };
+/**
+ * Get current Supabase Auth session
+ */
+export async function getSession(): Promise<AuthUser | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return null;
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+
+    return {
+      id: session.user.id,
+      email: session.user.email || '',
+      name: profile?.name || session.user.user_metadata?.name || '',
+      company_name: profile?.company_name || session.user.user_metadata?.company_name || '',
+      phone: profile?.phone || '',
+      role: profile?.role || 'super_admin',
+      tenant_id: profile?.tenant_id || 'tenant_' + session.user.id.slice(0, 12),
+    };
+  } catch {
+    return null;
   }
-
-  // Create new tenant
-  const tenantId = 'tenant_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const newTenant: Tenant = {
-    id: tenantId,
-    company_name: data.company_name,
-    owner_email: data.email,
-    created_at: new Date().toISOString(),
-    status: 'trial',
-  };
-
-  // Create new user
-  const newUser: RegisteredUser = {
-    id: 'user_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    email: data.email.toLowerCase().trim(),
-    password: data.password,
-    name: data.name,
-    company_name: data.company_name,
-    phone: data.phone,
-    role: 'super_admin', // Owner of their tenant
-    tenant_id: tenantId,
-    created_at: new Date().toISOString(),
-    status: 'active',
-  };
-
-  // Save
-  users.push(newUser);
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-
-  const tenants = initializeTenants();
-  tenants.push(newTenant);
-  localStorage.setItem(TENANTS_STORAGE_KEY, JSON.stringify(tenants));
-
-  // Set current tenant
-  localStorage.setItem(CURRENT_TENANT_KEY, tenantId);
-
-  return { success: true, user: newUser };
 }
 
-// ========== TENANT FUNCTIONS ==========
-
-export function getCurrentTenantId(): string {
-  return localStorage.getItem(CURRENT_TENANT_KEY) || 'tenant_demo';
-}
-
-export function getStorageKeyForTenant(tenantId: string): string {
-  // Each tenant gets their own localStorage key for ERP data
-  return `garud-erp-${tenantId}`;
-}
+// ========== PLATFORM ADMIN FUNCTIONS ==========
 
 export function isPlatformAdmin(email: string): boolean {
-  return email.toLowerCase() === PLATFORM_SUPER_ADMIN.email.toLowerCase();
+  return email.toLowerCase() === PLATFORM_ADMIN_EMAIL.toLowerCase();
 }
 
-export function getAllTenants(): Tenant[] {
-  return initializeTenants();
+export async function getAllTenants(): Promise<Tenant[]> {
+  const { data } = await supabase.from('tenants').select('*');
+  return (data || []).map(t => ({
+    id: t.id,
+    company_name: t.name || t.company_name || 'Unknown',
+    owner_email: t.domain || '',
+    created_at: t.created_at || '',
+    status: 'active' as const,
+  }));
 }
 
-export function getAllUsers(): RegisteredUser[] {
-  return initializeUsers();
+export function getAllUsers(): { email: string; tenant_id: string; name: string }[] {
+  // For session validation — returns from Supabase Auth
+  // In production this should be an async call, but for backward compatibility with existing code:
+  return [];
 }
 
 export function switchTenant(tenantId: string): void {
-  localStorage.setItem(CURRENT_TENANT_KEY, tenantId);
+  localStorage.setItem('garud_current_tenant', tenantId);
 }
 
-export function getTenantUsers(tenantId: string): RegisteredUser[] {
-  const users = initializeUsers();
-  return users.filter(u => u.tenant_id === tenantId);
+export function getCurrentTenantId(): string {
+  return localStorage.getItem('garud_current_tenant') || '';
+}
+
+export function getStorageKeyForTenant(tenantId: string): string {
+  return `garud-erp-${tenantId}`;
 }

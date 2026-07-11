@@ -20,7 +20,7 @@ import { useStore } from '../../store/useStore';
 import type { ModuleName } from '../../types';
 import HelpButton from '../ui/HelpButton';
 import { MODULE_HELP } from '../../lib/helpContent';
-import { isPlatformAdmin, getAllTenants, switchTenant, getAllUsers } from '../../lib/auth';
+import { isPlatformAdmin, getAllTenants, switchTenant } from '../../lib/auth';
 
 const moduleLabels: Record<ModuleName, string> = {
   dashboard: 'Dashboard',
@@ -118,11 +118,19 @@ export default function Topbar() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [tenants, setTenants] = useState<any[]>([]);
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
   const recentNotifications = notifications.slice(0, 5);
+
+  // Load tenants for platform admin switcher
+  useEffect(() => {
+    if (isPlatformAdmin(user.email)) {
+      getAllTenants().then(setTenants);
+    }
+  }, [user.email]);
 
   // Search logic
   const searchResults = searchQuery.length >= 2 ? [
@@ -433,25 +441,11 @@ export default function Topbar() {
                           🛡️ Switch Client Account
                         </p>
                         <div className="space-y-1 max-h-40 overflow-y-auto">
-                          {getAllTenants().map(tenant => (
+                          {tenants.map(tenant => (
                             <button
                               key={tenant.id}
                               onClick={() => {
                                 switchTenant(tenant.id);
-                                // Re-login as that tenant's admin
-                                const tenantUsers = getAllUsers().filter(u => u.tenant_id === tenant.id);
-                                const tenantAdmin = tenantUsers[0];
-                                if (tenantAdmin) {
-                                  login({
-                                    id: tenantAdmin.id,
-                                    company_id: tenantAdmin.tenant_id,
-                                    name: tenantAdmin.name,
-                                    email: tenantAdmin.email,
-                                    role: tenantAdmin.role,
-                                    phone: tenantAdmin.phone,
-                                    status: 'active',
-                                  });
-                                }
                                 setUserOpen(false);
                                 window.location.reload();
                               }}

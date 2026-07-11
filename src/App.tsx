@@ -9,7 +9,8 @@ import { useSupabaseSync } from './lib/useSupabaseSync';
 import LandingPage from './components/LandingPage';
 import OnboardingWizard from './components/ui/OnboardingWizard';
 import ToastContainer from './components/ui/Toast';
-import { authenticateUser, registerUser, isPlatformAdmin, getCurrentTenantId, getStorageKeyForTenant, getAllUsers } from './lib/auth';
+import { signIn, signUp, isPlatformAdmin, getAllTenants, switchTenant, getSession } from './lib/auth';
+import type { AuthUser } from './lib/auth';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -161,26 +162,29 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    const result = authenticateUser(email, password);
+    signIn(email, password).then(result => {
+      setLoading(false);
+      if (!result.success) {
+        setError(result.error || 'Login failed');
+        return;
+      }
 
-    if (!result.success) {
-      setError(result.error || 'Login failed');
-      return;
-    }
-
-    const user = result.user!;
-
-    login({
-      id: user.id,
-      company_id: user.tenant_id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      phone: user.phone,
-      status: 'active',
+      const user = result.user!;
+      login({
+        id: user.id,
+        company_id: user.tenant_id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        status: 'active',
+      });
     });
   };
+
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,18 +200,19 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
       return;
     }
 
-    const result = registerUser(regForm);
+    setLoading(true);
+    signUp(regForm).then(result => {
+      setLoading(false);
+      if (!result.success) {
+        setRegError(result.error || 'Registration failed');
+        return;
+      }
 
-    if (!result.success) {
-      setRegError(result.error || 'Registration failed');
-      return;
-    }
-
-    setRegSuccess('Account created successfully! You can now login.');
-    setIsRegistering(false);
-    setEmail(regForm.email);
-    setPassword(regForm.password);
-    setRegForm({ name: '', email: '', password: '', company_name: '', phone: '' });
+      setRegSuccess('Account created! Check your email for verification link, then login.');
+      setIsRegistering(false);
+      setEmail(regForm.email);
+      setRegForm({ name: '', email: '', password: '', company_name: '', phone: '' });
+    });
   };
 
   const features = [
@@ -568,20 +573,39 @@ function MainLayout() {
 }
 
 export default function App() {
-  const { isLoggedIn, theme, user, logout } = useStore();
+  const { isLoggedIn, theme, user, login, logout } = useStore();
   const [showLanding, setShowLanding] = useState(true);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
-  // Session validation — force logout if user isn't in registered users
+  // Check for existing Supabase session on load
   useEffect(() => {
-    if (isLoggedIn && user?.email) {
-      const users = getAllUsers();
-      const validUser = users.find(u => u.email.toLowerCase() === user.email.toLowerCase());
-      if (!validUser) {
-        // Cached login from old demo mode — force logout
+    getSession().then(authUser => {
+      if (authUser) {
+        login({
+          id: authUser.id,
+          company_id: authUser.tenant_id,
+          name: authUser.name,
+          email: authUser.email,
+          role: authUser.role,
+          phone: authUser.phone,
+          status: 'active',
+        });
+      } else if (isLoggedIn) {
+        // No valid Supabase session but localStorage says logged in — force logout
         logout();
       }
-    }
+      setSessionChecked(true);
+    });
   }, []);
+
+  // Don't render until session check is done
+  if (!sessionChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   if (!isLoggedIn) {
     if (showLanding) {
