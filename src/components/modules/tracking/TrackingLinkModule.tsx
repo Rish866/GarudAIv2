@@ -5,7 +5,7 @@ import { formatDate, classNames } from '../../../lib/utils';
 import { Link, Copy, CheckCircle, MapPin, Truck, Clock, Share2, ExternalLink } from 'lucide-react';
 
 export default function TrackingLinkModule() {
-  const { trips } = useStore();
+  const { data: trips } = useModuleData<any>('trips');
   const [copied, setCopied] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 

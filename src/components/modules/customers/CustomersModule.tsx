@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore, generateId } from '../../../store/useStore';
-import { useBranchData } from '../../../hooks/useBranchData';
 import type { Customer } from '../../../types';
 import { formatCurrency, getStatusColor, classNames } from '../../../lib/utils';
 import { exportCustomers } from '../../../lib/excel';
@@ -10,8 +9,7 @@ import CustomerTrackingPortal from '../tracking/CustomerTrackingPortal';
 import BulkUpload from '../../ui/BulkUpload';
 
 export default function CustomersModule() {
-  const { addCustomer } = useStore();
-  const { customers } = useBranchData();
+  const { data: customers, create: addCustomer, update: updateCustomer, loading: customersLoading } = useModuleData<any>('customers');
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showTracking, setShowTracking] = useState(false);
@@ -217,7 +215,7 @@ export default function CustomersModule() {
             data.forEach(row => {
               addCustomer({
                 id: generateId(),
-                company_id: 'comp_garud_001',
+                
                 name: row.name || '',
                 contact_person: row.contact_person || '',
                 phone: row.phone || '',
@@ -241,7 +239,7 @@ export default function CustomersModule() {
 }
 
 function AddCustomerModal({ onClose }: { onClose: () => void }) {
-  const { addCustomer } = useStore();
+  const { create: addCustomer } = useModuleData<any>("customers");
 
   const [form, setForm] = useState({
     name: '',
@@ -263,7 +261,7 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
 
     const customer: Customer = {
       id: generateId(),
-      company_id: 'comp_garud_001',
+      
       name: form.name,
       contact_person: form.contact_person,
       phone: form.phone,

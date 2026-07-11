@@ -13,7 +13,10 @@ export default function EnquiriesModule() {
   const [activeTab, setActiveTab] = useState<Tab>('enquiries');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null);
-  const { enquiries, quotations, customers, company, convertEnquiryToQuotation, convertQuotationToTrip, updateQuotation, addEnquiry } = useStore();
+  const { company } = useStore();
+  const { data: enquiries, create: addEnquiry } = useModuleData<any>('enquiries');
+  const { data: quotations, create: addQuotation, update: updateQuotation } = useModuleData<any>('quotations');
+  const { data: customers } = useModuleData<any>('customers');
 
   const steps = [
     { label: 'Enquiry', color: 'bg-purple-500', active: activeTab === 'enquiries' },
@@ -138,7 +141,7 @@ export default function EnquiriesModule() {
                     </div>
                     {enquiry.status === 'new' && (
                       <button
-                        onClick={() => convertEnquiryToQuotation(enquiry.id)}
+                        onClick={() => addQuotation({ enquiry_id: enquiry.id, customer_id: enquiry.customer_id, customer_name: enquiry.customer_name, origin: enquiry.origin, destination: enquiry.destination, vehicle_type: enquiry.vehicle_type, material: enquiry.material, weight_tons: enquiry.weight_tons, rate_type: 'per_trip', rate: enquiry.target_rate, total_amount: Math.round(enquiry.target_rate * 1.05), gst_percent: 5, validity_days: 7, quotation_number: `QT-${Date.now().toString(36)}`, status: 'draft', created_at: new Date().toISOString() })}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         <FileText className="w-3.5 h-3.5" />
@@ -248,7 +251,7 @@ export default function EnquiriesModule() {
                     )}
                     {quotation.status === 'sent' && (
                       <button
-                        onClick={() => convertQuotationToTrip(quotation.id)}
+                        onClick={() => updateQuotation(quotation.id, { status: 'accepted' })}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
                       >
                         <Truck className="w-3.5 h-3.5" />
@@ -284,7 +287,8 @@ export default function EnquiriesModule() {
 }
 
 function AddEnquiryModal({ onClose }: { onClose: () => void }) {
-  const { customers, addEnquiry } = useStore();
+  const { data: customers } = useModuleData<any>('customers');
+  const { create: addEnquiry } = useModuleData<any>('enquiries');
 
   const [form, setForm] = useState({
     customer_id: '',
@@ -309,7 +313,7 @@ function AddEnquiryModal({ onClose }: { onClose: () => void }) {
 
     const enquiry: Enquiry = {
       id: generateId(),
-      company_id: 'comp_garud_001',
+      
       customer_id: customer.id,
       customer_name: customer.name,
       origin: form.origin,
@@ -423,7 +427,7 @@ function AddEnquiryModal({ onClose }: { onClose: () => void }) {
 
 
 function EditQuotationModal({ quotation, onClose }: { quotation: Quotation; onClose: () => void }) {
-  const { updateQuotation } = useStore();
+  const { update: updateQuotation } = useModuleData<any>('quotations');
   const [form, setForm] = useState({
     origin: quotation.origin,
     destination: quotation.destination,

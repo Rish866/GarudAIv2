@@ -56,7 +56,7 @@ function getSLABadge(status: SLAStatus) {
 }
 
 export default function SLAModule() {
-  const { trips } = useStore();
+  const { data: trips } = useModuleData<any>('trips');
 
   const activeTrips = trips.filter((t) =>
     ['in_transit', 'loading', 'assigned', 'booked'].includes(t.status) && t.expected_delivery

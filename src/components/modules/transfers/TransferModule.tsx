@@ -27,7 +27,9 @@ interface Transfer {
 
 
 export default function TransferModule() {
-  const { branches, vehicles, drivers } = useStore();
+  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: drivers } = useModuleData<any>('drivers');
+  const branches: any[] = []; // branches loaded from org context
   const { data: transfers, create: createTransfer, update: updateTransfer } = useModuleData<Transfer>('transfers');
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
@@ -77,7 +79,7 @@ export default function TransferModule() {
       from_branch_name: fromBranch?.name || '',
       to_branch: form.to_branch,
       to_branch_name: toBranch?.name || '',
-      initiated_by: 'Rajesh Sharma',
+      initiated_by: 'Current User',
       initiated_date: new Date().toISOString().split('T')[0],
       status: 'initiated',
       remarks: form.remarks,

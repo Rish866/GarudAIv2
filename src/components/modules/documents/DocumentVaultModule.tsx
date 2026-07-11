@@ -19,7 +19,7 @@ interface VaultDocument {
 type FilterType = 'all' | 'expiring' | 'expired' | 'by_vehicle';
 
 export default function DocumentVaultModule() {
-  const { vehicles } = useStore();
+  const { data: vehicles } = useModuleData<any>('vehicles');
 
   const generateDocuments = (): VaultDocument[] => {
     const docs: VaultDocument[] = [];

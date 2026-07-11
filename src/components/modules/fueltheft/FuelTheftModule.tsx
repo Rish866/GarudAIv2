@@ -42,7 +42,8 @@ function getStatusBadge(status: 'normal' | 'low' | 'critical') {
 }
 
 export default function FuelTheftModule() {
-  const { fuelEntries, vehicles } = useStore();
+  const { data: fuelEntries } = useModuleData<any>('fuel_entries');
+  const { data: vehicles } = useModuleData<any>('vehicles');
 
   const totalFuelCost = fuelEntries.reduce((sum, entry) => sum + entry.amount, 0);
   const avgMileage = fuelEntries.length > 0

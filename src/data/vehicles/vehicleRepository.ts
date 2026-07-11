@@ -1,58 +1,33 @@
-import { TenantRepository, TenantQueryOptions } from '../base/tenantRepository';
+import { createRepository } from '../baseRepository';
 import { supabase } from '../../lib/supabase';
+import type { Vehicle } from '../../types';
 
-export interface VehicleRecord {
-  id: string;
-  organization_id: string;
-  reg_number: string;
-  vehicle_type: string;
-  make: string;
-  model: string;
-  year: number;
-  ownership_type: string;
-  owner_name: string;
-  owner_phone?: string;
-  capacity_tons: number;
-  fitness_expiry: string;
-  insurance_expiry: string;
-  puc_expiry: string;
-  permit_expiry: string;
-  driver_id?: string;
-  driver_name?: string;
-  status: string;
-  odometer: number;
-  lat?: number;
-  lng?: number;
-  speed?: number;
-  last_location?: string;
-  ignition?: boolean;
-  created_at: string;
-}
+const base = createRepository<Vehicle>('vehicles');
 
-class VehicleRepository extends TenantRepository<VehicleRecord> {
-  constructor() { super('vehicles'); }
+export const vehicleRepository = {
+  ...base,
 
-  async getByStatus(organizationId: string, status: string) {
-    const { data, error } = await supabase
-      .from('vehicles')
-      .select('*')
+  async assignDriver(organizationId: string, vehicleId: string, driverId: string) {
+    if (!organizationId) return { data: null, error: 'No organization ID provided' };
+    
+    // Verify driver belongs to same org
+    const { data: driver } = await supabase
+      .from('drivers')
+      .select('id')
       .eq('organization_id', organizationId)
-      .eq('status', status);
-    return { data: data as VehicleRecord[] | null, error: error?.message || null };
-  }
+      .eq('id', driverId)
+      .single();
 
-  async getExpiringDocuments(organizationId: string, withinDays: number = 30) {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + withinDays);
-    const dateStr = futureDate.toISOString().split('T')[0];
+    if (!driver) return { data: null, error: 'Driver not found in this organization' };
 
-    const { data, error } = await supabase
-      .from('vehicles')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .or(`fitness_expiry.lte.${dateStr},insurance_expiry.lte.${dateStr},puc_expiry.lte.${dateStr},permit_expiry.lte.${dateStr}`);
-    return { data: data as VehicleRecord[] | null, error: error?.message || null };
-  }
-}
+    return base.update(organizationId, vehicleId, { assigned_driver_id: driverId } as any);
+  },
 
-export const vehicleRepository = new VehicleRepository();
+  async updateStatus(organizationId: string, vehicleId: string, status: string) {
+    return base.update(organizationId, vehicleId, { status } as any);
+  },
+
+  async assignBranch(organizationId: string, vehicleId: string, branchId: string) {
+    return base.update(organizationId, vehicleId, { branch_id: branchId } as any);
+  },
+};

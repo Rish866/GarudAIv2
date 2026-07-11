@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
-import { useBranchData } from '../../../hooks/useBranchData';
 import { formatCurrency } from '../../../lib/utils';
 import { generateTripReportPDF } from '../../../lib/pdf';
 
 export default function ReportsModule() {
   const { company } = useStore();
-  const { invoices, expenses, trips } = useBranchData();
+  const { data: invoices } = useModuleData<any>('invoices');
+  const { data: expenses } = useModuleData<any>('expenses');
+  const { data: trips } = useModuleData<any>('trips');
 
   const [dateRange, setDateRange] = useState<'all' | 'this_month' | 'last_month' | 'custom'>('all');
   const [startDate, setStartDate] = useState('');

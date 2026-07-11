@@ -1,8 +1,8 @@
-import { useStore } from '../../../store/useStore';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency } from '../../../lib/utils';
 
 export default function DriverAdvanceTracker() {
-  const { trips } = useStore();
+  const { data: trips } = useModuleData<any>('trips');
   
   // Calculate advances by driver
   const driverAdvances: Record<string, { name: string; total_advance: number; total_freight: number; trips_count: number; unsettled: number }> = {};

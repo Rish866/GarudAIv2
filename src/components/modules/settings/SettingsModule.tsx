@@ -37,14 +37,8 @@ export default function SettingsModule() {
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'company' | 'users' | 'roles'>('company');
 
-  // User management state
-  const [users, setUsers] = useState<ManagedUser[]>([
-    { id: 'user_001', name: 'Rajesh Sharma', email: 'rajesh@garudtransport.in', phone: '+91 98765 43210', role: 'super_admin', status: 'active' },
-    { id: 'user_002', name: 'Priya Mehta', email: 'priya@garudtransport.in', phone: '+91 98765 54321', role: 'admin', status: 'active' },
-    { id: 'user_003', name: 'Amit Sharma', email: 'amit@garudtransport.in', phone: '+91 98765 65432', role: 'operations', status: 'active' },
-    { id: 'user_004', name: 'Kavita Desai', email: 'kavita@garudtransport.in', phone: '+91 98765 76543', role: 'accounts', status: 'active' },
-    { id: 'user_005', name: 'Suresh Kumar', email: 'suresh.driver@garudtransport.in', phone: '+91 98765 11111', role: 'driver', status: 'active' },
-  ]);
+  // User management state — loaded from organization members
+  const [users, setUsers] = useState<ManagedUser[]>([]);
   const [showUserModal, setShowUserModal] = useState(false);
   const [userForm, setUserForm] = useState({ name: '', email: '', phone: '', role: 'operations' as UserRole });
   const [selectedRole, setSelectedRole] = useState<UserRole>('super_admin');

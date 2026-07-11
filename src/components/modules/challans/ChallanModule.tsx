@@ -38,7 +38,7 @@ const STATUS_COLORS: Record<PaymentStatus, string> = {
 
 
 export default function ChallanModule() {
-  const { vehicles } = useStore();
+  const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: challans, create: createChallan, remove: removeChallan, loading: challansLoading } = useModuleData<Challan>('challans');
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | PaymentStatus>('all');

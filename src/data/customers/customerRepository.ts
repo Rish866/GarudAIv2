@@ -1,43 +1,24 @@
-import { TenantRepository } from '../base/tenantRepository';
-import { supabase } from '../../lib/supabase';
+import { createRepository } from '../baseRepository';
+import type { Customer } from '../../types';
 
-export interface CustomerRecord {
-  id: string;
-  organization_id: string;
-  name: string;
-  contact_person: string;
-  phone: string;
-  email: string;
-  gstin: string;
-  billing_address: string;
-  credit_limit: number;
-  credit_days: number;
-  outstanding: number;
-  total_business: number;
-  status: string;
-  created_at: string;
-}
+const base = createRepository<Customer>('customers');
 
-class CustomerRepository extends TenantRepository<CustomerRecord> {
-  constructor() { super('customers'); }
+export const customerRepository = {
+  ...base,
 
-  async getActive(organizationId: string) {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .eq('status', 'active');
-    return { data: data as CustomerRecord[] | null, error: error?.message || null };
-  }
+  async block(organizationId: string, customerId: string) {
+    return base.update(organizationId, customerId, { status: 'blocked' } as any);
+  },
 
-  async getOverdueCustomers(organizationId: string) {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .gt('outstanding', 0);
-    return { data: data as CustomerRecord[] | null, error: error?.message || null };
-  }
-}
+  async unblock(organizationId: string, customerId: string) {
+    return base.update(organizationId, customerId, { status: 'active' } as any);
+  },
 
-export const customerRepository = new CustomerRepository();
+  async updateCreditLimit(organizationId: string, customerId: string, creditLimit: number) {
+    return base.update(organizationId, customerId, { credit_limit: creditLimit } as any);
+  },
+
+  async assignBranch(organizationId: string, customerId: string, branchId: string) {
+    return base.update(organizationId, customerId, { branch_id: branchId } as any);
+  },
+};

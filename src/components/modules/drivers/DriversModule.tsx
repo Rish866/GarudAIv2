@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
-import { useBranchData } from '../../../hooks/useBranchData';
 import type { Driver } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
 import { exportDrivers } from '../../../lib/excel';
@@ -11,8 +10,8 @@ import { useModuleData } from '../../../hooks/useModuleData';
 type DriverView = 'list' | 'performance' | 'detail';
 
 export default function DriversModule() {
-  const { addDriver, trips } = useStore();
-  const { drivers } = useBranchData();
+  const { data: trips } = useModuleData<any>('trips');
+  const { data: drivers, create: addDriver, loading: driversLoading } = useModuleData<any>('drivers');
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -319,7 +318,7 @@ export default function DriversModule() {
             data.forEach(row => {
               addDriver({
                 id: generateId(),
-                company_id: 'comp_garud_001',
+                
                 name: row.name || '',
                 phone: row.phone || '',
                 license_number: row.license_number || '',
@@ -440,7 +439,7 @@ function DriverCard({ driver, onTimePercent, overallScore, rating }: { key?: str
 }
 
 function AddDriverModal({ onClose }: { onClose: () => void }) {
-  const { addDriver } = useStore();
+  const { create: addDriver } = useModuleData<any>('drivers');
 
   const [form, setForm] = useState({
     name: '',
@@ -464,7 +463,7 @@ function AddDriverModal({ onClose }: { onClose: () => void }) {
 
     const driver: Driver = {
       id: generateId(),
-      company_id: 'comp_garud_001',
+      
       name: form.name,
       phone: form.phone,
       license_number: form.license_number,

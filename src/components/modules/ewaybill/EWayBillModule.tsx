@@ -32,7 +32,9 @@ interface EWayBillRecord {
 
 
 export default function EWayBillModule() {
-  const { trips, vehicles, company } = useStore();
+  const { company } = useStore();
+  const { data: trips } = useModuleData<any>('trips');
+  const { data: vehicles } = useModuleData<any>('vehicles');
     const { data: bills, create: createBill, loading: billsLoading } = useModuleData<EWayBillRecord>('eway_bills');
 
   const [showModal, setShowModal] = useState(false);

@@ -62,7 +62,7 @@ function getTypeIcon(type: GeofenceType) {
 }
 
 export default function GeofencingModule() {
-  const { vehicles } = useStore();
+  const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: geofences, create: createGeofence, remove: removeGeofence, loading: geofencesLoading } = useModuleData<Geofence>('geofences');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newGeofence, setNewGeofence] = useState<{ name: string; type: GeofenceType; lat: string; lng: string; radius: string }>({

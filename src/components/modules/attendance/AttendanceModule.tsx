@@ -43,7 +43,7 @@ const today = new Date().toISOString().split('T')[0];
 type TabView = 'attendance' | 'leaves' | 'summary';
 
 export default function AttendanceModule() {
-  const { drivers } = useStore();
+  const { data: drivers } = useModuleData<any>('drivers');
   const { data: attendance, create: createAttendance, update: updateAttendance } = useModuleData<AttendanceRecord>('attendance');
   const { data: leaves, create: createLeave, update: updateLeave } = useModuleData<LeaveRequest>('leave_requests');
   const [tab, setTab] = useState<TabView>('attendance');

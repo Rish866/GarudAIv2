@@ -40,7 +40,9 @@ interface DemandForecast {
 
 
 export default function PredictiveModule() {
-  const { trips, vehicles, maintenance } = useStore();
+  const { data: trips } = useModuleData<any>('trips');
+  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: maintenance } = useModuleData<any>('maintenance');
   const [view, setView] = useState<AIView>('eta');
 
   // Simulated AI predictions based on real store data

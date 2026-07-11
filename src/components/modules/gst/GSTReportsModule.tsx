@@ -33,7 +33,9 @@ interface HSNRow {
 
 
 export default function GSTReportsModule() {
-  const { invoices, customers, company } = useStore();
+  const { company } = useStore();
+  const { data: invoices } = useModuleData<any>('invoices');
+  const { data: customers } = useModuleData<any>('customers');
   const [view, setView] = useState<GSTView>('gstr1');
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState<MonthFilter>(

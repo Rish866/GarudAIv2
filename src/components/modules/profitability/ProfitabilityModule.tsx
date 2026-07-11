@@ -7,7 +7,13 @@ import { TrendingUp, TrendingDown, BarChart3, Filter, Download } from 'lucide-re
 type GroupBy = 'customer' | 'vehicle' | 'route' | 'branch' | 'month';
 
 export default function ProfitabilityModule() {
-  const { trips, expenses, fuelEntries, invoices, customers, vehicles, branches } = useStore();
+  const { data: trips } = useModuleData<any>('trips');
+  const { data: expenses } = useModuleData<any>('expenses');
+  const { data: fuelEntries } = useModuleData<any>('fuel_entries');
+  const { data: invoices } = useModuleData<any>('invoices');
+  const { data: customers } = useModuleData<any>('customers');
+  const { data: vehicles } = useModuleData<any>('vehicles');
+  const branches: any[] = [];
   const [groupBy, setGroupBy] = useState<GroupBy>('customer');
 
   const calcTripProfit = (trip: typeof trips[0]) => {

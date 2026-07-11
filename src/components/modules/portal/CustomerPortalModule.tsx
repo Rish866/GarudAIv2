@@ -7,7 +7,10 @@ import { Users, Eye, Package, Receipt, MapPin, Search, Download, Truck, Clock, C
 type PortalView = 'overview' | 'tracking' | 'invoices' | 'pod' | 'bookings';
 
 export default function CustomerPortalModule() {
-  const { customers, trips, invoices, payments } = useStore();
+  const { data: customers } = useModuleData<any>('customers');
+  const { data: trips } = useModuleData<any>('trips');
+  const { data: invoices } = useModuleData<any>('invoices');
+  const { data: payments } = useModuleData<any>('payments');
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [activeView, setActiveView] = useState<PortalView>('overview');
   const [searchTerm, setSearchTerm] = useState('');

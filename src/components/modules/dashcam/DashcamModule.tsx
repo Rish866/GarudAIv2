@@ -36,7 +36,8 @@ function getSeverityStyle(severity: EventSeverity) {
 }
 
 export default function DashcamModule() {
-  const { vehicles, drivers } = useStore();
+  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: drivers } = useModuleData<any>('drivers');
 
   const cameraVehicles = vehicles.slice(0, 6);
   const topDrivers = [...drivers].sort((a, b) => b.safety_score - a.safety_score).slice(0, 5);

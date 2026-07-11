@@ -126,7 +126,6 @@ const itemVariants = {
 };
 
 export default function DashboardModule() {
-  const state = useStore();
   const { organizationId } = useOrganization();
 
   // Read ALL data from Supabase (org-scoped via useModuleData)

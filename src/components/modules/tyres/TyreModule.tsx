@@ -20,7 +20,7 @@ interface TyreRecord {
 }
 
 export default function TyreModule() {
-  const { vehicles } = useStore();
+  const { data: vehicles } = useModuleData<any>('vehicles');
 
     const { data: tyres, create: createTyre, remove: removeTyre, loading: tyresLoading } = useModuleData<TyreRecord>('tyres');
 

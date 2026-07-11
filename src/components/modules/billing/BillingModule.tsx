@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore, generateId } from '../../../store/useStore';
-import { useBranchData } from '../../../hooks/useBranchData';
 import type { Invoice, Payment, Expense, ExpenseCategory } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateInvoiceNumber } from '../../../lib/utils';
 import { generateInvoicePDF } from '../../../lib/pdf';
@@ -10,8 +9,13 @@ import { exportInvoices, exportExpenses } from '../../../lib/excel';
 type BillingTab = 'invoices' | 'payments' | 'expenses';
 
 export default function BillingModule() {
-  const { addInvoice, addPayment, addExpense, company } = useStore();
-  const { invoices, payments, expenses, customers, trips, vehicles } = useBranchData();
+  const { company } = useStore();
+  const { data: invoices, create: addInvoice } = useModuleData<any>('invoices');
+  const { data: payments, create: addPayment } = useModuleData<any>('payments');
+  const { data: expenses, create: addExpense } = useModuleData<any>('expenses');
+  const { data: customers } = useModuleData<any>('customers');
+  const { data: trips } = useModuleData<any>('trips');
+  const { data: vehicles } = useModuleData<any>('vehicles');
   const [activeTab, setActiveTab] = useState<BillingTab>('invoices');
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);

@@ -44,7 +44,10 @@ function getNotificationIcon(type: Notification['type']) {
 
 export default function NotificationsModule() {
   const [filter, setFilter] = useState<FilterTab>('all');
-  const { notifications, markNotificationRead, markAllNotificationsRead, setActiveModule } = useStore();
+  const { setActiveModule } = useStore();
+  const { data: notifications, update: markNotification } = useModuleData<any>('notifications');
+  const markNotificationRead = (id: string) => markNotification(id, { is_read: true });
+  const markAllNotificationsRead = () => notifications.forEach((n: any) => { if (!n.is_read) markNotification(n.id, { is_read: true }); });
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 

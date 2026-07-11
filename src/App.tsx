@@ -5,7 +5,6 @@ import { useStore } from './store/useStore';
 import type { ModuleName } from './types';
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
-import { useSupabaseSync } from './lib/useSupabaseSync';
 import LandingPage from './components/LandingPage';
 import OnboardingWizard from './components/ui/OnboardingWizard';
 import ToastContainer from './components/ui/Toast';
@@ -512,7 +511,6 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
 
 function MainLayout() {
   const { activeModule, sidebarCollapsed, setActiveModule } = useStore();
-  useSupabaseSync();
 
   // Browser history management — prevents back button from leaving the app
   useEffect(() => {

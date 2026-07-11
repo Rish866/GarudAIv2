@@ -20,7 +20,8 @@ interface ContractRate {
 }
 
 export default function ContractRateModule() {
-  const { customers, trips } = useStore();
+  const { data: customers } = useModuleData<any>('customers');
+  const { data: trips } = useModuleData<any>('trips');
 
   const { data: contracts, create: createContract, remove: removeContract, loading: contractsLoading } = useModuleData<ContractRate>('contracts');
 

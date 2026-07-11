@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore, generateId } from '../../../store/useStore';
-import { useBranchData } from '../../../hooks/useBranchData';
 import type { FuelEntry } from '../../../types';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 
 export default function FuelModule() {
-  const { addFuelEntry, company } = useStore();
-  const { fuelEntries, vehicles, drivers } = useBranchData();
+  const { company } = useStore();
+  const { data: fuelEntries, create: addFuelEntry } = useModuleData<any>('fuel_entries');
+  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: drivers } = useModuleData<any>('drivers');
   const [showModal, setShowModal] = useState(false);
 
   // Summary calculations

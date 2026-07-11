@@ -37,16 +37,20 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
         return;
       }
 
-      // Get user's active membership (first active org)
+      // Fetch ALL active memberships (not just one)
       const { data: memberships, error: memError } = await supabase
         .from('organization_members')
         .select('*, organizations(*)')
         .eq('user_id', session.user.id)
-        .eq('status', 'active')
-        .limit(1)
-        .single();
+        .eq('status', 'active');
 
-      if (memError || !memberships) {
+      if (memError) {
+        setError(new Error(memError.message));
+        setLoading(false);
+        return;
+      }
+
+      if (!memberships || memberships.length === 0) {
         // User has no organization — they need to create one
         setOrganization(null);
         setMembership(null);
@@ -54,14 +58,29 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
         return;
       }
 
-      const org = memberships.organizations as unknown as Organization;
+      if (memberships.length > 1) {
+        // Multiple active memberships — this is a configuration error
+        // Normal users should have exactly one active org
+        setError(new Error(
+          `Configuration error: User has ${memberships.length} active organization memberships. ` +
+          `Contact support to resolve this. Only one active organization is allowed per user.`
+        ));
+        setOrganization(null);
+        setMembership(null);
+        setLoading(false);
+        return;
+      }
+
+      // Exactly one membership — use it
+      const memRecord = memberships[0];
+      const org = memRecord.organizations as unknown as Organization;
       const mem: OrganizationMembership = {
-        id: memberships.id,
-        organization_id: memberships.organization_id,
-        user_id: memberships.user_id,
-        role: memberships.role,
-        status: memberships.status,
-        created_at: memberships.created_at,
+        id: memRecord.id,
+        organization_id: memRecord.organization_id,
+        user_id: memRecord.user_id,
+        role: memRecord.role,
+        status: memRecord.status,
+        created_at: memRecord.created_at,
       };
 
       setOrganization(org);

@@ -32,7 +32,7 @@ interface Claim {
 
 
 export default function ClaimsModule() {
-  const { trips } = useStore();
+  const { data: trips } = useModuleData<any>('trips');
   const { data: claims, create: createClaim, update: updateClaim } = useModuleData<Claim>('claims');
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | ClaimStatus>('all');
@@ -63,7 +63,7 @@ export default function ClaimsModule() {
       vehicle_reg: trip?.vehicle_reg || '', driver_name: trip?.driver_name || '',
       incident_date: form.incident_date || new Date().toISOString().split('T')[0], location: form.location,
       description: form.description, claim_amount: parseFloat(form.claim_amount), approved_amount: 0,
-      liability: form.liability, evidence: [], status: 'reported', filed_by: 'Rajesh Sharma', created_at: new Date().toISOString(),
+      liability: form.liability, evidence: [], status: 'reported', filed_by: 'Current User', created_at: new Date().toISOString(),
     };
     createClaim(newClaim);
     setShowModal(false);

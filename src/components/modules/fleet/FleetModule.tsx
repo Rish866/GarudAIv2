@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
-import { useBranchData } from '../../../hooks/useBranchData';
 import type { Vehicle, VehicleType, VehicleStatus, OwnershipType } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
 import { exportVehicles } from '../../../lib/excel';
@@ -63,8 +62,8 @@ const emptyForm: VehicleForm = {
 
 
 export default function FleetModule() {
-  const { addVehicle, updateVehicle, deleteVehicle } = useStore();
-  const { vehicles } = useBranchData();
+  // Business CRUD via Supabase (useModuleData)
+  const { data: vehicles, create: addVehicle, update: updateVehicle, remove: deleteVehicle, loading: vehiclesLoading } = useModuleData<any>('vehicles');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -133,7 +132,7 @@ export default function FleetModule() {
     } else {
       const newVehicle: Vehicle = {
         id: generateId(),
-        company_id: 'comp_garud_001',
+        
         reg_number: form.reg_number,
         vehicle_type: form.vehicle_type,
         make: form.make,
@@ -445,7 +444,7 @@ export default function FleetModule() {
             data.forEach(row => {
               addVehicle({
                 id: generateId(),
-                company_id: 'comp_garud_001',
+                
                 reg_number: row.reg_number || '',
                 vehicle_type: (row.vehicle_type as any) || 'truck',
                 make: row.make || '',

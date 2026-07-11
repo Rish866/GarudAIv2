@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useBranchData } from '../../../hooks/useBranchData';
 import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
@@ -32,8 +31,11 @@ function getNextStatuses(current: TripStatus): TripStatus[] {
 
 
 export default function TripsModule() {
-  const { company, addTrip, updateTripStatus, updateTrip, addInvoice, addNotification } = useStore();
-  const { trips, customers, vehicles, drivers } = useBranchData();
+  const { company } = useStore();
+  const { data: trips, create: addTrip, update: updateTrip, loading: tripsLoading } = useModuleData<any>('trips');
+  const { data: customers } = useModuleData<any>('customers');
+  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: drivers } = useModuleData<any>('drivers');
   const [showModal, setShowModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,7 +62,7 @@ export default function TripsModule() {
 
 
   const handleStatusUpdate = (tripId: string, newStatus: TripStatus) => {
-    updateTripStatus(tripId, newStatus);
+    updateTrip(tripId, newStatus);
     setStatusDropdown(null);
 
     // Trigger notification modal
@@ -103,7 +105,7 @@ export default function TripsModule() {
         addInvoice(invoice);
 
         // Also update trip to billed
-        updateTripStatus(tripId, 'billed');
+        updateTrip(tripId, 'billed');
 
         // Send notification
         addNotification({
@@ -355,7 +357,7 @@ export default function TripsModule() {
 
 
 function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
-  const { updateTrip } = useStore();
+  const { update: updateTrip } = useModuleData<any>('trips');
   const [receivedBy, setReceivedBy] = useState('');
   const [condition, setCondition] = useState<'good' | 'damaged' | 'partial'>('good');
   const [remarks, setRemarks] = useState('');
@@ -456,7 +458,13 @@ function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) 
 
 
 function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
-  const { company, expenses, fuelEntries, invoices, payments, quotations, enquiries } = useStore();
+  const { company } = useStore();
+  const { data: expenses } = useModuleData<any>('expenses');
+  const { data: fuelEntries } = useModuleData<any>('fuel_entries');
+  const { data: invoices } = useModuleData<any>('invoices');
+  const { data: payments } = useModuleData<any>('payments');
+  const { data: quotations } = useModuleData<any>('quotations');
+  const { data: enquiries } = useModuleData<any>('enquiries');
   const currentIdx = STATUS_FLOW.indexOf(trip.status);
 
   // P0.1 — Trip-Level Profitability Calculation
@@ -755,7 +763,11 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
 
 
 function NewTripModal({ onClose }: { onClose: () => void }) {
-  const { customers, vehicles, drivers, quotations, addTrip } = useStore();
+  const { data: customers } = useModuleData<any>('customers');
+  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: quotations } = useModuleData<any>('quotations');
+  const { create: addTrip } = useModuleData<any>('trips');
   const availableVehicles = vehicles;
   const availableDrivers = drivers;
 
@@ -816,7 +828,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
 
     const trip: Trip = {
       id: generateId(),
-      company_id: 'comp_garud_001',
+      
       trip_number: generateTripNumber(),
       lr_number: generateLRNumber(),
       eway_bill: form.eway_bill || ('EWB-' + Date.now().toString().slice(-9)),

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Smartphone, Download, Bell, MapPin, Camera, Shield, Settings, Users, CheckCircle, Clock, QrCode, Wifi } from 'lucide-react';
+import { useModuleData } from '../../../hooks/useModuleData';
 
 type AppView = 'overview' | 'drivers' | 'config' | 'activity';
 
@@ -32,7 +33,7 @@ const seedDriverApps: DriverAppStatus[] = [];
 const seedActivity: AppActivity[] = [];
 
 export default function MobileAppModule() {
-  const { drivers } = useStore();
+  const { data: drivers } = useModuleData<any>('drivers');
   const [view, setView] = useState<AppView>('overview');
   const [appConfig, setAppConfig] = useState({
     gps_interval_seconds: 30,

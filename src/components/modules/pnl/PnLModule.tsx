@@ -8,7 +8,11 @@ type ViewMode = 'pnl' | 'balance_sheet';
 type PeriodFilter = 'this_month' | 'last_month' | 'this_quarter' | 'this_year' | 'all';
 
 export default function PnLModule() {
-  const { invoices, expenses, payments, fuelEntries, maintenance } = useStore();
+  const { data: invoices } = useModuleData<any>('invoices');
+  const { data: expenses } = useModuleData<any>('expenses');
+  const { data: payments } = useModuleData<any>('payments');
+  const { data: fuelEntries } = useModuleData<any>('fuel_entries');
+  const { data: maintenance } = useModuleData<any>('maintenance');
   const [viewMode, setViewMode] = useState<ViewMode>('pnl');
   const [period, setPeriod] = useState<PeriodFilter>('this_month');
 

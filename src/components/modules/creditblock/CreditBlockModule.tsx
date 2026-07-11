@@ -5,7 +5,8 @@ import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { ShieldAlert, ShieldCheck, AlertTriangle, Lock, Unlock, Search, Ban } from 'lucide-react';
 
 export default function CreditBlockModule() {
-  const { customers, invoices, updateCustomer } = useStore();
+  const { data: customers, update: updateCustomer } = useModuleData<any>('customers');
+  const { data: invoices } = useModuleData<any>('invoices');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'blocked' | 'at_risk' | 'clear'>('all');
 

@@ -26,7 +26,7 @@ const generateId = () => Date.now().toString(36) + Math.random().toString(36).su
 
 
 export default function RouteModule() {
-  const { trips } = useStore();
+  const { data: trips } = useModuleData<any>('trips');
   const { data: routes, create: createRoute, remove: removeRoute, loading: routesLoading } = useModuleData<RouteRecord>('routes');
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);

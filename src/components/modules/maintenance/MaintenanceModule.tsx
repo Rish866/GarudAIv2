@@ -5,7 +5,9 @@ import type { MaintenanceRecord } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames } from '../../../lib/utils';
 
 export default function MaintenanceModule() {
-  const { maintenance, vehicles, company, addMaintenance } = useStore();
+  const { company } = useStore();
+  const { data: maintenance, create: addMaintenance } = useModuleData<any>('maintenance');
+  const { data: vehicles } = useModuleData<any>('vehicles');
   const [showModal, setShowModal] = useState(false);
 
   // Summary calculations

@@ -28,7 +28,7 @@ interface MappedVehicle {
 }
 
 export default function GPSSettingsModule() {
-  const { vehicles } = useStore();
+  const { data: vehicles } = useModuleData<any>('vehicles');
 
   const providers: GPSProvider[] = [
     { id: 'itriangle', name: 'iTriangle', description: 'India\'s leading GPS tracking provider', logo_color: 'bg-blue-500' },

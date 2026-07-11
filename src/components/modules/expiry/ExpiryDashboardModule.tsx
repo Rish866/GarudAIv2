@@ -16,7 +16,8 @@ interface ExpiryItem {
 }
 
 export default function ExpiryDashboardModule() {
-  const { vehicles, drivers } = useStore();
+  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: drivers } = useModuleData<any>('drivers');
   const [filter, setFilter] = useState<'all' | 'expired' | 'critical' | 'warning' | 'ok'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'vehicle' | 'driver'>('all');
 

@@ -66,7 +66,7 @@ const STATUS_COLORS: Record<WOStatus, string> = {
 
 
 export default function WorkOrderModule() {
-  const { vehicles } = useStore();
+  const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: workOrders, create: createWorkOrder, remove: removeWorkOrder, loading: workOrdersLoading } = useModuleData<WorkOrder>('work_orders');
   const [showModal, setShowModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | WOStatus>('all');

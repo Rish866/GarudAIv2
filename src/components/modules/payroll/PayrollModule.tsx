@@ -19,7 +19,8 @@ interface SalaryRecord {
 }
 
 export default function PayrollModule() {
-  const { drivers, trips } = useStore();
+  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: trips } = useModuleData<any>('trips');
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());

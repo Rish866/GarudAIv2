@@ -32,7 +32,12 @@ const generateIndentId = () => Date.now().toString(36) + Math.random().toString(
 
 
 export default function IndentModule() {
-  const { customers, vehicles, drivers, trips, quotations, addTrip } = useStore();
+  const { data: customers } = useModuleData<any>('customers');
+  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: trips } = useModuleData<any>('trips');
+  const { data: quotations } = useModuleData<any>('quotations');
+  const { create: addTrip } = useModuleData<any>('trips');
   const { data: indents, create: createIndent, update: updateIndent, remove: removeIndent, loading: indentsLoading } = useModuleData<Indent>('indents');
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -151,7 +156,7 @@ export default function IndentModule() {
       const driver = allocVeh.driver_id ? drivers.find(d => d.id === allocVeh.driver_id) : null;
       const trip = {
         id: 'trip_' + generateId(),
-        company_id: 'comp_garud_001',
+        
         trip_number: `TRP-2025-${String(150 + Math.floor(Math.random() * 50) + idx).padStart(4, '0')}`,
         lr_number: `LR-${7850 + Math.floor(Math.random() * 100) + idx}`,
         customer_id: indent.customer_id,

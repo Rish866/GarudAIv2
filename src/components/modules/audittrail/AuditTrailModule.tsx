@@ -33,7 +33,7 @@ const ACTION_COLORS: Record<string, string> = {
 
 
 export default function AuditTrailModule() {
-  const { activityLog } = useStore();
+  const { data: activityLog } = useModuleData<any>('activity_log');
   const [searchTerm, setSearchTerm] = useState('');
   const [entityFilter, setEntityFilter] = useState<string>('all');
   const [userFilter, setUserFilter] = useState<string>('all');
