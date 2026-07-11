@@ -85,6 +85,7 @@ const navSections: NavSection[] = [
       { id: 'sales', label: 'Sales', icon: Receipt },
       { id: 'pnl', label: 'P&L / Balance Sheet', icon: DollarSign },
       { id: 'gstreports', label: 'GST Reports', icon: FileText },
+      { id: 'profitability', label: 'Profitability', icon: DollarSign },
       { id: 'creditblock', label: 'Credit Control', icon: DollarSign },
       { id: 'payroll', label: 'Payroll', icon: DollarSign },
       { id: 'attendance', label: 'Attendance & Leave', icon: DollarSign },
@@ -103,6 +104,8 @@ const navSections: NavSection[] = [
       { id: 'challans', label: 'Challans', icon: FileText },
       { id: 'documents', label: 'Documents', icon: FileText },
       { id: 'ewaybill', label: 'E-Way Bill', icon: FileText },
+      { id: 'expiry', label: 'Doc Expiry', icon: AlertTriangle },
+      { id: 'claims', label: 'Claims & Insurance', icon: AlertTriangle },
     ],
   },
   {
@@ -116,19 +119,16 @@ const navSections: NavSection[] = [
       { id: 'dashcam', label: 'AI Dashcam', icon: Camera },
       { id: 'fueltheft', label: 'Fuel Alerts', icon: AlertTriangle },
       { id: 'predictive', label: 'AI Analytics', icon: Target },
+      { id: 'trackinglinks', label: 'Tracking Links', icon: Globe },
     ],
   },
   {
-    id: 'reports_settings',
-    label: 'Reports & Admin',
-    icon: BarChart3,
+    id: 'admin',
+    label: 'Admin',
+    icon: Shield,
     items: [
       { id: 'reports', label: 'Reports', icon: BarChart3 },
       { id: 'approvals', label: 'Approvals', icon: Shield },
-      { id: 'trackinglinks', label: 'Tracking Links', icon: Globe },
-      { id: 'expiry', label: 'Doc Expiry', icon: AlertTriangle },
-      { id: 'claims', label: 'Claims', icon: Shield },
-      { id: 'profitability', label: 'Profitability', icon: BarChart3 },
       { id: 'audittrail', label: 'Audit Trail', icon: Shield },
       { id: 'portal', label: 'Customer Portal', icon: Globe },
       { id: 'vendorportal', label: 'Vendor Portal', icon: Globe },
@@ -154,7 +154,7 @@ export default function Sidebar() {
   } = useStore();
 
   const [branchOpen, setBranchOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<string[]>(['overview', 'operations', 'reports_settings']);
+  const [expandedSections, setExpandedSections] = useState<string[]>(['overview', 'operations', 'admin']);
 
   const userRole = user.role;
 
