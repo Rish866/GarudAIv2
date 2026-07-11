@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { ArrowLeftRight, Plus, X, Truck, Package, Search, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
@@ -24,16 +24,11 @@ interface Transfer {
   remarks?: string;
 }
 
-const seedTransfers: Transfer[] = [
-  { id: 'tf_001', transfer_number: 'TF-2025-001', type: 'vehicle', item_name: 'MH-14-EF-9012 (BharatBenz 3523R)', item_id: 'veh_003', from_branch: 'branch_001', from_branch_name: 'Pune HQ', to_branch: 'branch_002', to_branch_name: 'Mumbai Branch', initiated_by: 'Rajesh Sharma', initiated_date: '2025-07-08', status: 'in_transit', remarks: 'Needed for Mumbai client delivery' },
-  { id: 'tf_002', transfer_number: 'TF-2025-002', type: 'driver', item_name: 'Dinesh Verma', item_id: 'drv_006', from_branch: 'branch_002', from_branch_name: 'Mumbai Branch', to_branch: 'branch_001', to_branch_name: 'Pune HQ', initiated_by: 'Priya Mehta', initiated_date: '2025-07-06', received_date: '2025-07-07', status: 'received' },
-  { id: 'tf_003', transfer_number: 'TF-2025-003', type: 'inventory', item_name: '10x MRF Tyres (18.5R22.5)', item_id: 'inv_tyre_001', from_branch: 'branch_001', from_branch_name: 'Pune HQ', to_branch: 'branch_002', to_branch_name: 'Mumbai Branch', initiated_by: 'Rajesh Sharma', initiated_date: '2025-07-09', status: 'initiated', remarks: 'Tyre replacement stock' },
-];
 
 
 export default function TransferModule() {
   const { branches, vehicles, drivers } = useStore();
-  const [transfers, setTransfers] = useState<Transfer[]>(isDemoTenant() ? seedTransfers : []);
+  const { data: transfers, create: createTransfer, update: updateTransfer } = useModuleData<Transfer>('transfers');
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -87,7 +82,7 @@ export default function TransferModule() {
       status: 'initiated',
       remarks: form.remarks,
     };
-    setTransfers([newTransfer, ...transfers]);
+    createTransfer(newTransfer);
     setShowModal(false);
     setForm({ type: 'vehicle', item_id: '', from_branch: '', to_branch: '', remarks: '' });
   };

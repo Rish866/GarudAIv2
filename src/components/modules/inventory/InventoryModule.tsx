@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency, classNames } from '../../../lib/utils';
 import { Plus, X, Package, IndianRupee, AlertTriangle } from 'lucide-react';
 
@@ -16,18 +16,7 @@ interface InventoryItem {
 
 
 export default function InventoryModule() {
-  const [items, setItems] = useState<InventoryItem[]>(isDemoTenant() ? [
-    { id: 'inv_001', item_code: 'LUB-001', name: 'Engine Oil (5W-30)', category: 'Lubricants', qty: 50, unit: 'Litres', rate: 450, reorder_level: 20 },
-    { id: 'inv_002', item_code: 'SP-001', name: 'Air Filter', category: 'Spare Parts', qty: 12, unit: 'Units', rate: 800, reorder_level: 5 },
-    { id: 'inv_003', item_code: 'SP-002', name: 'Brake Pad Set', category: 'Spare Parts', qty: 8, unit: 'Sets', rate: 2500, reorder_level: 4 },
-    { id: 'inv_004', item_code: 'TYR-001', name: 'MRF Tyre (295/80 R22.5)', category: 'Tyres', qty: 4, unit: 'Units', rate: 18500, reorder_level: 6 },
-    { id: 'inv_005', item_code: 'LUB-002', name: 'Coolant', category: 'Lubricants', qty: 25, unit: 'Litres', rate: 350, reorder_level: 10 },
-    { id: 'inv_006', item_code: 'SP-003', name: 'Fan Belt', category: 'Spare Parts', qty: 15, unit: 'Units', rate: 600, reorder_level: 5 },
-    { id: 'inv_007', item_code: 'SP-004', name: 'Clutch Plate', category: 'Spare Parts', qty: 3, unit: 'Units', rate: 8500, reorder_level: 4 },
-    { id: 'inv_008', item_code: 'CON-001', name: 'Grease Gun Cartridge', category: 'Consumables', qty: 30, unit: 'Units', rate: 180, reorder_level: 10 },
-    { id: 'inv_009', item_code: 'SP-005', name: 'Fuel Filter', category: 'Spare Parts', qty: 10, unit: 'Units', rate: 650, reorder_level: 5 },
-    { id: 'inv_010', item_code: 'LUB-003', name: 'Gear Oil (EP-90)', category: 'Lubricants', qty: 20, unit: 'Litres', rate: 520, reorder_level: 8 },
-  ] : []);
+    const { data: items, create: createItem, remove: removeItem, loading: itemsLoading } = useModuleData<InventoryItem>('inventory');
 
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ item_code: '', name: '', category: 'Spare Parts' as InventoryItem['category'], qty: '', unit: 'Units', rate: '', reorder_level: '' });
@@ -49,7 +38,7 @@ export default function InventoryModule() {
       rate: parseFloat(form.rate),
       reorder_level: parseInt(form.reorder_level) || 5,
     };
-    setItems([...items, newItem]);
+    createItem(newItem);
     setShowModal(false);
     setForm({ item_code: '', name: '', category: 'Spare Parts', qty: '', unit: 'Units', rate: '', reorder_level: '' });
   };

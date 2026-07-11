@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { CheckCircle, XCircle, Clock, Shield, AlertTriangle, User } from 'lucide-react';
@@ -30,19 +30,10 @@ const APPROVAL_RULES = [
   { type: 'trip_cancellation', threshold: 0, label: 'All trip cancellations need operations head approval' },
 ];
 
-const seedApprovals: ApprovalRequest[] = [
-  { id: 'apr_001', type: 'expense', title: 'Emergency Tyre Replacement', description: 'MH-12-AB-1234 — Front tyre burst on NH-44. Replaced at roadside', amount: 18500, requested_by: 'Vikram Singh (Driver)', requested_at: '2025-07-09T14:30:00Z', status: 'pending', entity_id: 'exp_101' },
-  { id: 'apr_002', type: 'rate_change', title: 'Rate Increase: Pune → Delhi', description: 'Tata Motors requesting ₹1,35,000 (was ₹1,25,000). Fuel price increase justification.', amount: 135000, requested_by: 'Priya Mehta', requested_at: '2025-07-09T11:00:00Z', status: 'pending', entity_id: 'ctr_006' },
-  { id: 'apr_003', type: 'credit_limit', title: 'UltraTech Cement — Credit Limit Increase', description: 'Current: ₹40L → Requested: ₹60L. Customer business growing.', amount: 6000000, requested_by: 'Amit Sharma', requested_at: '2025-07-08T16:00:00Z', status: 'pending', entity_id: 'cust_004' },
-  { id: 'apr_004', type: 'payment', title: 'Vendor Payment: Mahesh Patel Transport', description: 'Pending hire payment for 3 trips. Overdue by 7 days.', amount: 225000, requested_by: 'Kavita Desai', requested_at: '2025-07-08T10:00:00Z', status: 'pending', entity_id: 'vnd_001' },
-  { id: 'apr_005', type: 'expense', title: 'Office Rent — July 2025', description: 'Monthly rent for Pune HQ office. Regular recurring expense.', amount: 45000, requested_by: 'Rajesh Sharma', requested_at: '2025-07-01T09:00:00Z', approved_by: 'Rajesh Sharma', approved_at: '2025-07-01T09:05:00Z', status: 'approved', entity_id: 'exp_099' },
-  { id: 'apr_006', type: 'trip_cancellation', title: 'Cancel Trip TRP-2025-0130', description: 'Customer cancelled order last minute. Vehicle already dispatched.', amount: 0, requested_by: 'Amit Sharma', requested_at: '2025-07-07T18:00:00Z', approved_by: 'Rajesh Sharma', approved_at: '2025-07-07T18:30:00Z', status: 'approved', entity_id: 'trip_099', remarks: 'Approved. Charge cancellation fee.' },
-  { id: 'apr_007', type: 'rate_change', title: 'Discount for Asian Paints', description: 'Requested 10% discount on Ankleshwar→Ahmedabad route for 6-month commitment', amount: 32400, requested_by: 'Priya Mehta', requested_at: '2025-07-06T14:00:00Z', status: 'rejected', entity_id: 'ctr_003', remarks: 'Margin too low at discounted rate.' },
-];
 
 export default function ApprovalsModule() {
   const { user } = useStore();
-  const [approvals, setApprovals] = useState<ApprovalRequest[]>(isDemoTenant() ? seedApprovals : []);
+  const { data: approvals, create: createApproval, update: updateApproval } = useModuleData<ApprovalRequest>('approvals');
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [rejectReason, setRejectReason] = useState('');
   const [rejectingId, setRejectingId] = useState<string | null>(null);

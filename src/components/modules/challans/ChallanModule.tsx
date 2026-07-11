@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { FileWarning, IndianRupee, Clock, Plus, X, Filter } from 'lucide-react';
@@ -36,78 +36,10 @@ const STATUS_COLORS: Record<PaymentStatus, string> = {
   disputed: 'bg-red-100 text-red-800',
 };
 
-const seedChallans: Challan[] = [
-  {
-    id: '1',
-    date: '2025-01-10',
-    challan_number: 'CH-MH-2025-00142',
-    vehicle_reg: 'MH-12-AB-1234',
-    driver_name: 'Ramesh Patil',
-    violation_type: 'overspeeding',
-    location: 'Mumbai-Pune Expressway, KM 45',
-    fine_amount: 2000,
-    payment_status: 'paid',
-  },
-  {
-    id: '2',
-    date: '2025-01-15',
-    challan_number: 'CH-GJ-2025-00287',
-    vehicle_reg: 'GJ-05-GH-3456',
-    driver_name: 'Suresh Sharma',
-    violation_type: 'signal_jump',
-    location: 'Ahmedabad Ring Road, SG Highway',
-    fine_amount: 5000,
-    payment_status: 'pending',
-  },
-  {
-    id: '3',
-    date: '2025-01-18',
-    challan_number: 'CH-MH-2025-00356',
-    vehicle_reg: 'MH-12-CD-5678',
-    driver_name: 'Vikram Singh',
-    violation_type: 'overloading',
-    location: 'Nashik Highway Toll Plaza',
-    fine_amount: 10000,
-    payment_status: 'disputed',
-  },
-  {
-    id: '4',
-    date: '2025-01-22',
-    challan_number: 'CH-RJ-2025-00098',
-    vehicle_reg: 'RJ-14-JK-7890',
-    driver_name: 'Mahesh Kumar',
-    violation_type: 'no_helmet',
-    location: 'Jaipur City, MI Road',
-    fine_amount: 1000,
-    payment_status: 'paid',
-  },
-  {
-    id: '5',
-    date: '2025-01-25',
-    challan_number: 'CH-KA-2025-00445',
-    vehicle_reg: 'KA-01-LM-2345',
-    driver_name: 'Rajesh Gowda',
-    violation_type: 'lane_violation',
-    location: 'Bangalore ORR, Hebbal Flyover',
-    fine_amount: 1500,
-    payment_status: 'pending',
-  },
-  {
-    id: '6',
-    date: '2025-01-28',
-    challan_number: 'CH-MP-2025-00612',
-    vehicle_reg: 'MP-09-NP-6789',
-    driver_name: 'Anil Verma',
-    violation_type: 'expired_docs',
-    location: 'Indore Bypass, Dewas Naka',
-    fine_amount: 3500,
-    payment_status: 'pending',
-  },
-];
 
 export default function ChallanModule() {
   const { vehicles } = useStore();
-  const [challans, setChallans] = useState<Challan[]>(isDemoTenant() ? seedChallans : []);
+  const { data: challans, create: createChallan, remove: removeChallan, loading: challansLoading } = useModuleData<Challan>('challans');
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | PaymentStatus>('all');
 

@@ -1,5 +1,5 @@
 import { Camera, AlertTriangle, ShieldCheck, Wifi, WifiOff, Info, Eye, Brain, Phone, ArrowLeftRight, Gauge } from 'lucide-react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { classNames } from '../../../lib/utils';
 
@@ -14,13 +14,7 @@ interface DashcamEvent {
   severity: EventSeverity;
 }
 
-const simulatedEvents: DashcamEvent[] = isDemoTenant() ? [
-  { id: 'evt_001', type: 'fatigue', description: 'Driver fatigue detected', vehicle_reg: 'MH-12-AB-1234', timestamp: '14:28:10', severity: 'critical' },
-  { id: 'evt_002', type: 'harsh_braking', description: 'Harsh braking alert', vehicle_reg: 'GJ-05-GH-3456', timestamp: '13:15:44', severity: 'warning' },
-  { id: 'evt_003', type: 'phone_usage', description: 'Phone usage detected', vehicle_reg: 'MH-12-CD-5678', timestamp: '12:50:22', severity: 'critical' },
-  { id: 'evt_004', type: 'lane_departure', description: 'Lane departure warning', vehicle_reg: 'KA-01-LM-2345', timestamp: '11:30:15', severity: 'warning' },
-  { id: 'evt_005', type: 'overspeeding', description: 'Overspeeding (82 km/h in 60 zone)', vehicle_reg: 'RJ-14-JK-7890', timestamp: '10:45:00', severity: 'info' },
-] : [];
+const simulatedEvents: DashcamEvent[] = [];
 
 function getEventIcon(type: string) {
   switch (type) {

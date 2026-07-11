@@ -1,5 +1,5 @@
 import { Clock, AlertTriangle, CheckCircle, TrendingDown, Target, ArrowRight } from 'lucide-react';
-import { isDemoTenant } from '../../../lib/tenant';
+// SLA uses store data directly
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { MapPin, Plus, Bell, Shield, X, Circle as CircleIcon, Warehouse, Users, AlertTriangle } from 'lucide-react';
 import { MapContainer, TileLayer, Circle, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -27,14 +27,6 @@ interface GeofenceAlert {
   timestamp: string;
 }
 
-const seedGeofences: Geofence[] = [
-  { id: 'gf_001', name: 'Pune Transport Hub', type: 'depot', lat: 18.520, lng: 73.856, radius: 2000, status: 'active', alerts_count: 42 },
-  { id: 'gf_002', name: 'Mumbai JNPT Port', type: 'loading_point', lat: 18.952, lng: 72.951, radius: 3000, status: 'active', alerts_count: 78 },
-  { id: 'gf_003', name: 'Delhi NCR Zone', type: 'unloading_point', lat: 28.613, lng: 77.209, radius: 5000, status: 'active', alerts_count: 56 },
-  { id: 'gf_004', name: 'Ahmedabad Depot', type: 'depot', lat: 23.022, lng: 72.571, radius: 1500, status: 'active', alerts_count: 31 },
-  { id: 'gf_005', name: 'Customer: Tata Motors Pimpri', type: 'customer', lat: 18.627, lng: 73.800, radius: 1000, status: 'active', alerts_count: 23 },
-  { id: 'gf_006', name: 'Restricted: Pune City Center', type: 'restricted', lat: 18.531, lng: 73.847, radius: 2500, status: 'inactive', alerts_count: 5 },
-];
 
 const seedAlerts: GeofenceAlert[] = [
   { id: 'ga_001', vehicle_reg: 'MH-12-AB-1234', zone_name: 'Pune Transport Hub', event: 'exit', timestamp: '2025-07-09T10:30:00Z' },
@@ -77,7 +69,7 @@ function getTypeIcon(type: GeofenceType) {
 
 export default function GeofencingModule() {
   const { vehicles } = useStore();
-  const [geofences, setGeofences] = useState<Geofence[]>(isDemoTenant() ? seedGeofences : []);
+  const { data: geofences, create: createGeofence, remove: removeGeofence, loading: geofencesLoading } = useModuleData<Geofence>('geofences');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newGeofence, setNewGeofence] = useState<{ name: string; type: GeofenceType; lat: string; lng: string; radius: string }>({
     name: '',

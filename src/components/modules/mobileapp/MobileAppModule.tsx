@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+// Mobile App - config module
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Smartphone, Download, Bell, MapPin, Camera, Shield, Settings, Users, CheckCircle, Clock, QrCode, Wifi } from 'lucide-react';
@@ -59,7 +59,7 @@ export default function MobileAppModule() {
     auto_update_enabled: true,
   });
 
-  const driverApps = isDemoTenant() ? seedDriverApps : [];
+  const driverApps = [];
   const onlineCount = driverApps.filter(d => d.status === 'online').length;
   const offlineCount = driverApps.filter(d => d.status === 'offline').length;
   const gpsDisabled = driverApps.filter(d => !d.gps_enabled).length;
@@ -226,7 +226,7 @@ export default function MobileAppModule() {
       {/* Activity Log */}
       {view === 'activity' && (
         <div className="rounded-2xl border divide-y" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
-          {(isDemoTenant() ? seedActivity : []).map(act => (
+          {([]).map(act => (
             <div key={act.id} className="flex items-start gap-4 p-4" style={{ borderColor: 'var(--border-color)' }}>
               <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: 'var(--bg-secondary)' }}>
                 <Smartphone className="w-4 h-4" style={{ color: 'var(--accent)' }} />

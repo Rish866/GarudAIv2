@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Wrench, Clock, CheckCircle2, IndianRupee, Plus, X, Filter } from 'lucide-react';
@@ -64,92 +64,10 @@ const STATUS_COLORS: Record<WOStatus, string> = {
   cancelled: 'bg-slate-100 text-slate-600',
 };
 
-const seedWorkOrders: WorkOrder[] = [
-  {
-    id: '1',
-    work_order_number: 'WO-2025-001',
-    vehicle_reg: 'RJ-14-JK-7890',
-    job_type: 'repair',
-    description: 'Engine overhaul - complete disassembly, piston ring replacement, gasket set, valve grinding and reassembly',
-    assigned_mechanic: 'Rajendra Meena',
-    priority: 'high',
-    estimated_cost: 35000,
-    actual_cost: null,
-    start_date: '2025-01-20',
-    expected_completion: '2025-01-28',
-    actual_completion: null,
-    status: 'in_progress',
-    parts_used: 'Piston rings, Gasket set, Valve springs, Engine oil 15W-40',
-  },
-  {
-    id: '2',
-    work_order_number: 'WO-2025-002',
-    vehicle_reg: 'MH-12-AB-1234',
-    job_type: 'preventive',
-    description: 'Periodic oil change and filter replacement - 50,000 km service',
-    assigned_mechanic: 'Santosh Yadav',
-    priority: 'low',
-    estimated_cost: 8500,
-    actual_cost: 8200,
-    start_date: '2025-01-15',
-    expected_completion: '2025-01-15',
-    actual_completion: '2025-01-15',
-    status: 'completed',
-    parts_used: 'Engine oil 15W-40 (8L), Oil filter, Air filter, Fuel filter',
-  },
-  {
-    id: '3',
-    work_order_number: 'WO-2025-003',
-    vehicle_reg: 'MH-12-CD-5678',
-    job_type: 'repair',
-    description: 'Rear axle tyre replacement - 2 tyres worn below 3mm tread depth',
-    assigned_mechanic: 'Deepak Tiwari',
-    priority: 'medium',
-    estimated_cost: 42000,
-    actual_cost: null,
-    start_date: '2025-01-22',
-    expected_completion: '2025-01-24',
-    actual_completion: null,
-    status: 'parts_waiting',
-    parts_used: 'MRF 10.00R20 tyres x2 (awaiting delivery)',
-  },
-  {
-    id: '4',
-    work_order_number: 'WO-2025-004',
-    vehicle_reg: 'GJ-05-GH-3456',
-    job_type: 'inspection',
-    description: 'Brake system inspection - driver reported soft brake pedal and increased stopping distance',
-    assigned_mechanic: 'Vikram Chauhan',
-    priority: 'high',
-    estimated_cost: 5000,
-    actual_cost: null,
-    start_date: '2025-01-26',
-    expected_completion: '2025-01-27',
-    actual_completion: null,
-    status: 'open',
-    parts_used: '',
-  },
-  {
-    id: '5',
-    work_order_number: 'WO-2025-005',
-    vehicle_reg: 'KA-01-LM-2345',
-    job_type: 'repair',
-    description: 'AC compressor repair - no cooling, suspected compressor clutch failure',
-    assigned_mechanic: 'Ravi Naik',
-    priority: 'medium',
-    estimated_cost: 15000,
-    actual_cost: null,
-    start_date: '2025-01-24',
-    expected_completion: '2025-01-26',
-    actual_completion: null,
-    status: 'in_progress',
-    parts_used: 'AC compressor clutch, Refrigerant R134a, O-rings',
-  },
-];
 
 export default function WorkOrderModule() {
   const { vehicles } = useStore();
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(isDemoTenant() ? seedWorkOrders : []);
+  const { data: workOrders, create: createWorkOrder, remove: removeWorkOrder, loading: workOrdersLoading } = useModuleData<WorkOrder>('work_orders');
   const [showModal, setShowModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | WOStatus>('all');
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { AlertTriangle, Plus, X, Search, Download, FileText, Shield, Clock, CheckCircle, Camera } from 'lucide-react';
@@ -29,18 +29,11 @@ interface Claim {
   created_at: string;
 }
 
-const seedClaims: Claim[] = [
-  { id: 'clm_001', claim_number: 'CLM-2025-0012', type: 'damage', trip_id: 'trip_003', trip_number: 'TRP-2025-0140', customer_name: 'Asian Paints Ltd', vehicle_reg: 'GJ-05-GH-3456', driver_name: 'Ajay Chauhan', incident_date: '2025-07-08', location: 'NH-48, near Baroda', description: '3 paint drums leaked due to rough road. Customer rejected delivery of damaged items.', claim_amount: 45000, approved_amount: 38000, liability: 'company', evidence: ['Photo of damaged drums', 'Customer rejection slip', 'Driver statement'], status: 'claim_filed', filed_by: 'Amit Sharma', created_at: '2025-07-08T16:00:00Z' },
-  { id: 'clm_002', claim_number: 'CLM-2025-0011', type: 'shortage', trip_id: 'trip_005', trip_number: 'TRP-2025-0138', customer_name: 'Tata Motors Ltd', vehicle_reg: 'MH-14-EF-9012', driver_name: 'Vikram Singh', incident_date: '2025-07-05', location: 'Delivery point, Manesar', description: '2 cartons missing from consignment. Total 180 dispatched, 178 received.', claim_amount: 12000, approved_amount: 12000, liability: 'driver', evidence: ['POD with shortage noted', 'Loading tally sheet'], status: 'settled', filed_by: 'Kavita Desai', resolution: 'Amount deducted from driver salary', created_at: '2025-07-05T14:00:00Z' },
-  { id: 'clm_003', claim_number: 'CLM-2025-0010', type: 'accident', trip_id: 'trip_001', trip_number: 'TRP-2025-0142', customer_name: 'Tata Motors Ltd', vehicle_reg: 'MH-12-AB-1234', driver_name: 'Suresh Kumar', incident_date: '2025-07-09', location: 'NH-44, near Aurangabad toll', description: 'Minor collision with divider. Front bumper damaged. No cargo damage. Driver safe.', claim_amount: 35000, approved_amount: 0, liability: 'insurer', evidence: ['FIR copy', 'Accident photos', 'Insurance claim form'], status: 'under_investigation', filed_by: 'Rajesh Sharma', created_at: '2025-07-09T12:00:00Z' },
-  { id: 'clm_004', claim_number: 'CLM-2025-0009', type: 'delay_penalty', trip_id: 'trip_006', trip_number: 'TRP-2025-0137', customer_name: 'Maruti Suzuki India', vehicle_reg: 'MP-09-NP-6789', driver_name: 'Dinesh Verma', incident_date: '2025-07-03', location: 'Chennai plant gate', description: 'Delivery delayed by 6 hours due to vehicle breakdown on highway. Customer charged penalty.', claim_amount: 15000, approved_amount: 15000, liability: 'company', evidence: ['Breakdown report', 'Customer penalty debit note'], status: 'settled', filed_by: 'Priya Mehta', resolution: 'Absorbed as operational cost', created_at: '2025-07-03T18:00:00Z' },
-  { id: 'clm_005', claim_number: 'CLM-2025-0008', type: 'theft', trip_id: '', trip_number: 'TRP-2025-0125', customer_name: 'Reliance Industries', vehicle_reg: 'MH-12-CD-5678', driver_name: 'Ramesh Yadav', incident_date: '2025-06-28', location: 'Dhaba parking, Nashik bypass', description: 'Diesel siphoned from tank during overnight halt. ~80 litres stolen.', claim_amount: 7600, approved_amount: 0, liability: 'driver', evidence: ['Driver statement', 'Fuel level sensor data', 'Police complaint'], status: 'rejected', filed_by: 'Amit Sharma', resolution: 'Driver negligence — deducted from salary', created_at: '2025-06-28T08:00:00Z' },
-];
 
 
 export default function ClaimsModule() {
   const { trips } = useStore();
-  const [claims, setClaims] = useState<Claim[]>(isDemoTenant() ? seedClaims : []);
+  const { data: claims, create: createClaim, update: updateClaim } = useModuleData<Claim>('claims');
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | ClaimStatus>('all');
   const [search, setSearch] = useState('');
@@ -72,7 +65,7 @@ export default function ClaimsModule() {
       description: form.description, claim_amount: parseFloat(form.claim_amount), approved_amount: 0,
       liability: form.liability, evidence: [], status: 'reported', filed_by: 'Rajesh Sharma', created_at: new Date().toISOString(),
     };
-    setClaims([newClaim, ...claims]);
+    createClaim(newClaim);
     setShowModal(false);
     setForm({ type: 'damage', trip_id: '', incident_date: '', location: '', description: '', claim_amount: '', liability: 'company' });
   };

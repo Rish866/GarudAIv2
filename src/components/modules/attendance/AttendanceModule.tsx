@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Calendar, Clock, UserCheck, UserX, Plus, X, Download, Filter } from 'lucide-react';
@@ -37,31 +37,15 @@ const generateId = () => Date.now().toString(36) + Math.random().toString(36).su
 
 const today = new Date().toISOString().split('T')[0];
 
-const seedAttendance: AttendanceRecord[] = [
-  { id: 'att_001', employee_id: 'drv_001', employee_name: 'Suresh Kumar', date: today, status: 'on_trip', check_in: '06:00', remarks: 'On trip TRP-2025-0142' },
-  { id: 'att_002', employee_id: 'drv_002', employee_name: 'Ramesh Yadav', date: today, status: 'on_trip', check_in: '05:30', remarks: 'On trip TRP-2025-0141' },
-  { id: 'att_003', employee_id: 'drv_003', employee_name: 'Vikram Singh', date: today, status: 'present', check_in: '08:00', check_out: '' },
-  { id: 'att_004', employee_id: 'drv_004', employee_name: 'Ajay Chauhan', date: today, status: 'on_trip', check_in: '04:00', remarks: 'On trip TRP-2025-0140' },
-  { id: 'att_005', employee_id: 'drv_005', employee_name: 'Manoj Reddy', date: today, status: 'present', check_in: '07:30' },
-  { id: 'att_006', employee_id: 'drv_006', employee_name: 'Dinesh Verma', date: today, status: 'absent', remarks: 'No show' },
-  { id: 'att_007', employee_id: 'user_002', employee_name: 'Priya Mehta', date: today, status: 'present', check_in: '09:00' },
-  { id: 'att_008', employee_id: 'user_003', employee_name: 'Amit Sharma', date: today, status: 'on_leave', remarks: 'Casual Leave' },
-];
 
-const seedLeaves: LeaveRequest[] = [
-  { id: 'lv_001', employee_id: 'user_003', employee_name: 'Amit Sharma', leave_type: 'casual', from_date: '2025-07-09', to_date: '2025-07-10', days: 2, reason: 'Family function', status: 'approved', applied_on: '2025-07-07' },
-  { id: 'lv_002', employee_id: 'drv_006', employee_name: 'Dinesh Verma', leave_type: 'sick', from_date: '2025-07-11', to_date: '2025-07-12', days: 2, reason: 'Fever', status: 'pending', applied_on: '2025-07-09' },
-  { id: 'lv_003', employee_id: 'drv_003', employee_name: 'Vikram Singh', leave_type: 'earned', from_date: '2025-07-20', to_date: '2025-07-25', days: 6, reason: 'Annual vacation', status: 'pending', applied_on: '2025-07-08' },
-  { id: 'lv_004', employee_id: 'drv_001', employee_name: 'Suresh Kumar', leave_type: 'casual', from_date: '2025-06-25', to_date: '2025-06-25', days: 1, reason: 'Personal work', status: 'approved', applied_on: '2025-06-23' },
-];
 
 
 type TabView = 'attendance' | 'leaves' | 'summary';
 
 export default function AttendanceModule() {
   const { drivers } = useStore();
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>(isDemoTenant() ? seedAttendance : []);
-  const [leaves, setLeaves] = useState<LeaveRequest[]>(isDemoTenant() ? seedLeaves : []);
+  const { data: attendance, create: createAttendance, update: updateAttendance } = useModuleData<AttendanceRecord>('attendance');
+  const { data: leaves, create: createLeave, update: updateLeave } = useModuleData<LeaveRequest>('leave_requests');
   const [tab, setTab] = useState<TabView>('attendance');
   const [selectedDate, setSelectedDate] = useState(today);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -94,9 +78,9 @@ export default function AttendanceModule() {
   const markAttendance = (employeeId: string, name: string, status: AttendanceStatus) => {
     const existing = attendance.find(a => a.employee_id === employeeId && a.date === selectedDate);
     if (existing) {
-      setAttendance(attendance.map(a => a.id === existing.id ? { ...a, status } : a));
+      updateAttendance(existing.id, { status });
     } else {
-      setAttendance([...attendance, { id: 'att_' + generateId(), employee_id: employeeId, employee_name: name, date: selectedDate, status, check_in: new Date().toTimeString().slice(0, 5) }]);
+      createAttendance({ employee_id: employeeId, employee_name: name, date: selectedDate, status, check_in: new Date().toTimeString().slice(0, 5) });
     }
   };
 
@@ -118,7 +102,7 @@ export default function AttendanceModule() {
       status: 'pending',
       applied_on: today,
     };
-    setLeaves([newLeave, ...leaves]);
+    createLeave(newLeave);
     setShowLeaveModal(false);
     setLeaveForm({ employee_id: '', leave_type: 'casual', from_date: '', to_date: '', reason: '' });
   };
