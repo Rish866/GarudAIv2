@@ -62,15 +62,28 @@ function formatCompact(amount: number): string {
   return '₹' + amount.toString();
 }
 
-// Revenue vs Expenses chart data (last 6 months)
-const revenueExpenseData = [
-  { month: 'Feb', revenue: 2800000, expenses: 1900000 },
-  { month: 'Mar', revenue: 3200000, expenses: 2100000 },
-  { month: 'Apr', revenue: 2900000, expenses: 2000000 },
-  { month: 'May', revenue: 3500000, expenses: 2300000 },
-  { month: 'Jun', revenue: 3100000, expenses: 2200000 },
-  { month: 'Jul', revenue: 3800000, expenses: 2500000 },
-];
+// Revenue vs Expenses chart data — derived from actual invoices/expenses
+// Shows last 6 months of real data, or empty if no data exists
+function getRevenueExpenseChartData(invoices: any[], expenses: any[], fuelEntries: any[]) {
+  const months: { month: string; revenue: number; expenses: number }[] = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthStr = d.toLocaleDateString('en-US', { month: 'short' });
+    const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const monthRevenue = invoices
+      .filter(inv => inv.invoice_date?.startsWith(yearMonth))
+      .reduce((s: number, inv: any) => s + (inv.total_amount || 0), 0);
+    const monthExpenses = expenses
+      .filter(exp => exp.date?.startsWith(yearMonth))
+      .reduce((s: number, exp: any) => s + (exp.amount || 0), 0)
+      + fuelEntries
+      .filter(f => f.date?.startsWith(yearMonth))
+      .reduce((s: number, f: any) => s + (f.amount || 0), 0);
+    months.push({ month: monthStr, revenue: monthRevenue, expenses: monthExpenses });
+  }
+  return months;
+}
 
 // Pie chart colors
 const PIE_COLORS = ['#22c55e', '#2563eb', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
@@ -130,6 +143,10 @@ export default function DashboardModule() {
   );
 
   const unreadAlerts = alerts.filter((a) => !a.is_read);
+
+  // Dynamic chart data from actual store data
+  const revenueExpenseChartData = getRevenueExpenseChartData(state.invoices, state.expenses, state.fuelEntries);
+  const hasChartData = revenueExpenseChartData.some(d => d.revenue > 0 || d.expenses > 0);
 
   const recentNotifications = [...notifications]
     .sort(
@@ -318,7 +335,7 @@ export default function DashboardModule() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={revenueExpenseData} barGap={4}>
+            <BarChart data={revenueExpenseChartData} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
               <XAxis
                 dataKey="month"
