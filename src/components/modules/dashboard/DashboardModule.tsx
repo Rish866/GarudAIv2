@@ -1,5 +1,6 @@
-import { useStore, getDashboardMetrics } from '../../../store/useStore';
-import { useBranchData } from '../../../hooks/useBranchData';
+import { useStore } from '../../../store/useStore';
+import { useModuleData } from '../../../hooks/useModuleData';
+import { useOrganization } from '../../../contexts/OrganizationContext';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -126,37 +127,64 @@ const itemVariants = {
 
 export default function DashboardModule() {
   const state = useStore();
-  const branchData = useBranchData();
-  // Use branch-filtered data for KPIs
-  const metrics = getDashboardMetrics({ ...state, vehicles: branchData.vehicles, trips: branchData.trips, invoices: branchData.invoices, payments: branchData.payments, expenses: branchData.expenses, drivers: branchData.drivers, alerts: branchData.alerts });
-  const { vehicles, trips, alerts, notifications, user } = { ...state, vehicles: branchData.vehicles, trips: branchData.trips, alerts: branchData.alerts };
+  const { organizationId } = useOrganization();
+
+  // Read ALL data from Supabase (org-scoped via useModuleData)
+  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: trips } = useModuleData<any>('trips');
+  const { data: invoices } = useModuleData<any>('invoices');
+  const { data: payments } = useModuleData<any>('payments');
+  const { data: expenses } = useModuleData<any>('expenses');
+  const { data: fuelEntries } = useModuleData<any>('fuel_entries');
+  const { data: notifications } = useModuleData<any>('notifications');
+  const { data: alerts } = useModuleData<any>('activity_log');
+
+  const { user } = state;
+
+  // Compute metrics from Supabase data (org-scoped, real zeros)
+  const totalVehicles = vehicles.length;
+  const activeVehicles = vehicles.filter((v: any) => v.status === 'on_trip').length;
+  const availableVehicles = vehicles.filter((v: any) => v.status === 'available').length;
+  const maintenanceVehicles = vehicles.filter((v: any) => v.status === 'maintenance' || v.status === 'breakdown').length;
+  const totalTrips = trips.length;
+  const activeTrips = trips.filter((t: any) => ['in_transit', 'loading', 'unloading', 'assigned'].includes(t.status));
+  const completedTrips = trips.filter((t: any) => ['completed', 'billed', 'settled'].includes(t.status)).length;
+  const totalRevenue = invoices.reduce((sum: number, inv: any) => sum + (inv.total_amount ?? 0), 0);
+  const totalReceived = payments.reduce((sum: number, p: any) => sum + (p.amount ?? 0), 0);
+  const totalExpenses = expenses.reduce((sum: number, e: any) => sum + (e.amount ?? 0), 0);
+  const totalOutstanding = invoices.reduce((sum: number, inv: any) => sum + (inv.balance_amount ?? 0), 0);
+  const totalDrivers = drivers.length;
+  const availableDrivers = drivers.filter((d: any) => d.status === 'available').length;
+  const unreadAlerts = (alerts || []).filter((a: any) => !a.is_read).length;
+
+  const metrics = {
+    totalVehicles, activeVehicles, availableVehicles, maintenanceVehicles,
+    totalTrips, activeTrips: activeTrips.length, completedTrips,
+    totalRevenue, totalReceived, totalExpenses, totalOutstanding,
+    totalDrivers, availableDrivers, unreadAlerts
+  };
 
   const vehiclesWithLocation = vehicles.filter(
-    (v) => v.lat !== undefined && v.lng !== undefined
+    (v: any) => v.lat !== undefined && v.lng !== undefined
   );
   const onlineVehicles = vehicles.filter(
-    (v) => v.status === 'on_trip' && v.lat !== undefined
+    (v: any) => v.status === 'on_trip' && v.lat !== undefined
   );
 
-  const activeTrips = trips.filter((t) =>
-    ['in_transit', 'loading', 'assigned'].includes(t.status)
-  );
-
-  const unreadAlerts = alerts.filter((a) => !a.is_read);
-
-  // Dynamic chart data from actual store data
-  const revenueExpenseChartData = getRevenueExpenseChartData(state.invoices, state.expenses, state.fuelEntries);
+  // Dynamic chart data from actual Supabase data
+  const revenueExpenseChartData = getRevenueExpenseChartData(invoices, expenses, fuelEntries);
   const hasChartData = revenueExpenseChartData.some(d => d.revenue > 0 || d.expenses > 0);
 
-  const recentNotifications = [...notifications]
+  const recentNotifications = [...(notifications || [])]
     .sort(
-      (a, b) =>
+      (a: any, b: any) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
     .slice(0, 5);
 
   // Trip status distribution for pie chart
-  const tripStatusCounts = trips.reduce<Record<string, number>>((acc, t) => {
+  const tripStatusCounts = trips.reduce<Record<string, number>>((acc, t: any) => {
     acc[t.status] = (acc[t.status] || 0) + 1;
     return acc;
   }, {});
