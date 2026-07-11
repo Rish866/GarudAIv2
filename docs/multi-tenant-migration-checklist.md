@@ -21,9 +21,9 @@
 | 6 | Secure onboarding | ⬜ Pending |
 | 7 | Organization context/provider | ⬜ Pending |
 | 8 | Data-access layer (repositories) | ⬜ Pending |
-| 9 | Module migration (all batches) | 🔄 Batch 1 In Progress |
-| 10 | Remove localStorage business persistence | ⬜ Pending |
-| 11 | Remove hardcoded seed data | ⬜ Pending |
+| 9 | Module migration (all batches) | ✅ Batch 1-7 Complete |
+| 10 | Remove localStorage business persistence | ✅ Complete |
+| 11 | Remove hardcoded seed data | ✅ Complete |
 | 12 | Realtime isolation | ⬜ Pending |
 | 13 | Storage isolation | ⬜ Pending |
 | 14 | API/service-role security | ⬜ Pending |
