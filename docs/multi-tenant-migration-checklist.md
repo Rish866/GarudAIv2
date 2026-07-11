@@ -24,8 +24,8 @@
 | 9 | Module migration (all batches) | ✅ Batch 1-7 Complete |
 | 10 | Remove localStorage business persistence | ✅ Complete |
 | 11 | Remove hardcoded seed data | ✅ Complete |
-| 12 | Realtime isolation | ⬜ Pending |
-| 13 | Storage isolation | ⬜ Pending |
+| 12 | Realtime isolation | ✅ Complete |
+| 13 | Storage isolation | ✅ Complete |
 | 14 | API/service-role security | ⬜ Pending |
 | 15 | Relational tenant integrity | ⬜ Pending |
 | 16 | Dashboard correction | ⬜ Pending |
