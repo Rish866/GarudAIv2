@@ -5,6 +5,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Organization, OrganizationMembership, OrganizationRole, OrganizationContextValue } from '../types/organization';
+import { getPermissionsForRole } from '../lib/permissions';
 
 const OrganizationContext = createContext<OrganizationContextValue>({
   organization: null,
@@ -16,21 +17,6 @@ const OrganizationContext = createContext<OrganizationContextValue>({
   error: null,
   refreshOrganization: async () => {},
 });
-
-// Permission matrix per role
-const ROLE_PERMISSIONS: Record<OrganizationRole, string[]> = {
-  organization_owner: ['*'], // All permissions
-  admin: ['*'],
-  operations_manager: ['vehicles.read', 'vehicles.create', 'vehicles.update', 'drivers.read', 'drivers.create', 'trips.read', 'trips.create', 'trips.update', 'enquiries.*', 'indents.*', 'bookings.*'],
-  dispatcher: ['trips.read', 'trips.create', 'trips.update', 'vehicles.read', 'drivers.read'],
-  fleet_manager: ['vehicles.*', 'drivers.*', 'maintenance.*', 'fuel.*', 'tyres.*', 'documents.*'],
-  accountant: ['invoices.*', 'payments.*', 'expenses.*', 'reports.*', 'gst.*', 'payroll.*'],
-  maintenance_manager: ['maintenance.*', 'vehicles.read', 'tyres.*', 'work_orders.*'],
-  hr_manager: ['drivers.*', 'attendance.*', 'payroll.*', 'employees.*'],
-  driver: ['trips.read', 'expenses.create', 'documents.read'],
-  customer: ['trips.read', 'invoices.read', 'pod.read'],
-  viewer: ['*.read'],
-};
 
 export function OrganizationProvider({ children }: { children: React.ReactNode }) {
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -99,7 +85,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
   }, [loadOrganization]);
 
   const role = membership?.role ?? null;
-  const permissions = role ? ROLE_PERMISSIONS[role] || [] : [];
+  const permissions = role ? getPermissionsForRole(role) : [];
 
   const value: OrganizationContextValue = {
     organization,
