@@ -206,43 +206,6 @@ export default function SettingsModule() {
             </div>
           </div>
 
-          {/* Plan Card */}
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 text-white">
-            <h3 className="text-sm font-semibold mb-1">Current Plan</h3>
-            <p className="text-2xl font-bold mb-2">Professional</p>
-            <p className="text-sm text-blue-100 mb-4">Unlimited vehicles, drivers, and trips. Priority support included.</p>
-            <button className="px-4 py-2 bg-white text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50">
-              Upgrade Plan
-            </button>
-          </div>
-
-          {/* Database Status */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h3 className="text-sm font-semibold text-slate-900 mb-4">Database Connection</h3>
-            <div className="flex items-center gap-3 mb-3">
-              <div className={`w-3 h-3 rounded-full ${dbStatus?.connected ? 'bg-green-500 animate-pulse' : dbStatus === null ? 'bg-yellow-500' : 'bg-red-500'}`} />
-              <span className="text-sm font-medium text-slate-700">
-                {dbStatus === null ? 'Checking connection...' : dbStatus.connected ? 'Connected to Supabase' : 'Offline — using localStorage'}
-              </span>
-            </div>
-            {dbStatus && (
-              <p className="text-xs text-slate-500">{dbStatus.message}</p>
-            )}
-            <div className="mt-3 p-3 bg-slate-50 rounded-lg">
-              <p className="text-xs text-slate-500">URL: emcynvexbauhohpwcqaw.supabase.co</p>
-              <p className="text-xs text-slate-500">Tenant: garud-erp-001</p>
-              <p className="text-xs text-slate-500">Tables: tenants, users, vehicles, events</p>
-            </div>
-          </div>
-
-          {/* Danger Zone */}
-          <div className="bg-white rounded-2xl border border-red-200 p-6">
-            <h3 className="text-sm font-semibold text-red-600 mb-2">Danger Zone</h3>
-            <p className="text-sm text-slate-600 mb-4">Reset all demo data back to default. This action cannot be undone.</p>
-            <button onClick={handleResetDemo} className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700">
-              Reset Demo Data
-            </button>
-          </div>
         </div>
       </div>
       )}
