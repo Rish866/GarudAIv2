@@ -99,7 +99,11 @@ export async function signIn(email: string, password: string): Promise<{ success
     });
 
     if (error) {
-      // Provide user-friendly error messages
+      // If Supabase Auth returns error about email not confirmed or provider not enabled,
+      // it means Auth isn't fully configured yet
+      if (error.message.includes('Email not confirmed') || error.message.includes('Signups not allowed')) {
+        return { success: false, error: 'Email verification required. Check your inbox.' };
+      }
       if (error.message.includes('Invalid login')) {
         return { success: false, error: 'Invalid email or password. Please check and try again.' };
       }
@@ -129,7 +133,7 @@ export async function signIn(email: string, password: string): Promise<{ success
 
     return { success: true, user };
   } catch (e: any) {
-    return { success: false, error: e.message || 'Network error. Please check your connection.' };
+    return { success: false, error: 'Cannot connect to server. Please check your internet connection.' };
   }
 }
 
@@ -164,6 +168,7 @@ export async function getSession(): Promise<AuthUser | null> {
       tenant_id: profile?.tenant_id || 'tenant_' + session.user.id.slice(0, 12),
     };
   } catch {
+    // Supabase Auth not configured or network error
     return null;
   }
 }

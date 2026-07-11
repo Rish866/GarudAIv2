@@ -154,6 +154,7 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [regForm, setRegForm] = useState({ name: '', email: '', password: '', company_name: '', phone: '' });
   const [regError, setRegError] = useState('');
@@ -183,8 +184,6 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
       });
     });
   };
-
-  const [loading, setLoading] = useState(false);
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
@@ -577,25 +576,30 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [sessionChecked, setSessionChecked] = useState(false);
 
-  // Check for existing Supabase session on load
+  // Check for existing Supabase session on load (with timeout)
   useEffect(() => {
-    getSession().then(authUser => {
-      if (authUser) {
-        login({
-          id: authUser.id,
-          company_id: authUser.tenant_id,
-          name: authUser.name,
-          email: authUser.email,
-          role: authUser.role,
-          phone: authUser.phone,
-          status: 'active',
-        });
-      } else if (isLoggedIn) {
-        // No valid Supabase session but localStorage says logged in — force logout
-        logout();
-      }
-      setSessionChecked(true);
-    });
+    const timeout = setTimeout(() => setSessionChecked(true), 3000); // Max 3s wait
+    getSession()
+      .then(authUser => {
+        clearTimeout(timeout);
+        if (authUser) {
+          login({
+            id: authUser.id,
+            company_id: authUser.tenant_id,
+            name: authUser.name,
+            email: authUser.email,
+            role: authUser.role,
+            phone: authUser.phone,
+            status: 'active',
+          });
+        }
+        setSessionChecked(true);
+      })
+      .catch(() => {
+        clearTimeout(timeout);
+        setSessionChecked(true);
+      });
+    return () => clearTimeout(timeout);
   }, []);
 
   // Don't render until session check is done
