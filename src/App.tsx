@@ -168,6 +168,27 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
     signIn(email, password).then(result => {
       setLoading(false);
       if (result.success && result.user) {
+        const currentTenant = localStorage.getItem('garud_active_tenant');
+        const newTenant = result.user.tenant_id;
+
+        // Set the active tenant for this user
+        localStorage.setItem('garud_active_tenant', newTenant);
+
+        // If switching to a different tenant, reload to use correct storage
+        if (currentTenant && currentTenant !== newTenant) {
+          login({
+            id: result.user.id,
+            company_id: result.user.tenant_id,
+            name: result.user.name,
+            email: result.user.email,
+            role: result.user.role,
+            phone: result.user.phone,
+            status: 'active',
+          });
+          window.location.reload();
+          return;
+        }
+
         login({
           id: result.user.id,
           company_id: result.user.tenant_id,
@@ -178,7 +199,6 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
           status: 'active',
         });
       } else {
-        // If Supabase Auth fails (not configured), show error with hint
         setError(result.error || 'Login failed. If you just deployed, make sure Supabase Auth is enabled in your dashboard.');
       }
     }).catch(() => {
@@ -209,7 +229,7 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
         return;
       }
 
-      setRegSuccess('Account created! Check your email for verification link, then login.');
+      setRegSuccess('Account created! You can now login with your credentials.');
       setIsRegistering(false);
       setEmail(regForm.email);
       setRegForm({ name: '', email: '', password: '', company_name: '', phone: '' });

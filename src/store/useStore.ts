@@ -123,6 +123,9 @@ export function getDashboardMetrics(state: StoreState) {
   return { totalVehicles, activeVehicles, availableVehicles, maintenanceVehicles, totalTrips, activeTrips, completedTrips, totalRevenue, totalReceived, totalExpenses, totalOutstanding, totalDrivers, availableDrivers, unreadAlerts };
 }
 
+// Determine if this is the demo tenant (show seed data) or a fresh tenant (empty)
+const IS_DEMO_TENANT = !localStorage.getItem('garud_active_tenant') || localStorage.getItem('garud_active_tenant') === 'default';
+
 // Seed data
 const COMPANY_ID = 'comp_garud_001';
 
@@ -243,30 +246,32 @@ const seedEnquiries: Enquiry[] = [
 export const useStore = create<StoreState>()(
   persist(
     (set) => ({
-  company: seedCompany,
+  company: IS_DEMO_TENANT ? seedCompany : { id: '', name: 'My Transport Company', address: '', city: '', state: '', gstin: '', pan: '', phone: '', email: '' },
   user: seedUser,
-  vehicles: seedVehicles,
-  drivers: seedDrivers,
-  customers: seedCustomers,
-  trips: seedTrips,
-  invoices: seedInvoices,
-  payments: seedPayments,
-  expenses: seedExpenses,
-  fuelEntries: seedFuelEntries,
+  vehicles: IS_DEMO_TENANT ? seedVehicles : [],
+  drivers: IS_DEMO_TENANT ? seedDrivers : [],
+  customers: IS_DEMO_TENANT ? seedCustomers : [],
+  trips: IS_DEMO_TENANT ? seedTrips : [],
+  invoices: IS_DEMO_TENANT ? seedInvoices : [],
+  payments: IS_DEMO_TENANT ? seedPayments : [],
+  expenses: IS_DEMO_TENANT ? seedExpenses : [],
+  fuelEntries: IS_DEMO_TENANT ? seedFuelEntries : [],
   maintenance: seedMaintenance,
   alerts: seedAlerts,
-  enquiries: seedEnquiries,
+  maintenance: IS_DEMO_TENANT ? seedMaintenance : [],
+  alerts: IS_DEMO_TENANT ? seedAlerts : [],
+  enquiries: IS_DEMO_TENANT ? seedEnquiries : [],
   activeModule: 'dashboard',
   sidebarCollapsed: false,
   isLoggedIn: false,
   showModal: null,
   theme: 'light',
-  notifications: seedNotifications,
-  quotations: seedQuotations,
-  branches: seedBranches,
+  notifications: IS_DEMO_TENANT ? seedNotifications : [],
+  quotations: IS_DEMO_TENANT ? seedQuotations : [],
+  branches: IS_DEMO_TENANT ? seedBranches : [{ id: 'branch_001', company_id: '', name: 'Head Office', code: 'HQ', city: '', state: '', address: '', manager_name: '', phone: '', status: 'active' }],
   activeBranch: 'all',
-  activityLog: seedActivityLog,
-  onboarding: { completed: true, current_step: 5, steps_completed: ['company_setup', 'add_vehicles', 'add_drivers', 'add_customers', 'first_trip'] },
+  activityLog: IS_DEMO_TENANT ? seedActivityLog : [],
+  onboarding: IS_DEMO_TENANT ? { completed: true, current_step: 5, steps_completed: ['company_setup', 'add_vehicles', 'add_drivers', 'add_customers', 'first_trip'] } : { completed: false, current_step: 0, steps_completed: [] },
 
   addVehicle: (vehicle) => set((state) => {
     const newVeh = { ...vehicle, branch_id: vehicle.branch_id || state.activeBranch };
@@ -402,7 +407,7 @@ export const useStore = create<StoreState>()(
   addActivityLog: (log) => set((state) => ({ activityLog: [log, ...state.activityLog] })),
 }),
     {
-      name: 'garud-erp-storage',
+      name: `garud-erp-${localStorage.getItem('garud_active_tenant') || 'default'}`,
       partialize: (state) => ({
         vehicles: state.vehicles,
         drivers: state.drivers,
