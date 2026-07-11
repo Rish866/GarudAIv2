@@ -108,6 +108,7 @@ export default function Topbar() {
     drivers,
     toggleSidebar,
     toggleTheme,
+    login,
     markNotificationRead,
     markAllNotificationsRead,
     setActiveModule,
@@ -422,6 +423,54 @@ export default function Topbar() {
                     {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
                     <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                   </button>
+
+                  {/* Platform Admin — Client Account Switcher */}
+                  {isPlatformAdmin(user.email) && (
+                    <>
+                      <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
+                      <div className="px-4 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--accent)' }}>
+                          🛡️ Switch Client Account
+                        </p>
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                          {getAllTenants().map(tenant => (
+                            <button
+                              key={tenant.id}
+                              onClick={() => {
+                                switchTenant(tenant.id);
+                                // Re-login as that tenant's admin
+                                const tenantUsers = getAllUsers().filter(u => u.tenant_id === tenant.id);
+                                const tenantAdmin = tenantUsers[0];
+                                if (tenantAdmin) {
+                                  login({
+                                    id: tenantAdmin.id,
+                                    company_id: tenantAdmin.tenant_id,
+                                    name: tenantAdmin.name,
+                                    email: tenantAdmin.email,
+                                    role: tenantAdmin.role,
+                                    phone: tenantAdmin.phone,
+                                    status: 'active',
+                                  });
+                                }
+                                setUserOpen(false);
+                                window.location.reload();
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-left transition-colors hover:bg-[var(--bg-secondary)]"
+                              style={{ color: 'var(--text-secondary)' }}
+                            >
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shrink-0">
+                                <span className="text-white text-[9px] font-bold">{tenant.company_name.charAt(0)}</span>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{tenant.company_name}</p>
+                                <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{tenant.owner_email} • {tenant.status}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
 
