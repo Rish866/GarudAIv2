@@ -6,6 +6,7 @@ import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } 
 import { exportDrivers } from '../../../lib/excel';
 import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle, TrendingUp, Clock, Award, Fuel, ChevronRight, BarChart3, Star } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
+import { useModuleData } from '../../../hooks/useModuleData';
 
 type DriverView = 'list' | 'performance' | 'detail';
 

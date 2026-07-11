@@ -8,6 +8,8 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import BulkUpload from '../../ui/BulkUpload';
+import { useModuleData } from '../../../hooks/useModuleData';
+import type { VehicleRecord } from '../../../data/vehicles/vehicleRepository';
 
 // Fix default leaflet icon
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;

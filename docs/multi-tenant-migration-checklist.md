@@ -21,7 +21,7 @@
 | 6 | Secure onboarding | ⬜ Pending |
 | 7 | Organization context/provider | ⬜ Pending |
 | 8 | Data-access layer (repositories) | ⬜ Pending |
-| 9 | Module migration (all batches) | ⬜ Pending |
+| 9 | Module migration (all batches) | 🔄 Batch 1 In Progress |
 | 10 | Remove localStorage business persistence | ⬜ Pending |
 | 11 | Remove hardcoded seed data | ⬜ Pending |
 | 12 | Realtime isolation | ⬜ Pending |
@@ -40,10 +40,10 @@
 
 | Module | Current Source | Target Table | org_id | RLS | Repo | Read | Create | Update | Delete | RT | Storage | Tests | Status |
 |--------|---------------|-------------|--------|-----|------|------|--------|--------|--------|----|---------| ------|--------|
-| Fleet/Vehicles | Zustand+localStorage | vehicles | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Drivers | Zustand+localStorage | drivers | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Customers | Zustand+localStorage | customers | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Vendors | useState(seed) | vendors | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Fleet/Vehicles | Zustand+localStorage | vehicles | ✅ | ✅ | ✅ | 🔄 | 🔄 | 🔄 | 🔄 | ⬜ | ⬜ | ⬜ | 🔄 |
+| Drivers | Zustand+localStorage | drivers | ✅ | ✅ | ✅ | 🔄 | 🔄 | 🔄 | 🔄 | ⬜ | ⬜ | ⬜ | 🔄 |
+| Customers | Zustand+localStorage | customers | ✅ | ✅ | ✅ | 🔄 | 🔄 | 🔄 | 🔄 | ⬜ | ⬜ | ⬜ | 🔄 |
+| Vendors | useModuleData → Supabase | vendors | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ | ⬜ | ✅ |
 | Trips | Zustand+localStorage | trips | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Enquiries | Zustand+localStorage | enquiries | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Quotations | Zustand+localStorage | quotations | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -57,9 +57,9 @@
 | Payroll | useState(seed) | payroll_records | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Attendance | useState(seed) | attendance | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Documents | Zustand+localStorage | documents | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Contracts | useState(seed) | contracts | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Contracts | useModuleData → Supabase | contracts | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ✅ |
 | Market Hire | useState(seed) | market_hires | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Routes | useState(seed) | routes | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Routes | useModuleData → Supabase | routes | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ✅ |
 | Transfers | useState(seed) | transfers | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Branches | Zustand+localStorage | branches | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Notifications | Zustand+localStorage | notifications | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |

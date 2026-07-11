@@ -4,6 +4,7 @@ import { testSupabaseConnection } from '../../../lib/supabase';
 import { canAccessModule, getRoleLabel } from '../../../lib/rbac';
 import type { UserRole, ModuleName } from '../../../types';
 import { Plus, X, Trash2, Edit, Users, Shield, CheckCircle } from 'lucide-react';
+import { useOrganization } from '../../../hooks/useOrganization';
 
 interface ManagedUser {
   id: string;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { FileText, Plus, X, AlertTriangle } from 'lucide-react';
@@ -22,14 +22,7 @@ interface ContractRate {
 export default function ContractRateModule() {
   const { customers, trips } = useStore();
 
-  const [contracts, setContracts] = useState<ContractRate[]>(isDemoTenant() ? [
-    { id: 'ctr_001', customer_id: 'cust_001', customer_name: 'Tata Motors Ltd', origin: 'Pune', destination: 'Mumbai', vehicle_type: 'trailer', rate_type: 'per_trip', rate: 45000, effective_from: '2025-01-01', effective_to: '2025-12-31', status: 'active' },
-    { id: 'ctr_002', customer_id: 'cust_002', customer_name: 'Reliance Industries', origin: 'Mumbai', destination: 'Hyderabad', vehicle_type: 'container', rate_type: 'per_trip', rate: 85000, effective_from: '2025-01-01', effective_to: '2025-12-31', status: 'active' },
-    { id: 'ctr_003', customer_id: 'cust_003', customer_name: 'Asian Paints Ltd', origin: 'Ankleshwar', destination: 'Ahmedabad', vehicle_type: 'tanker', rate_type: 'per_ton', rate: 1600, effective_from: '2025-03-01', effective_to: '2025-09-30', status: 'active' },
-    { id: 'ctr_004', customer_id: 'cust_004', customer_name: 'UltraTech Cement', origin: 'Bangalore', destination: 'Goa', vehicle_type: 'truck', rate_type: 'per_trip', rate: 62000, effective_from: '2025-04-01', effective_to: '2025-10-31', status: 'active' },
-    { id: 'ctr_005', customer_id: 'cust_005', customer_name: 'Maruti Suzuki India', origin: 'Manesar', destination: 'Chennai', vehicle_type: 'truck', rate_type: 'per_km', rate: 82, effective_from: '2024-06-01', effective_to: '2025-05-31', status: 'expired' },
-    { id: 'ctr_006', customer_id: 'cust_001', customer_name: 'Tata Motors Ltd', origin: 'Pune', destination: 'Delhi', vehicle_type: 'trailer', rate_type: 'per_trip', rate: 125000, effective_from: '2025-01-01', effective_to: '2025-12-31', status: 'active' },
-  ] : []);
+  const { data: contracts, create: createContract, remove: removeContract, loading: contractsLoading } = useModuleData<ContractRate>('contracts');
 
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -83,7 +76,7 @@ export default function ContractRateModule() {
       status: isExpired ? 'expired' : 'active',
     };
 
-    setContracts([...contracts, newContract]);
+    createContract(newContract);
     setShowModal(false);
     setForm({ customer_id: '', origin: '', destination: '', vehicle_type: 'truck', rate_type: 'per_trip', rate: '', effective_from: '', effective_to: '' });
   };
@@ -207,7 +200,7 @@ export default function ContractRateModule() {
             data.forEach(row => {
               const today = new Date().toISOString().split('T')[0];
               const isExpired = (row.effective_to || '') < today;
-              setContracts(prev => [...prev, {
+              createContract({
                 id: 'ctr_' + generateId(),
                 customer_id: '',
                 customer_name: row.customer_name || '',
@@ -219,7 +212,7 @@ export default function ContractRateModule() {
                 effective_from: row.effective_from || today,
                 effective_to: row.effective_to || '',
                 status: isExpired ? 'expired' : 'active',
-              }]);
+              });
             });
           }}
           onClose={() => setShowBulkUpload(false)}

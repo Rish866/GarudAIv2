@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, classNames } from '../../../lib/utils';
 import { MapPin, Plus, X, Search, Download, TrendingUp, Clock, Fuel } from 'lucide-react';
@@ -24,20 +24,10 @@ interface RouteRecord {
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
 
-const seedRoutes: RouteRecord[] = [
-  { id: 'rt_001', name: 'Pune - Mumbai', origin: 'Pune, Maharashtra', destination: 'Mumbai, Maharashtra', distance_km: 150, standard_hours: 4, toll_points: 3, toll_cost: 850, fuel_estimate: 3200, trips_completed: 89, total_revenue: 4005000, total_cost: 2670000, status: 'active' },
-  { id: 'rt_002', name: 'Pune - Delhi', origin: 'Pune, Maharashtra', destination: 'Delhi, NCR', distance_km: 1420, standard_hours: 28, toll_points: 12, toll_cost: 4500, fuel_estimate: 28400, trips_completed: 34, total_revenue: 4250000, total_cost: 2890000, status: 'active' },
-  { id: 'rt_003', name: 'Mumbai - Ahmedabad', origin: 'Mumbai, Maharashtra', destination: 'Ahmedabad, Gujarat', distance_km: 530, standard_hours: 10, toll_points: 6, toll_cost: 1800, fuel_estimate: 10600, trips_completed: 56, total_revenue: 4760000, total_cost: 3192000, status: 'active' },
-  { id: 'rt_004', name: 'Pune - Hyderabad', origin: 'Pune, Maharashtra', destination: 'Hyderabad, Telangana', distance_km: 560, standard_hours: 11, toll_points: 5, toll_cost: 1650, fuel_estimate: 11200, trips_completed: 42, total_revenue: 3570000, total_cost: 2394000, status: 'active' },
-  { id: 'rt_005', name: 'Mumbai - Bangalore', origin: 'Mumbai, Maharashtra', destination: 'Bangalore, Karnataka', distance_km: 980, standard_hours: 18, toll_points: 8, toll_cost: 3200, fuel_estimate: 19600, trips_completed: 28, total_revenue: 2520000, total_cost: 1764000, status: 'active' },
-  { id: 'rt_006', name: 'Delhi - Jaipur', origin: 'Delhi, NCR', destination: 'Jaipur, Rajasthan', distance_km: 280, standard_hours: 5, toll_points: 4, toll_cost: 1100, fuel_estimate: 5600, trips_completed: 18, total_revenue: 810000, total_cost: 540000, status: 'active' },
-  { id: 'rt_007', name: 'Pune - Chennai', origin: 'Pune, Maharashtra', destination: 'Chennai, Tamil Nadu', distance_km: 1170, standard_hours: 22, toll_points: 10, toll_cost: 3800, fuel_estimate: 23400, trips_completed: 21, total_revenue: 2940000, total_cost: 1974000, status: 'active' },
-  { id: 'rt_008', name: 'Jamnagar - Delhi', origin: 'Jamnagar, Gujarat', destination: 'Delhi, NCR', distance_km: 930, standard_hours: 17, toll_points: 9, toll_cost: 3100, fuel_estimate: 18600, trips_completed: 15, total_revenue: 1575000, total_cost: 1050000, status: 'active' },
-];
 
 export default function RouteModule() {
   const { trips } = useStore();
-  const [routes, setRoutes] = useState<RouteRecord[]>(isDemoTenant() ? seedRoutes : []);
+  const { data: routes, create: createRoute, remove: removeRoute, loading: routesLoading } = useModuleData<RouteRecord>('routes');
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');
@@ -80,7 +70,7 @@ export default function RouteModule() {
       total_cost: 0,
       status: 'active',
     };
-    setRoutes([newRoute, ...routes]);
+    createRoute(newRoute);
     setShowModal(false);
     setForm({ name: '', origin: '', destination: '', distance_km: '', standard_hours: '', toll_points: '', toll_cost: '', fuel_estimate: '' });
   };
@@ -237,7 +227,7 @@ export default function RouteModule() {
       )}
 
       {showBulkUpload && (
-        <BulkUpload title="Bulk Upload Routes" description="Import route records from CSV" sampleFields={['name', 'origin', 'destination', 'distance_km', 'standard_hours', 'toll_points', 'toll_cost', 'fuel_estimate']} onUpload={(data) => { data.forEach(row => { setRoutes(prev => [...prev, { id: 'rt_' + generateId(), name: row.name || '', origin: row.origin || '', destination: row.destination || '', distance_km: Number(row.distance_km) || 0, standard_hours: Number(row.standard_hours) || 0, toll_points: Number(row.toll_points) || 0, toll_cost: Number(row.toll_cost) || 0, fuel_estimate: Number(row.fuel_estimate) || 0, trips_completed: 0, total_revenue: 0, total_cost: 0, status: 'active' }]); }); }} onClose={() => setShowBulkUpload(false)} />
+        <BulkUpload title="Bulk Upload Routes" description="Import route records from CSV" sampleFields={['name', 'origin', 'destination', 'distance_km', 'standard_hours', 'toll_points', 'toll_cost', 'fuel_estimate']} onUpload={(data) => { data.forEach(row => { createRoute( { id: 'rt_' + generateId(), name: row.name || '', origin: row.origin || '', destination: row.destination || '', distance_km: Number(row.distance_km) || 0, standard_hours: Number(row.standard_hours) || 0, toll_points: Number(row.toll_points) || 0, toll_cost: Number(row.toll_cost) || 0, fuel_estimate: Number(row.fuel_estimate) || 0, trips_completed: 0, total_revenue: 0, total_cost: 0, status: 'active' }); }); }} onClose={() => setShowBulkUpload(false)} />
       )}
     </div>
   );

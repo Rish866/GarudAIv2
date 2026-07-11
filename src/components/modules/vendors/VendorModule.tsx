@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isDemoTenant } from '../../../lib/tenant';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Users, Plus, X, Search, Download, Edit, Trash2, Phone, Mail } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
@@ -28,19 +28,10 @@ interface Vendor {
 }
 
 
-const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
-const seedVendors: Vendor[] = [
-  { id: 'vnd_001', name: 'Mahesh Patel Transport', type: 'vehicle_owner', contact_person: 'Mahesh Patel', phone: '+91 94265 78901', email: 'mahesh.patel@gmail.com', gstin: '24AABCP1234E1Z5', pan: 'AABCP1234E', address: '12, Industrial Area', city: 'Ahmedabad', state: 'Gujarat', bank_name: 'HDFC Bank', account_number: '50200012345678', ifsc: 'HDFC0001234', total_paid: 2850000, outstanding: 125000, status: 'active', created_at: '2021-03-15' },
-  { id: 'vnd_002', name: 'Bharat Petroleum (Dealer)', type: 'fuel_supplier', contact_person: 'Rajiv Gupta', phone: '+91 98765 12345', email: 'dealer.pune@bpcl.in', gstin: '27AABCB1234F1Z8', pan: 'AABCB1234F', address: '45, GT Road Fuel Station', city: 'Pune', state: 'Maharashtra', bank_name: 'SBI', account_number: '30200098765432', ifsc: 'SBIN0005678', total_paid: 4200000, outstanding: 0, status: 'active', created_at: '2020-01-10' },
-  { id: 'vnd_003', name: 'MRF Tyre Distributor', type: 'tyre_vendor', contact_person: 'Sunil Agarwal', phone: '+91 98234 56789', email: 'sunil@mrfdist.com', gstin: '27AABCM5678G1Z2', pan: 'AABCM5678G', address: '78, Auto Market, Nigdi', city: 'Pune', state: 'Maharashtra', bank_name: 'ICICI Bank', account_number: '120200043210987', ifsc: 'ICIC0002345', total_paid: 890000, outstanding: 72000, status: 'active', created_at: '2022-05-20' },
-  { id: 'vnd_004', name: 'Shree Balaji Service Center', type: 'garage', contact_person: 'Kishore Sharma', phone: '+91 97654 32100', email: 'balaji.service@gmail.com', gstin: '27AABCS3456H1Z9', pan: 'AABCS3456H', address: '23, MIDC Road', city: 'Nashik', state: 'Maharashtra', bank_name: 'Axis Bank', account_number: '91800234567890', ifsc: 'UTIB0003456', total_paid: 560000, outstanding: 45000, status: 'active', created_at: '2021-08-12' },
-  { id: 'vnd_005', name: 'Ravi Logistics (Broker)', type: 'broker', contact_person: 'Ravi Kumar', phone: '+91 99887 76655', email: 'ravi.broker@yahoo.com', gstin: '', pan: 'AABCR7890I', address: '56, Transport Nagar', city: 'Delhi', state: 'Delhi', bank_name: 'PNB', account_number: '40100056789012', ifsc: 'PUNB0004567', total_paid: 1450000, outstanding: 88000, status: 'active', created_at: '2023-01-05' },
-  { id: 'vnd_006', name: 'Krishna Spare Parts', type: 'other', contact_person: 'Dinesh Rao', phone: '+91 98112 34567', email: 'krishnaspares@gmail.com', gstin: '29AABCK2345J1Z1', pan: 'AABCK2345J', address: '12, Spare Parts Market', city: 'Bangalore', state: 'Karnataka', bank_name: 'Kotak Bank', account_number: '78900012345678', ifsc: 'KKBK0005678', total_paid: 320000, outstanding: 0, status: 'active', created_at: '2022-11-18' },
-];
 
 export default function VendorModule() {
-  const [vendors, setVendors] = useState<Vendor[]>(isDemoTenant() ? seedVendors : []);
+  const { data: vendors, create: createVendor, update: updateVendor, remove: removeVendor, loading: vendorsLoading } = useModuleData<Vendor>('vendors');
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');
@@ -90,13 +81,13 @@ export default function VendorModule() {
       status: 'active',
       created_at: new Date().toISOString().split('T')[0],
     };
-    setVendors([newVendor, ...vendors]);
+    createVendor(newVendor);
     setShowModal(false);
     setForm({ name: '', type: 'vehicle_owner', contact_person: '', phone: '', email: '', gstin: '', pan: '', address: '', city: '', state: '', bank_name: '', account_number: '', ifsc: '' });
   };
 
   const handleDelete = (id: string) => {
-    setVendors(vendors.filter(v => v.id !== id));
+    removeVendor(id);
   };
 
   const exportCSV = () => {
@@ -275,7 +266,7 @@ export default function VendorModule() {
       )}
 
       {showBulkUpload && (
-        <BulkUpload title="Bulk Upload Vendors" description="Import vendor records from CSV" sampleFields={['name', 'type', 'contact_person', 'phone', 'email', 'gstin', 'city', 'state']} onUpload={(data) => { data.forEach(row => { setVendors(prev => [...prev, { id: 'vnd_' + generateId(), name: row.name || '', type: (row.type as VendorType) || 'other', contact_person: row.contact_person || '', phone: row.phone || '', email: row.email || '', gstin: row.gstin || '', pan: row.pan || '', address: row.address || '', city: row.city || '', state: row.state || '', bank_name: '', account_number: '', ifsc: '', total_paid: 0, outstanding: 0, status: 'active', created_at: new Date().toISOString().split('T')[0] }]); }); }} onClose={() => setShowBulkUpload(false)} />
+        <BulkUpload title="Bulk Upload Vendors" description="Import vendor records from CSV" sampleFields={['name', 'type', 'contact_person', 'phone', 'email', 'gstin', 'city', 'state']} onUpload={(data) => { data.forEach(row => { createVendor( { id: 'vnd_' + generateId(), name: row.name || '', type: (row.type as VendorType) || 'other', contact_person: row.contact_person || '', phone: row.phone || '', email: row.email || '', gstin: row.gstin || '', pan: row.pan || '', address: row.address || '', city: row.city || '', state: row.state || '', bank_name: '', account_number: '', ifsc: '', total_paid: 0, outstanding: 0, status: 'active', created_at: new Date().toISOString().split('T')[0] }); }); }} onClose={() => setShowBulkUpload(false)} />
       )}
     </div>
   );

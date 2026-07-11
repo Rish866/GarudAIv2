@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore, generateId } from '../../../store/useStore';
 import { useBranchData } from '../../../hooks/useBranchData';
 import type { Customer } from '../../../types';
