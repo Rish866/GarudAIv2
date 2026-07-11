@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Plus, X, BookOpen, Building2, Landmark, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
@@ -35,7 +36,7 @@ interface LedgerAccount {
 export default function AccountsModule() {
   const [activeTab, setActiveTab] = useState<'cash' | 'bank' | 'ledger'>('cash');
 
-  const [cashEntries, setCashEntries] = useState<CashEntry[]>([
+  const [cashEntries, setCashEntries] = useState<CashEntry[]>(isDemoTenant() ? [
     { id: 'ce_001', date: '2025-07-01', voucher_number: 'CV-001', particulars: 'Received freight from Tata Motors', type: 'receipt', amount: 47000, narration: 'Trip TRP-2025-0142 freight' },
     { id: 'ce_002', date: '2025-07-02', voucher_number: 'CV-002', particulars: 'Paid driver salary - Suresh Kumar', type: 'payment', amount: 25000, narration: 'Monthly salary July' },
     { id: 'ce_003', date: '2025-07-03', voucher_number: 'CV-003', particulars: 'Paid diesel - HP Pump Lonavala', type: 'payment', amount: 12000, narration: 'Diesel for MH-12-AB-1234' },
@@ -44,20 +45,20 @@ export default function AccountsModule() {
     { id: 'ce_006', date: '2025-07-06', voucher_number: 'CV-006', particulars: 'Paid office supplies', type: 'payment', amount: 3200, narration: 'Stationery & printer ink' },
     { id: 'ce_007', date: '2025-07-07', voucher_number: 'CV-007', particulars: 'Received container handling charges', type: 'receipt', amount: 8000, narration: 'Container handling at port' },
     { id: 'ce_008', date: '2025-07-08', voucher_number: 'CV-008', particulars: 'Paid vehicle repair advance', type: 'payment', amount: 10000, narration: 'Advance to Sharma Auto Works' },
-  ]);
+  ] : []);
 
 
-  const [bankEntries, setBankEntries] = useState<BankEntry[]>([
+  const [bankEntries, setBankEntries] = useState<BankEntry[]>(isDemoTenant() ? [
     { id: 'be_001', date: '2025-07-01', voucher_number: 'BV-001', particulars: 'NEFT received from Reliance Industries', type: 'receipt', amount: 88500, reference: 'NEFT-20250701-56789', narration: 'Freight payment TRP-2025-0141' },
     { id: 'be_002', date: '2025-07-02', voucher_number: 'BV-002', particulars: 'Paid vehicle EMI - HDFC Bank', type: 'payment', amount: 35000, reference: 'EMI-AUTO-072025', narration: 'EMI for MH-14-EF-9012' },
     { id: 'be_003', date: '2025-07-03', voucher_number: 'BV-003', particulars: 'RTGS received from Maruti Suzuki', type: 'receipt', amount: 188490, reference: 'RTGS-20250703-12345', narration: 'Invoice INV-2025-0088 full payment' },
     { id: 'be_004', date: '2025-07-05', voucher_number: 'BV-004', particulars: 'Paid insurance premium - New India Assurance', type: 'payment', amount: 45000, reference: 'CHQ-445567', narration: 'Vehicle insurance RJ-14-JK-7890' },
     { id: 'be_005', date: '2025-07-07', voucher_number: 'BV-005', particulars: 'Paid driver salaries (bulk NEFT)', type: 'payment', amount: 125000, reference: 'NEFT-BULK-070725', narration: 'Monthly driver salaries July' },
     { id: 'be_006', date: '2025-07-08', voucher_number: 'BV-006', particulars: 'NEFT received from Asian Paints', type: 'receipt', amount: 50000, reference: 'NEFT-20250708-99012', narration: 'Part payment INV-2025-0087' },
-  ]);
+  ] : []);
 
 
-  const [ledgerAccounts, setLedgerAccounts] = useState<LedgerAccount[]>([
+  const [ledgerAccounts, setLedgerAccounts] = useState<LedgerAccount[]>(isDemoTenant() ? [
     { id: 'la_001', name: 'Cash', group: 'Assets', balance: 125300, balance_type: 'Dr' },
     { id: 'la_002', name: 'Bank (SBI Current A/c)', group: 'Assets', balance: 485000, balance_type: 'Dr' },
     { id: 'la_003', name: 'Sundry Debtors', group: 'Assets', balance: 2895000, balance_type: 'Dr' },
@@ -68,7 +69,7 @@ export default function AccountsModule() {
     { id: 'la_008', name: 'Freight Income', group: 'Income', balance: 1850000, balance_type: 'Cr' },
     { id: 'la_009', name: 'Vehicle Repairs', group: 'Expense', balance: 135000, balance_type: 'Dr' },
     { id: 'la_010', name: 'Office Expense', group: 'Expense', balance: 42000, balance_type: 'Dr' },
-  ]);
+  ] : []);
 
   const [showCashModal, setShowCashModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);

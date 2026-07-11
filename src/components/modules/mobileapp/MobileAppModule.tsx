@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Smartphone, Download, Bell, MapPin, Camera, Shield, Settings, Users, CheckCircle, Clock, QrCode, Wifi } from 'lucide-react';
@@ -58,10 +59,11 @@ export default function MobileAppModule() {
     auto_update_enabled: true,
   });
 
-  const onlineCount = seedDriverApps.filter(d => d.status === 'online').length;
-  const offlineCount = seedDriverApps.filter(d => d.status === 'offline').length;
-  const gpsDisabled = seedDriverApps.filter(d => !d.gps_enabled).length;
-  const lowBattery = seedDriverApps.filter(d => d.battery_level < 20 && d.battery_level > 0).length;
+  const driverApps = isDemoTenant() ? seedDriverApps : [];
+  const onlineCount = driverApps.filter(d => d.status === 'online').length;
+  const offlineCount = driverApps.filter(d => d.status === 'offline').length;
+  const gpsDisabled = driverApps.filter(d => !d.gps_enabled).length;
+  const lowBattery = driverApps.filter(d => d.battery_level < 20 && d.battery_level > 0).length;
 
 
   return (
@@ -164,7 +166,7 @@ export default function MobileAppModule() {
               </tr>
             </thead>
             <tbody>
-              {seedDriverApps.map(app => (
+              {driverApps.map(app => (
                 <tr key={app.driver_id} className="border-t" style={{ borderColor: 'var(--border-color)' }}>
                   <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{app.driver_name}</td>
                   <td className="px-4 py-3 text-center">
@@ -224,7 +226,7 @@ export default function MobileAppModule() {
       {/* Activity Log */}
       {view === 'activity' && (
         <div className="rounded-2xl border divide-y" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
-          {seedActivity.map(act => (
+          {(isDemoTenant() ? seedActivity : []).map(act => (
             <div key={act.id} className="flex items-start gap-4 p-4" style={{ borderColor: 'var(--border-color)' }}>
               <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: 'var(--bg-secondary)' }}>
                 <Smartphone className="w-4 h-4" style={{ color: 'var(--accent)' }} />

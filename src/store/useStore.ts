@@ -256,8 +256,6 @@ export const useStore = create<StoreState>()(
   payments: IS_DEMO_TENANT ? seedPayments : [],
   expenses: IS_DEMO_TENANT ? seedExpenses : [],
   fuelEntries: IS_DEMO_TENANT ? seedFuelEntries : [],
-  maintenance: seedMaintenance,
-  alerts: seedAlerts,
   maintenance: IS_DEMO_TENANT ? seedMaintenance : [],
   alerts: IS_DEMO_TENANT ? seedAlerts : [],
   enquiries: IS_DEMO_TENANT ? seedEnquiries : [],

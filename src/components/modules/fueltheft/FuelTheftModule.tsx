@@ -1,4 +1,5 @@
 import { Fuel, AlertTriangle, TrendingUp, Shield, Info, Search, DollarSign, BarChart3 } from 'lucide-react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, classNames } from '../../../lib/utils';
 
@@ -20,7 +21,7 @@ interface MileageRow {
   status: 'normal' | 'low' | 'critical';
 }
 
-const simulatedAnomalies: FuelAnomaly[] = [
+const simulatedAnomalies: FuelAnomaly[] = isDemoTenant() ? [
   {
     id: 'anom_001',
     vehicle_reg: 'MH-12-AB-1234',
@@ -57,16 +58,16 @@ const simulatedAnomalies: FuelAnomaly[] = [
     timestamp: '2025-07-05T09:00:00Z',
     label: 'REVIEW REQUIRED',
   },
-];
+] : [];
 
-const simulatedMileage: MileageRow[] = [
+const simulatedMileage: MileageRow[] = isDemoTenant() ? [
   { vehicle_reg: 'MH-12-AB-1234', expected_mileage: 4.2, actual_mileage: 4.0, variance: -4.8, status: 'normal' },
   { vehicle_reg: 'MH-12-CD-5678', expected_mileage: 3.8, actual_mileage: 3.5, variance: -7.9, status: 'low' },
   { vehicle_reg: 'GJ-05-GH-3456', expected_mileage: 4.2, actual_mileage: 2.1, variance: -50.0, status: 'critical' },
   { vehicle_reg: 'KA-01-LM-2345', expected_mileage: 4.5, actual_mileage: 4.3, variance: -4.4, status: 'normal' },
   { vehicle_reg: 'MH-14-EF-9012', expected_mileage: 4.0, actual_mileage: 3.2, variance: -20.0, status: 'low' },
   { vehicle_reg: 'MP-09-NP-6789', expected_mileage: 3.9, actual_mileage: 3.7, variance: -5.1, status: 'normal' },
-];
+] : [];
 
 function getSeverityBadgeStyle(severity: 'critical' | 'warning' | 'info') {
   switch (severity) {

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Satellite, Wifi, WifiOff, Check, Settings, RefreshCw, Info, Truck } from 'lucide-react';
@@ -47,7 +48,7 @@ export default function GPSSettingsModule() {
     last_sync: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
   });
 
-  const [mappedVehicles] = useState<MappedVehicle[]>([
+  const [mappedVehicles] = useState<MappedVehicle[]>(isDemoTenant() ? [
     { vehicle_id: 'veh_001', vehicle_reg: 'MH-12-AB-1234', device_id: 'ITRI-DEV-78901', status: 'active' },
     { vehicle_id: 'veh_002', vehicle_reg: 'MH-12-CD-5678', device_id: 'ITRI-DEV-78902', status: 'active' },
     { vehicle_id: 'veh_003', vehicle_reg: 'MH-14-EF-9012', device_id: 'ITRI-DEV-78903', status: 'active' },
@@ -56,7 +57,7 @@ export default function GPSSettingsModule() {
     { vehicle_id: 'veh_006', vehicle_reg: 'KA-01-LM-2345', device_id: 'ITRI-DEV-78906', status: 'active' },
     { vehicle_id: 'veh_007', vehicle_reg: 'MP-09-NP-6789', device_id: 'ITRI-DEV-78907', status: 'active' },
     { vehicle_id: 'veh_008', vehicle_reg: 'TN-07-QR-4567', device_id: 'ITRI-DEV-78908', status: 'active' },
-  ]);
+  ] : []);
 
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'idle'>('idle');

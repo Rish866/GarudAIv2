@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isDemoTenant } from '../../../lib/tenant';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { FileText, Plus, X, AlertTriangle } from 'lucide-react';
@@ -21,14 +22,14 @@ interface ContractRate {
 export default function ContractRateModule() {
   const { customers, trips } = useStore();
 
-  const [contracts, setContracts] = useState<ContractRate[]>([
+  const [contracts, setContracts] = useState<ContractRate[]>(isDemoTenant() ? [
     { id: 'ctr_001', customer_id: 'cust_001', customer_name: 'Tata Motors Ltd', origin: 'Pune', destination: 'Mumbai', vehicle_type: 'trailer', rate_type: 'per_trip', rate: 45000, effective_from: '2025-01-01', effective_to: '2025-12-31', status: 'active' },
     { id: 'ctr_002', customer_id: 'cust_002', customer_name: 'Reliance Industries', origin: 'Mumbai', destination: 'Hyderabad', vehicle_type: 'container', rate_type: 'per_trip', rate: 85000, effective_from: '2025-01-01', effective_to: '2025-12-31', status: 'active' },
     { id: 'ctr_003', customer_id: 'cust_003', customer_name: 'Asian Paints Ltd', origin: 'Ankleshwar', destination: 'Ahmedabad', vehicle_type: 'tanker', rate_type: 'per_ton', rate: 1600, effective_from: '2025-03-01', effective_to: '2025-09-30', status: 'active' },
     { id: 'ctr_004', customer_id: 'cust_004', customer_name: 'UltraTech Cement', origin: 'Bangalore', destination: 'Goa', vehicle_type: 'truck', rate_type: 'per_trip', rate: 62000, effective_from: '2025-04-01', effective_to: '2025-10-31', status: 'active' },
     { id: 'ctr_005', customer_id: 'cust_005', customer_name: 'Maruti Suzuki India', origin: 'Manesar', destination: 'Chennai', vehicle_type: 'truck', rate_type: 'per_km', rate: 82, effective_from: '2024-06-01', effective_to: '2025-05-31', status: 'expired' },
     { id: 'ctr_006', customer_id: 'cust_001', customer_name: 'Tata Motors Ltd', origin: 'Pune', destination: 'Delhi', vehicle_type: 'trailer', rate_type: 'per_trip', rate: 125000, effective_from: '2025-01-01', effective_to: '2025-12-31', status: 'active' },
-  ]);
+  ] : []);
 
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
