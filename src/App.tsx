@@ -167,21 +167,23 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
 
     signIn(email, password).then(result => {
       setLoading(false);
-      if (!result.success) {
-        setError(result.error || 'Login failed');
-        return;
+      if (result.success && result.user) {
+        login({
+          id: result.user.id,
+          company_id: result.user.tenant_id,
+          name: result.user.name,
+          email: result.user.email,
+          role: result.user.role,
+          phone: result.user.phone,
+          status: 'active',
+        });
+      } else {
+        // If Supabase Auth fails (not configured), show error with hint
+        setError(result.error || 'Login failed. If you just deployed, make sure Supabase Auth is enabled in your dashboard.');
       }
-
-      const user = result.user!;
-      login({
-        id: user.id,
-        company_id: user.tenant_id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        status: 'active',
-      });
+    }).catch(() => {
+      setLoading(false);
+      setError('Cannot connect to authentication server. Please try again.');
     });
   };
 

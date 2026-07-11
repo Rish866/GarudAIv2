@@ -22,8 +22,8 @@ export interface Tenant {
   status: 'active' | 'trial' | 'suspended';
 }
 
-// Platform admin email from environment variable (not hardcoded)
-const PLATFORM_ADMIN_EMAIL = import.meta.env.VITE_PLATFORM_ADMIN_EMAIL || '';
+// Platform admin email — this is the platform owner who can see all tenants
+const PLATFORM_ADMIN_EMAIL = import.meta.env.VITE_PLATFORM_ADMIN_EMAIL || 'rishkatiyar1@gmail.com';
 
 // ========== SUPABASE AUTH FUNCTIONS ==========
 
