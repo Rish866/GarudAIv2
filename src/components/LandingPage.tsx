@@ -193,17 +193,17 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
   return (
     <div className="min-h-screen bg-white font-sans overflow-x-hidden">
       {/* ── NAV ── */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur border-b border-gray-100">
+      <nav className="fixed top-0 inset-x-0 z-50 bg-gray-900/60 backdrop-blur-md border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
               <Truck size={18} className="text-white" />
             </div>
-            <span className="text-lg font-bold text-gray-900">Garud AI</span>
+            <span className="text-lg font-bold text-white">Garud AI</span>
           </div>
           <button
             onClick={onGetStarted}
-            className="px-5 py-2 rounded-lg text-sm font-semibold text-blue-600 border border-blue-200 hover:bg-blue-50 transition-colors"
+            className="px-5 py-2 rounded-lg text-sm font-semibold text-white border border-white/30 hover:bg-white/10 transition-colors"
           >
             Login
           </button>
@@ -211,35 +211,38 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center pt-16 bg-gradient-to-b from-white to-blue-50 px-4">
-        {/* Subtle grid background */}
+      <section className="relative min-h-screen flex flex-col items-center justify-center pt-16 px-4 overflow-hidden">
+        {/* Background Image — Logistics truck highway */}
         <div
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage:
-              'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%230000ff\' fill-opacity=\'1\'%3E%3Cpath d=\'M0 0h1v40H0zm39 0h1v40h-1zM0 0v1h40V0zm0 39v1h40v-1z\'/%3E%3C/g%3E%3C/svg%3E")',
+            backgroundImage: 'url("https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=1920&q=80")',
           }}
         />
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-900/80 via-gray-900/70 to-blue-900/80" />
+        {/* Animated particles effect */}
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 25% 50%, rgba(59,130,246,0.3) 0%, transparent 50%), radial-gradient(circle at 75% 50%, rgba(99,102,241,0.3) 0%, transparent 50%)' }} />
 
-        <div className="relative max-w-4xl mx-auto text-center">
+        <div className="relative max-w-4xl mx-auto text-center z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold mb-6"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs font-semibold mb-6"
           >
-            <Zap size={12} />
-            Now with AI-powered analytics
+            <Zap size={12} className="text-yellow-400" />
+            AI-Powered Transport ERP — 49 Modules
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight"
+            className="text-4xl sm:text-5xl lg:text-7xl font-extrabold text-white leading-tight tracking-tight"
           >
-            India&apos;s Most Complete
-            <span className="block bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            India&apos;s Smartest
+            <span className="block bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
               Transport ERP
             </span>
           </motion.h1>
@@ -248,9 +251,9 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-6 text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed"
+            className="mt-6 text-lg sm:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed"
           >
-            Fleet tracking, trip management, billing, driver payroll — everything a transporter needs in one platform.
+            From enquiry to profit — fleet tracking, trip management, billing, compliance, AI analytics. Everything a transporter needs, in one powerful platform.
           </motion.p>
 
           <motion.div
@@ -261,12 +264,12 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           >
             <button
               onClick={onGetStarted}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl text-white text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-white text-sm font-bold bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-2xl shadow-blue-500/40 hover:shadow-blue-500/60 transition-all transform hover:scale-105"
             >
               Start Free Trial
               <ArrowRight size={16} />
             </button>
-            <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl text-gray-700 text-sm font-semibold border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all">
+            <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-white text-sm font-semibold border border-white/30 hover:border-white/60 hover:bg-white/10 backdrop-blur-sm transition-all">
               Watch Demo
             </button>
           </motion.div>
@@ -280,8 +283,8 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           >
             {stats.map((s) => (
               <div key={s.label} className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+                <p className="text-2xl font-bold text-white">{s.value}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{s.label}</p>
               </div>
             ))}
           </motion.div>
