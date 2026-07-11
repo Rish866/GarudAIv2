@@ -20,6 +20,7 @@ import { useStore } from '../../store/useStore';
 import type { ModuleName } from '../../types';
 import HelpButton from '../ui/HelpButton';
 import { MODULE_HELP } from '../../lib/helpContent';
+import { isPlatformAdmin, getAllTenants, switchTenant, getAllUsers } from '../../lib/auth';
 
 const moduleLabels: Record<ModuleName, string> = {
   dashboard: 'Dashboard',
@@ -152,6 +153,12 @@ export default function Topbar() {
         borderColor: 'var(--border-color)',
       }}
     >
+      {/* Platform Admin Banner */}
+      {isPlatformAdmin(user.email) && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs text-center py-1 font-medium">
+          🛡️ Platform Admin Mode — You can switch between client accounts via Settings
+        </div>
+      )}
       {/* Left */}
       <div className="flex items-center gap-3">
         <button

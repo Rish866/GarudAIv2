@@ -151,18 +151,67 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
+  const [error, setError] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [regForm, setRegForm] = useState({ name: '', email: '', password: '', company_name: '', phone: '' });
+  const [regError, setRegError] = useState('');
+  const [regSuccess, setRegSuccess] = useState('');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    const { authenticateUser, isPlatformAdmin, getCurrentTenantId, getStorageKeyForTenant } = require('../lib/auth');
+    const result = authenticateUser(email, password);
+
+    if (!result.success) {
+      setError(result.error || 'Login failed');
+      return;
+    }
+
+    const user = result.user!;
+
+    // Update store persistence key for this tenant's data
+    const tenantStorageKey = getStorageKeyForTenant(user.tenant_id);
+
     login({
-      id: 'user_001',
-      company_id: 'comp_garud_001',
-      name: 'Rajesh Sharma',
-      email: email || 'rajesh@garudtransport.in',
-      role: 'super_admin',
-      phone: '+91 98765 43210',
+      id: user.id,
+      company_id: user.tenant_id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
       status: 'active',
     });
+  };
+
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegError('');
+    setRegSuccess('');
+
+    if (!regForm.name || !regForm.email || !regForm.password || !regForm.company_name) {
+      setRegError('Please fill all required fields');
+      return;
+    }
+    if (regForm.password.length < 6) {
+      setRegError('Password must be at least 6 characters');
+      return;
+    }
+
+    const { registerUser } = require('../lib/auth');
+    const result = registerUser(regForm);
+
+    if (!result.success) {
+      setRegError(result.error || 'Registration failed');
+      return;
+    }
+
+    setRegSuccess('Account created successfully! You can now login.');
+    setIsRegistering(false);
+    setEmail(regForm.email);
+    setPassword(regForm.password);
+    setRegForm({ name: '', email: '', password: '', company_name: '', phone: '' });
   };
 
   const features = [
@@ -368,27 +417,76 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
             </button>
           </motion.form>
 
-          {/* Demo Credentials */}
+          {/* Error Message */}
+          {error && (
+            <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-200">
+              <p className="text-xs text-red-700 font-medium">{error}</p>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {regSuccess && (
+            <div className="mt-4 p-3 rounded-xl bg-green-50 border border-green-200">
+              <p className="text-xs text-green-700 font-medium">{regSuccess}</p>
+            </div>
+          )}
+
+          {/* Register Link */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="mt-6 rounded-xl border p-4"
-            style={{
-              backgroundColor: 'var(--accent-light)',
-              borderColor: 'var(--accent)',
-            }}
+            className="mt-6 text-center"
           >
-            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--accent)' }}>
-              Demo Mode — All credentials accepted
-            </p>
-            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              Email: <span className="font-mono">rajesh@garudtransport.in</span>
-            </p>
-            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              Password: <span className="font-mono">any password works</span>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Don&apos;t have an account?{' '}
+              <button
+                type="button"
+                onClick={() => setIsRegistering(true)}
+                className="font-semibold hover:underline"
+                style={{ color: 'var(--accent)' }}
+              >
+                Register your company
+              </button>
             </p>
           </motion.div>
+
+          {/* Registration Modal */}
+          {isRegistering && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="rounded-2xl shadow-xl w-full max-w-md p-6 m-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
+                <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Create Account</h2>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>Register your transport company to get started</p>
+                {regError && <p className="text-xs text-red-600 mb-3 p-2 bg-red-50 rounded">{regError}</p>}
+                <form onSubmit={handleRegister} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Full Name *</label>
+                    <input type="text" value={regForm.name} onChange={(e) => setRegForm({...regForm, name: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} placeholder="Your name" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Company Name *</label>
+                    <input type="text" value={regForm.company_name} onChange={(e) => setRegForm({...regForm, company_name: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} placeholder="Your transport company name" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Email *</label>
+                    <input type="email" value={regForm.email} onChange={(e) => setRegForm({...regForm, email: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} placeholder="you@company.com" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Phone</label>
+                    <input type="text" value={regForm.phone} onChange={(e) => setRegForm({...regForm, phone: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} placeholder="+91 98765 43210" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Password * (min 6 chars)</label>
+                    <input type="password" value={regForm.password} onChange={(e) => setRegForm({...regForm, password: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} placeholder="Create a password" />
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button type="button" onClick={() => setIsRegistering(false)} className="flex-1 py-2.5 border rounded-lg text-sm font-medium" style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>Cancel</button>
+                    <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Register</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
 
           {onBackToHome && (
             <button
