@@ -9,6 +9,7 @@ import { useSupabaseSync } from './lib/useSupabaseSync';
 import LandingPage from './components/LandingPage';
 import OnboardingWizard from './components/ui/OnboardingWizard';
 import ToastContainer from './components/ui/Toast';
+import { authenticateUser, registerUser, isPlatformAdmin, getCurrentTenantId, getStorageKeyForTenant } from './lib/auth';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -161,7 +162,6 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
     e.preventDefault();
     setError('');
 
-    const { authenticateUser, isPlatformAdmin, getCurrentTenantId, getStorageKeyForTenant } = require('../lib/auth');
     const result = authenticateUser(email, password);
 
     if (!result.success) {
@@ -170,9 +170,6 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
     }
 
     const user = result.user!;
-
-    // Update store persistence key for this tenant's data
-    const tenantStorageKey = getStorageKeyForTenant(user.tenant_id);
 
     login({
       id: user.id,
@@ -199,7 +196,6 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
       return;
     }
 
-    const { registerUser } = require('../lib/auth');
     const result = registerUser(regForm);
 
     if (!result.success) {
