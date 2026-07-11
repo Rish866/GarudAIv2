@@ -9,8 +9,9 @@ import { useSupabaseSync } from './lib/useSupabaseSync';
 import LandingPage from './components/LandingPage';
 import OnboardingWizard from './components/ui/OnboardingWizard';
 import ToastContainer from './components/ui/Toast';
-import { signIn, signUp, isPlatformAdmin, getAllTenants, switchTenant, getSession } from './lib/auth';
-import type { AuthUser } from './lib/auth';
+import { OrganizationProvider } from './contexts/OrganizationContext';
+import { signUpWithOrganization } from './services/organizationService';
+import { signIn, isPlatformAdmin, getAllTenants, switchTenant } from './lib/auth';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -222,7 +223,13 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
     }
 
     setLoading(true);
-    signUp(regForm).then(result => {
+    signUpWithOrganization({
+      email: regForm.email,
+      password: regForm.password,
+      fullName: regForm.name,
+      companyName: regForm.company_name,
+      phone: regForm.phone,
+    }).then(result => {
       setLoading(false);
       if (!result.success) {
         setRegError(result.error || 'Registration failed');
@@ -614,7 +621,9 @@ export default function App() {
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-      <MainLayout />
+      <OrganizationProvider>
+        <MainLayout />
+      </OrganizationProvider>
       <ToastContainer />
     </div>
   );
