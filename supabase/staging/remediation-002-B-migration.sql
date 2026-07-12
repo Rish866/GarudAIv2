@@ -1,24 +1,27 @@
 -- remediation-002-B-migration.sql
--- Default ACL Remediation: Revoke unsafe default TABLE and SEQUENCE privileges
+-- Default ACL Remediation: Deny-by-default for all future objects
 -- Target: staging ybuhazlnjqjrshcvpuna
 -- ATOMIC: BEGIN/COMMIT
--- Purpose: Prevent future tables/sequences in public schema from automatically
---          granting privileges to PUBLIC, anon, or authenticated.
+-- Purpose: Prevent future tables, sequences, and functions in public schema
+--          from automatically granting privileges to PUBLIC, anon, or authenticated.
 -- Scope:
---   TABLE defaults: revoke ALL from PUBLIC, anon, authenticated (for both owners)
---   SEQUENCE defaults: revoke ALL from PUBLIC, anon, authenticated (for both owners)
---   FUNCTION defaults: revoke EXECUTE from anon ONLY (see compatibility analysis)
--- Owners: supabase_admin, postgres (both have default ACLs on staging)
+--   TABLE defaults: revoke ALL from PUBLIC, anon, authenticated (both owners)
+--   SEQUENCE defaults: revoke ALL from PUBLIC, anon, authenticated (both owners)
+--   FUNCTION defaults: revoke EXECUTE from PUBLIC, anon, authenticated (both owners)
+-- Owners: supabase_admin, postgres
+-- Principle: DENY-BY-DEFAULT. Future callable functions must receive explicit
+--            GRANT EXECUTE after security review. This does NOT affect existing
+--            functions, existing RPCs, or existing service_role operations.
 -- Safety: ALTER DEFAULT PRIVILEGES is idempotent — re-running is a no-op.
--- Does NOT retroactively affect existing tables (that's Remediation 001's job).
+--         Does not revoke direct service_role grants.
 -- Production: NOT TOUCHED.
 
 BEGIN;
 
 -- ============================================================
 -- PHASE 1: Revoke default TABLE privileges
--- Covers: SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN
--- For both supabase_admin and postgres as owners
+-- Covers all table privileges: SELECT, INSERT, UPDATE, DELETE,
+-- TRUNCATE, REFERENCES, TRIGGER, MAINTAIN
 -- ============================================================
 
 -- supabase_admin owned tables
@@ -39,7 +42,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
 
 -- ============================================================
 -- PHASE 2: Revoke default SEQUENCE privileges
--- All PKs use gen_random_uuid() — no sequence access needed by API roles.
+-- All PKs use gen_random_uuid() — no sequence access needed.
 -- Sequence access bypasses table RLS.
 -- ============================================================
 
@@ -60,18 +63,28 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE ALL ON SEQUENCES FROM authenticated;
 
 -- ============================================================
--- PHASE 3: Revoke default FUNCTION EXECUTE from anon ONLY
--- anon should never auto-execute newly-created functions.
--- authenticated and PUBLIC are left intact per compatibility analysis:
---   - authenticated: revoking would silently break future RPCs
---   - PUBLIC: revoking would break service_role internals
--- Migration 013 will establish per-function grant discipline.
+-- PHASE 3: Revoke default FUNCTION EXECUTE privileges
+-- DENY-BY-DEFAULT: future functions are not callable without explicit grant.
+-- This does NOT affect existing functions or existing grants.
+-- Future callable functions must explicitly:
+--   GRANT EXECUTE ON FUNCTION ... TO authenticated;
+-- after security review (already the pattern in Migration 001).
 -- ============================================================
 
+-- supabase_admin owned functions
+ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
   REVOKE EXECUTE ON FUNCTIONS FROM anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM authenticated;
 
+-- postgres owned functions
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE EXECUTE ON FUNCTIONS FROM anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM authenticated;
 
 COMMIT;

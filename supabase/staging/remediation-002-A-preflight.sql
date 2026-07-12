@@ -127,26 +127,19 @@ WHERE defaclobjtype = 'S'
 ORDER BY owner_role, grantee, privilege_type;
 
 -- ============================================================
--- SECTION 5: Default FUNCTION EXECUTE privileges — compatibility analysis
--- Security note: Revoking default EXECUTE from authenticated would break
--- all RPC calls to newly-created functions unless explicit GRANT EXECUTE
--- is added per function. Our Migration 001 already does explicit
--- REVOKE ALL + GRANT EXECUTE on each security-critical function.
+-- SECTION 5: Default FUNCTION EXECUTE privileges — assessment
+-- Security note: Leaving automatic EXECUTE for future functions means any
+-- accidentally created SECURITY DEFINER function becomes callable without
+-- explicit security review. Revoking defaults does NOT affect existing
+-- functions or existing RPC grants — it only requires future functions to
+-- receive deliberate GRANT EXECUTE (the pattern already used in Migration 001).
 --
--- ASSESSMENT:
--- - Revoking default FUNCTION EXECUTE for 'anon' is SAFE: anon should
---   never call arbitrary new functions.
--- - Revoking default FUNCTION EXECUTE for 'authenticated' is RISKY:
---   future migrations creating SECURITY DEFINER RPCs would silently fail
---   unless each explicitly grants EXECUTE.
--- - Revoking default FUNCTION EXECUTE for PUBLIC is VERY RISKY: it affects
---   all roles including service_role internal operations.
---
--- RECOMMENDATION:
--- - Revoke from anon only for TABLE/SEQUENCE defaults.
--- - For FUNCTION: revoke from anon only. Leave authenticated/PUBLIC as-is
---   until Migration 013 establishes explicit per-function grant discipline.
--- - Document that all new functions MUST have explicit GRANT/REVOKE.
+-- DECISION: DENY-BY-DEFAULT for all three roles.
+-- - PUBLIC:        revoke. Existing functions unaffected. Future functions
+--                  used by service_role must get explicit grants.
+-- - anon:          revoke. Anon should never auto-execute new functions.
+-- - authenticated: revoke. Future RPCs must explicitly GRANT EXECUTE TO
+--                  authenticated after security review.
 -- ============================================================
 SELECT
   'S5_FUNCTION_DEFAULTS' AS section,
@@ -156,15 +149,7 @@ SELECT
     ELSE acl.grantee::regrole::text
   END AS grantee,
   acl.privilege_type,
-  CASE
-    WHEN acl.grantee = (SELECT oid FROM pg_roles WHERE rolname = 'anon')
-    THEN 'SAFE TO REVOKE: anon should not auto-execute new functions'
-    WHEN acl.grantee = 0
-    THEN 'DO NOT REVOKE: PUBLIC EXECUTE removal breaks service_role internals'
-    WHEN acl.grantee = (SELECT oid FROM pg_roles WHERE rolname = 'authenticated')
-    THEN 'DEFER: revocation requires per-function explicit grants (Migration 013)'
-    ELSE 'OK'
-  END AS assessment
+  'REVOKE: deny-by-default (future functions must get explicit GRANT EXECUTE)' AS assessment
 FROM pg_default_acl
 CROSS JOIN LATERAL aclexplode(defaclacl) AS acl
 WHERE defaclobjtype = 'f'

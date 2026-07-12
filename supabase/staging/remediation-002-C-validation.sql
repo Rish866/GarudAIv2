@@ -84,21 +84,29 @@ WHERE defaclobjtype = 'S'
 UNION ALL
 
 -- ============================================================
--- C04: Zero default FUNCTION EXECUTE grants to anon (both owners)
--- Note: authenticated and PUBLIC EXECUTE defaults intentionally preserved
+-- C04: Zero default FUNCTION EXECUTE grants to PUBLIC, anon, and authenticated (both owners)
+-- Deny-by-default: future functions must receive explicit GRANT EXECUTE
 -- ============================================================
 SELECT
   'C04',
-  'zero_function_defaults_anon',
+  'zero_function_defaults_all_api_roles',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' anon function defaults remain: ' ||
-      string_agg(defaclrole::regrole::text || ':' || acl.privilege_type, ', ')
+    ELSE 'FAIL: ' || count(*) || ' function defaults remain: ' ||
+      string_agg(
+        defaclrole::regrole::text || '→' ||
+        CASE acl.grantee WHEN 0 THEN 'PUBLIC' ELSE acl.grantee::regrole::text END
+        || ':' || acl.privilege_type, ', '
+      )
   END
 FROM pg_default_acl
 CROSS JOIN LATERAL aclexplode(defaclacl) AS acl
 WHERE defaclobjtype = 'f'
   AND (defaclnamespace = 0 OR defaclnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public'))
-  AND acl.grantee = (SELECT oid FROM pg_roles WHERE rolname = 'anon')
+  AND acl.grantee IN (
+    0,
+    (SELECT oid FROM pg_roles WHERE rolname = 'anon'),
+    (SELECT oid FROM pg_roles WHERE rolname = 'authenticated')
+  )
 
 UNION ALL
 
