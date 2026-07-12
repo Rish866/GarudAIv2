@@ -1,13 +1,108 @@
 -- migration-003-B-migration.sql
--- Migration 003: 104 role-based business RLS policies
+-- Migration 003: 102 role-based business RLS policies + immutable organization_id trigger
 -- Target: staging ybuhazlnjqjrshcvpuna
 -- ATOMIC: BEGIN/COMMIT
 -- Pattern: role_{command}_{table} TO authenticated
 -- Organization scope: is_organization_member + has_organization_role
 -- NO grants issued: policies dormant until Migration 013 activates privileges
 -- Activation: Migration 013 (single point for all client grants)
+-- organization_id: immutable via BEFORE UPDATE trigger (database-enforced)
 
 BEGIN;
+
+-- ============================================================
+-- PHASE 1: Immutable organization_id trigger
+-- Prevents tenant-column reassignment regardless of RLS/grants.
+-- This is a defense-in-depth measure: even if a future migration
+-- accidentally grants UPDATE on organization_id, the trigger rejects it.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.enforce_immutable_organization_id()
+RETURNS TRIGGER AS $fn$
+BEGIN
+  IF NEW.organization_id IS DISTINCT FROM OLD.organization_id THEN
+    RAISE EXCEPTION 'organization_id is immutable and cannot be changed';
+  END IF;
+  RETURN NEW;
+END;
+$fn$ LANGUAGE plpgsql;
+
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.activity_log
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.approvals
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.attendance
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.bank_entries
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.branches
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.cash_entries
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.challans
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.claims
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.contracts
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.customers
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.drivers
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.enquiries
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.eway_bills
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.expenses
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.fuel_entries
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.geofences
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.gps_devices
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.indents
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.inventory
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.invoices
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.leave_requests
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.ledger_accounts
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.maintenance_records
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.market_hires
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.notifications
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.payments
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.purchases
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.quotations
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.routes
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.sales
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.transfers
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.trips
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.tyres
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.vehicles
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.vendors
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.work_orders
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+
+-- ============================================================
+-- PHASE 2: 102 RLS policies
+-- ============================================================
 
 -- activity_log
 DROP POLICY IF EXISTS "role_select_activity_log" ON public.activity_log;
@@ -292,10 +387,6 @@ CREATE POLICY "role_select_purchases" ON public.purchases FOR SELECT TO authenti
 DROP POLICY IF EXISTS "role_insert_purchases" ON public.purchases;
 CREATE POLICY "role_insert_purchases" ON public.purchases FOR INSERT TO authenticated
   WITH CHECK (public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant']));
-DROP POLICY IF EXISTS "role_update_purchases" ON public.purchases;
-CREATE POLICY "role_update_purchases" ON public.purchases FOR UPDATE TO authenticated
-  USING (public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant']))
-  WITH CHECK (public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant']));
 
 -- quotations
 DROP POLICY IF EXISTS "role_select_quotations" ON public.quotations;
@@ -333,10 +424,6 @@ CREATE POLICY "role_select_sales" ON public.sales FOR SELECT TO authenticated
   USING (public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant']));
 DROP POLICY IF EXISTS "role_insert_sales" ON public.sales;
 CREATE POLICY "role_insert_sales" ON public.sales FOR INSERT TO authenticated
-  WITH CHECK (public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant']));
-DROP POLICY IF EXISTS "role_update_sales" ON public.sales;
-CREATE POLICY "role_update_sales" ON public.sales FOR UPDATE TO authenticated
-  USING (public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant']))
   WITH CHECK (public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant']));
 
 -- transfers

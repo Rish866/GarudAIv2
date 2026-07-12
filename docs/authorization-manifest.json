@@ -1,10 +1,13 @@
 {
   "metadata": {
-    "version": "2.0",
+    "version": "3.0",
     "target_project": "ybuhazlnjqjrshcvpuna",
     "activation_migration": "013",
     "status": "APPROVED_SCHEMA_PENDING_MANIFEST",
-    "pg_version_required": ">=15"
+    "pg_version_required": ">=15",
+    "organization_id_immutability": "trigger_enforced",
+    "org_id_trigger_migration": "003",
+    "org_id_trigger_name": "enforce_immutable_organization_id"
   },
   "canonical_roles": {
     "supported": [
@@ -300,9 +303,20 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "name",
+        "code",
+        "city",
+        "state",
+        "address",
+        "manager_name",
+        "phone",
+        "status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -462,9 +476,23 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "challan_number",
+        "vehicle_id",
+        "vehicle_reg",
+        "driver_id",
+        "driver_name",
+        "offence",
+        "amount",
+        "date",
+        "location",
+        "payment_status",
+        "deducted_from"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -624,9 +652,22 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "customer_id",
+        "customer_name",
+        "origin",
+        "destination",
+        "vehicle_type",
+        "rate_type",
+        "rate",
+        "effective_from",
+        "effective_to",
+        "status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -761,7 +802,11 @@
         "total_business",
         "status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "column_restricted",
       "direct_table_privileges": [
         "UPDATE"
@@ -896,7 +941,11 @@
         "total_km",
         "photo_url"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "column_restricted",
       "direct_table_privileges": [
         "UPDATE"
@@ -993,9 +1042,27 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "customer_id",
+        "customer_name",
+        "origin",
+        "destination",
+        "material",
+        "vehicle_type",
+        "weight_tons",
+        "loading_date",
+        "target_rate",
+        "status",
+        "rejection_reason",
+        "rejected_at",
+        "converted_at",
+        "closed_at",
+        "remarks"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -1120,9 +1187,23 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "trip_id",
+        "trip_number",
+        "eway_number",
+        "generated_date",
+        "valid_until",
+        "distance_km",
+        "transporter_id",
+        "vehicle_reg",
+        "from_place",
+        "to_place",
+        "status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -1221,9 +1302,22 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "trip_id",
+        "vehicle_id",
+        "vehicle_reg",
+        "category",
+        "amount",
+        "date",
+        "description",
+        "paid_to",
+        "payment_mode",
+        "approved"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -1385,9 +1479,19 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "name",
+        "type",
+        "lat",
+        "lng",
+        "radius_meters",
+        "alert_on",
+        "status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -1511,9 +1615,18 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "device_id",
+        "vehicle_id",
+        "vehicle_reg",
+        "provider",
+        "api_endpoint",
+        "status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -1640,9 +1753,27 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "indent_number",
+        "customer_id",
+        "customer_name",
+        "origin",
+        "destination",
+        "material",
+        "weight_tons",
+        "vehicle_type",
+        "num_vehicles",
+        "loading_date",
+        "rate",
+        "allocated_vehicles",
+        "trip_id",
+        "status",
+        "remarks"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -1769,9 +1900,20 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "item_code",
+        "name",
+        "category",
+        "qty",
+        "unit",
+        "rate",
+        "reorder_level",
+        "status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -2090,9 +2232,23 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "vehicle_id",
+        "vehicle_reg",
+        "type",
+        "description",
+        "date",
+        "odometer",
+        "cost",
+        "vendor",
+        "next_due_date",
+        "next_due_km",
+        "status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -2215,9 +2371,22 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "trip_number",
+        "market_vehicle_reg",
+        "owner_name",
+        "owner_phone",
+        "hire_amount",
+        "advance_paid",
+        "balance_due",
+        "freight_charged",
+        "commission",
+        "payment_status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -2422,38 +2591,6 @@
     },
     {
       "schema": "public",
-      "table": "purchases",
-      "table_category": "business",
-      "policy_name": "role_update_purchases",
-      "policy_mode": "PERMISSIVE",
-      "postgres_role": "authenticated",
-      "expected_to_roles": "authenticated",
-      "command": "UPDATE",
-      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
-      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
-      "authorization_basis": "organization_role",
-      "canonical_roles": [
-        "organization_owner",
-        "admin",
-        "accountant"
-      ],
-      "organization_scope_column": "organization_id",
-      "status_condition": null,
-      "grant_scope": "columns",
-      "allowed_columns": [
-        "*"
-      ],
-      "prohibited_columns": [],
-      "sensitive_data_strategy": "none",
-      "direct_table_privileges": [
-        "UPDATE"
-      ],
-      "audit_mechanism": "none",
-      "migration_created": "003",
-      "activation_migration": "013"
-    },
-    {
-      "schema": "public",
       "table": "quotations",
       "table_category": "business",
       "policy_name": "role_select_quotations",
@@ -2540,9 +2677,29 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "quotation_number",
+        "enquiry_id",
+        "customer_id",
+        "customer_name",
+        "origin",
+        "destination",
+        "vehicle_type",
+        "material",
+        "weight_tons",
+        "rate_type",
+        "rate",
+        "total_amount",
+        "gst_percent",
+        "validity_days",
+        "terms",
+        "status",
+        "accepted_at"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -2667,9 +2824,24 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "name",
+        "origin",
+        "destination",
+        "distance_km",
+        "standard_hours",
+        "toll_points",
+        "toll_cost",
+        "fuel_estimate",
+        "trips_completed",
+        "total_revenue",
+        "total_cost",
+        "status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -2773,38 +2945,6 @@
     },
     {
       "schema": "public",
-      "table": "sales",
-      "table_category": "business",
-      "policy_name": "role_update_sales",
-      "policy_mode": "PERMISSIVE",
-      "postgres_role": "authenticated",
-      "expected_to_roles": "authenticated",
-      "command": "UPDATE",
-      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
-      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
-      "authorization_basis": "organization_role",
-      "canonical_roles": [
-        "organization_owner",
-        "admin",
-        "accountant"
-      ],
-      "organization_scope_column": "organization_id",
-      "status_condition": null,
-      "grant_scope": "columns",
-      "allowed_columns": [
-        "*"
-      ],
-      "prohibited_columns": [],
-      "sensitive_data_strategy": "none",
-      "direct_table_privileges": [
-        "UPDATE"
-      ],
-      "audit_mechanism": "none",
-      "migration_created": "003",
-      "activation_migration": "013"
-    },
-    {
-      "schema": "public",
       "table": "transfers",
       "table_category": "business",
       "policy_name": "role_select_transfers",
@@ -2888,9 +3028,25 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "transfer_number",
+        "type",
+        "item_name",
+        "item_id",
+        "from_branch",
+        "from_branch_name",
+        "to_branch",
+        "to_branch_name",
+        "initiated_by",
+        "initiated_date",
+        "received_date",
+        "status",
+        "remarks"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -3083,9 +3239,24 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "serial_number",
+        "brand",
+        "size",
+        "type",
+        "vehicle_id",
+        "vehicle_reg",
+        "position",
+        "odometer_fitted",
+        "current_odometer",
+        "condition",
+        "retread_count",
+        "status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -3282,7 +3453,11 @@
         "last_gps_update",
         "ignition"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "column_restricted",
       "direct_table_privileges": [
         "UPDATE"
@@ -3378,9 +3553,28 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "name",
+        "type",
+        "contact_person",
+        "phone",
+        "email",
+        "gstin",
+        "pan",
+        "address",
+        "city",
+        "state",
+        "bank_name",
+        "account_number",
+        "ifsc",
+        "total_paid",
+        "outstanding",
+        "status"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -3477,9 +3671,23 @@
       "status_condition": null,
       "grant_scope": "columns",
       "allowed_columns": [
-        "*"
+        "work_order_number",
+        "vehicle_id",
+        "vehicle_reg",
+        "type",
+        "description",
+        "assigned_to",
+        "priority",
+        "estimated_cost",
+        "actual_cost",
+        "status",
+        "completed_at"
       ],
-      "prohibited_columns": [],
+      "prohibited_columns": [
+        "organization_id",
+        "id",
+        "created_at"
+      ],
       "sensitive_data_strategy": "none",
       "direct_table_privileges": [
         "UPDATE"
@@ -3519,15 +3727,15 @@
     }
   ],
   "computed_totals": {
-    "business_policy_count": 104,
+    "business_policy_count": 102,
     "select_count": 36,
     "insert_count": 33,
-    "update_count": 23,
+    "update_count": 21,
     "delete_count": 12,
     "tables": 36,
     "platform_policy_count": 10,
     "storage_policy_count": 4,
     "function_operation_count": 22,
-    "total_rls": 118
+    "total_rls": 116
   }
 }

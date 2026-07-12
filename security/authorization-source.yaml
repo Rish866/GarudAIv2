@@ -1,9 +1,12 @@
 metadata:
-  version: '2.0'
+  version: '3.0'
   target_project: ybuhazlnjqjrshcvpuna
   activation_migration: '013'
   status: APPROVED_SCHEMA_PENDING_MANIFEST
   pg_version_required: '>=15'
+  organization_id_immutability: trigger_enforced
+  org_id_trigger_migration: '003'
+  org_id_trigger_name: enforce_immutable_organization_id
 canonical_roles:
   supported:
   - organization_owner
@@ -229,6 +232,22 @@ business_tables:
     - admin
     - operations_manager
     - dispatcher
+    update_cols:
+    - customer_id
+    - customer_name
+    - origin
+    - destination
+    - material
+    - vehicle_type
+    - weight_tons
+    - loading_date
+    - target_rate
+    - status
+    - rejection_reason
+    - rejected_at
+    - converted_at
+    - closed_at
+    - remarks
     delete:
       roles:
       - organization_owner
@@ -250,6 +269,24 @@ business_tables:
     - admin
     - operations_manager
     - dispatcher
+    update_cols:
+    - quotation_number
+    - enquiry_id
+    - customer_id
+    - customer_name
+    - origin
+    - destination
+    - vehicle_type
+    - material
+    - weight_tons
+    - rate_type
+    - rate
+    - total_amount
+    - gst_percent
+    - validity_days
+    - terms
+    - status
+    - accepted_at
     delete:
       roles:
       - organization_owner
@@ -300,6 +337,17 @@ business_tables:
     - admin
     - accountant
     - operations_manager
+    update_cols:
+    - trip_id
+    - vehicle_id
+    - vehicle_reg
+    - category
+    - amount
+    - date
+    - description
+    - paid_to
+    - payment_mode
+    - approved
     delete: null
   fuel_entries:
     select:
@@ -332,6 +380,18 @@ business_tables:
     - admin
     - fleet_manager
     - maintenance_manager
+    update_cols:
+    - vehicle_id
+    - vehicle_reg
+    - type
+    - description
+    - date
+    - odometer
+    - cost
+    - vendor
+    - next_due_date
+    - next_due_km
+    - status
     delete:
       roles:
       - organization_owner
@@ -353,6 +413,19 @@ business_tables:
     - admin
     - fleet_manager
     - maintenance_manager
+    update_cols:
+    - serial_number
+    - brand
+    - size
+    - type
+    - vehicle_id
+    - vehicle_reg
+    - position
+    - odometer_fitted
+    - current_odometer
+    - condition
+    - retread_count
+    - status
     delete:
       roles:
       - organization_owner
@@ -397,6 +470,18 @@ business_tables:
     - organization_owner
     - admin
     - operations_manager
+    update_cols:
+    - trip_id
+    - trip_number
+    - eway_number
+    - generated_date
+    - valid_until
+    - distance_km
+    - transporter_id
+    - vehicle_reg
+    - from_place
+    - to_place
+    - status
     delete: null
   branches:
     select:
@@ -408,6 +493,15 @@ business_tables:
     update:
     - organization_owner
     - admin
+    update_cols:
+    - name
+    - code
+    - city
+    - state
+    - address
+    - manager_name
+    - phone
+    - status
     delete: null
   vendors:
     select:
@@ -424,6 +518,23 @@ business_tables:
     - organization_owner
     - admin
     - accountant
+    update_cols:
+    - name
+    - type
+    - contact_person
+    - phone
+    - email
+    - gstin
+    - pan
+    - address
+    - city
+    - state
+    - bank_name
+    - account_number
+    - ifsc
+    - total_paid
+    - outstanding
+    - status
     delete: null
   contracts:
     select:
@@ -439,6 +550,17 @@ business_tables:
     - organization_owner
     - admin
     - operations_manager
+    update_cols:
+    - customer_id
+    - customer_name
+    - origin
+    - destination
+    - vehicle_type
+    - rate_type
+    - rate
+    - effective_from
+    - effective_to
+    - status
     delete: null
   routes:
     select:
@@ -455,6 +577,19 @@ business_tables:
     - organization_owner
     - admin
     - operations_manager
+    update_cols:
+    - name
+    - origin
+    - destination
+    - distance_km
+    - standard_hours
+    - toll_points
+    - toll_cost
+    - fuel_estimate
+    - trips_completed
+    - total_revenue
+    - total_cost
+    - status
     delete:
       roles:
       - organization_owner
@@ -476,6 +611,22 @@ business_tables:
     - admin
     - operations_manager
     - dispatcher
+    update_cols:
+    - indent_number
+    - customer_id
+    - customer_name
+    - origin
+    - destination
+    - material
+    - weight_tons
+    - vehicle_type
+    - num_vehicles
+    - loading_date
+    - rate
+    - allocated_vehicles
+    - trip_id
+    - status
+    - remarks
     delete:
       roles:
       - organization_owner
@@ -494,6 +645,17 @@ business_tables:
     - organization_owner
     - admin
     - operations_manager
+    update_cols:
+    - trip_number
+    - market_vehicle_reg
+    - owner_name
+    - owner_phone
+    - hire_amount
+    - advance_paid
+    - balance_due
+    - freight_charged
+    - commission
+    - payment_status
     delete:
       roles:
       - organization_owner
@@ -515,6 +677,18 @@ business_tables:
     - admin
     - fleet_manager
     - maintenance_manager
+    update_cols:
+    - work_order_number
+    - vehicle_id
+    - vehicle_reg
+    - type
+    - description
+    - assigned_to
+    - priority
+    - estimated_cost
+    - actual_cost
+    - status
+    - completed_at
     delete:
       roles:
       - organization_owner
@@ -535,6 +709,18 @@ business_tables:
     - organization_owner
     - admin
     - fleet_manager
+    update_cols:
+    - challan_number
+    - vehicle_id
+    - vehicle_reg
+    - driver_id
+    - driver_name
+    - offence
+    - amount
+    - date
+    - location
+    - payment_status
+    - deducted_from
     delete: null
   geofences:
     select:
@@ -550,6 +736,14 @@ business_tables:
     - organization_owner
     - admin
     - fleet_manager
+    update_cols:
+    - name
+    - type
+    - lat
+    - lng
+    - radius_meters
+    - alert_on
+    - status
     delete:
       roles:
       - organization_owner
@@ -593,6 +787,20 @@ business_tables:
     - organization_owner
     - admin
     - operations_manager
+    update_cols:
+    - transfer_number
+    - type
+    - item_name
+    - item_id
+    - from_branch
+    - from_branch_name
+    - to_branch
+    - to_branch_name
+    - initiated_by
+    - initiated_date
+    - received_date
+    - status
+    - remarks
     delete:
       roles:
       - organization_owner
@@ -643,11 +851,10 @@ business_tables:
     - organization_owner
     - admin
     - accountant
-    update:
-    - organization_owner
-    - admin
-    - accountant
+    update: null
     delete: null
+    immutable: true
+    fn_update: void_and_reenter_purchase
   sales:
     select:
     - organization_owner
@@ -657,11 +864,10 @@ business_tables:
     - organization_owner
     - admin
     - accountant
-    update:
-    - organization_owner
-    - admin
-    - accountant
+    update: null
     delete: null
+    immutable: true
+    fn_update: void_and_reenter_sale
   inventory:
     select:
     - organization_owner
@@ -679,6 +885,15 @@ business_tables:
     - admin
     - fleet_manager
     - maintenance_manager
+    update_cols:
+    - item_code
+    - name
+    - category
+    - qty
+    - unit
+    - rate
+    - reorder_level
+    - status
     delete:
       roles:
       - organization_owner
@@ -723,6 +938,13 @@ business_tables:
     - organization_owner
     - admin
     - fleet_manager
+    update_cols:
+    - device_id
+    - vehicle_id
+    - vehicle_reg
+    - provider
+    - api_endpoint
+    - status
     delete:
       roles:
       - organization_owner
@@ -733,12 +955,12 @@ computed_totals:
   business_policies:
     SELECT: 36
     INSERT: 33
-    UPDATE: 23
+    UPDATE: 21
     DELETE: 12
-    total: 104
+    total: 102
   platform_policies: 10
   storage_policies: 4
-  total_rls: 118
+  total_rls: 116
   function_operations: 22
   projections: 5
   immutable_tables:
@@ -748,3 +970,5 @@ computed_totals:
   - cash_entries
   - fuel_entries
   - notifications
+  - purchases
+  - sales

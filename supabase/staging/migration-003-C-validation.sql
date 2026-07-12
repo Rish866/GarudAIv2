@@ -1,14 +1,38 @@
 -- migration-003-C-validation.sql
--- Migration 003 Validation: Expression-level verification of 104 business RLS policies
+-- Migration 003 Validation: Expression-level verification of 102 business RLS policies
 -- Target: staging ybuhazlnjqjrshcvpuna
 -- Read-only: no persistent changes
 -- Uses pg_policy + pg_class + pg_namespace + pg_get_expr() for behavioral validation
--- Expected: ALL CHECKS PASS
+-- Normalizes expressions to handle PostgreSQL internal formatting differences
+-- Expected: ALL 15 CHECKS PASS
+-- Generated deterministically from docs/authorization-manifest.json
 
 -- ============================================================
--- SETUP: Expected policy manifest as a CTE
--- Each row = one expected policy with its exact expression fingerprint
+-- Normalization function: strips known pg_get_expr() formatting differences
+-- Removes extra parens, ::text[] casts, double schema qualification
 -- ============================================================
+CREATE OR REPLACE FUNCTION pg_temp.normalize_expr(expr TEXT)
+RETURNS TEXT AS $$
+BEGIN
+  IF expr IS NULL OR expr = '' THEN RETURN ''; END IF;
+  -- Remove leading/trailing whitespace
+  expr := btrim(expr);
+  -- Remove outer parentheses if present
+  WHILE expr LIKE '(%)' AND length(expr) > 2 LOOP
+    expr := substr(expr, 2, length(expr) - 2);
+    expr := btrim(expr);
+  END LOOP;
+  -- Normalize array type casts: ARRAY[...]::text[] → ARRAY[...]
+  expr := regexp_replace(expr, '::text\[\]', '', 'g');
+  -- Normalize schema: public.public. → public.
+  expr := replace(expr, 'public.public.', 'public.');
+  -- Normalize whitespace: collapse multiple spaces
+  expr := regexp_replace(expr, '\s+', ' ', 'g');
+  -- Lowercase for comparison
+  expr := lower(expr);
+  RETURN expr;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
 
 WITH expected_policies(policy_name, tablename, cmd, expected_using, expected_check) AS (
   VALUES
@@ -84,7 +108,6 @@ WITH expected_policies(policy_name, tablename, cmd, expected_using, expected_che
     ('role_insert_payments', 'payments', 'INSERT', '', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''accountant''])'),
     ('role_select_purchases', 'purchases', 'SELECT', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''accountant''])', ''),
     ('role_insert_purchases', 'purchases', 'INSERT', '', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''accountant''])'),
-    ('role_update_purchases', 'purchases', 'UPDATE', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''accountant''])', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''accountant''])'),
     ('role_select_quotations', 'quotations', 'SELECT', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''operations_manager'',''dispatcher''])', ''),
     ('role_insert_quotations', 'quotations', 'INSERT', '', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''operations_manager'',''dispatcher''])'),
     ('role_update_quotations', 'quotations', 'UPDATE', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''operations_manager'',''dispatcher''])', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''operations_manager'',''dispatcher''])'),
@@ -95,7 +118,6 @@ WITH expected_policies(policy_name, tablename, cmd, expected_using, expected_che
     ('role_delete_routes', 'routes', 'DELETE', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin''])', ''),
     ('role_select_sales', 'sales', 'SELECT', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''accountant''])', ''),
     ('role_insert_sales', 'sales', 'INSERT', '', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''accountant''])'),
-    ('role_update_sales', 'sales', 'UPDATE', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''accountant''])', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''accountant''])'),
     ('role_select_transfers', 'transfers', 'SELECT', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''operations_manager''])', ''),
     ('role_insert_transfers', 'transfers', 'INSERT', '', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''operations_manager''])'),
     ('role_update_transfers', 'transfers', 'UPDATE', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''operations_manager''])', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''operations_manager''])'),
@@ -116,12 +138,10 @@ WITH expected_policies(policy_name, tablename, cmd, expected_using, expected_che
     ('role_insert_work_orders', 'work_orders', 'INSERT', '', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''fleet_manager'',''maintenance_manager''])'),
     ('role_update_work_orders', 'work_orders', 'UPDATE', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''fleet_manager'',''maintenance_manager''])', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'',''fleet_manager'',''maintenance_manager''])'),
     ('role_delete_work_orders', 'work_orders', 'DELETE', 'public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'']) AND status = ''open''', '')
-
-
 ),
 
 -- ============================================================
--- INSTALLED: Actual policies from pg_policy catalog
+-- INSTALLED: Actual policies from pg_policy catalog (ALL policies, not just role_%)
 -- ============================================================
 installed_policies AS (
   SELECT
@@ -142,7 +162,44 @@ installed_policies AS (
   JOIN pg_class c ON c.oid = pol.polrelid
   JOIN pg_namespace n ON n.oid = c.relnamespace
   WHERE n.nspname = 'public'
-    AND pol.polname LIKE 'role_%'
+    AND c.relname IN (
+    ('activity_log'),
+    ('approvals'),
+    ('attendance'),
+    ('bank_entries'),
+    ('branches'),
+    ('cash_entries'),
+    ('challans'),
+    ('claims'),
+    ('contracts'),
+    ('customers'),
+    ('drivers'),
+    ('enquiries'),
+    ('eway_bills'),
+    ('expenses'),
+    ('fuel_entries'),
+    ('geofences'),
+    ('gps_devices'),
+    ('indents'),
+    ('inventory'),
+    ('invoices'),
+    ('leave_requests'),
+    ('ledger_accounts'),
+    ('maintenance_records'),
+    ('market_hires'),
+    ('notifications'),
+    ('payments'),
+    ('purchases'),
+    ('quotations'),
+    ('routes'),
+    ('sales'),
+    ('transfers'),
+    ('trips'),
+    ('tyres'),
+    ('vehicles'),
+    ('vendors'),
+    ('work_orders')
+    )
 ),
 
 -- ============================================================
@@ -150,14 +207,42 @@ installed_policies AS (
 -- ============================================================
 business_tables(t) AS (
   VALUES
-    ('vehicles'),('drivers'),('customers'),('trips'),('enquiries'),('quotations'),
-    ('invoices'),('payments'),('expenses'),('fuel_entries'),('maintenance_records'),
-    ('tyres'),('activity_log'),('notifications'),('eway_bills'),('branches'),
-    ('vendors'),('contracts'),('routes'),('indents'),('market_hires'),
-    ('work_orders'),('challans'),('geofences'),('claims'),('approvals'),
-    ('transfers'),('cash_entries'),('bank_entries'),('ledger_accounts'),
-    ('purchases'),('sales'),('inventory'),('attendance'),('leave_requests'),
-    ('gps_devices')
+    ('activity_log'),
+    ('approvals'),
+    ('attendance'),
+    ('bank_entries'),
+    ('branches'),
+    ('cash_entries'),
+    ('challans'),
+    ('claims'),
+    ('contracts'),
+    ('customers'),
+    ('drivers'),
+    ('enquiries'),
+    ('eway_bills'),
+    ('expenses'),
+    ('fuel_entries'),
+    ('geofences'),
+    ('gps_devices'),
+    ('indents'),
+    ('inventory'),
+    ('invoices'),
+    ('leave_requests'),
+    ('ledger_accounts'),
+    ('maintenance_records'),
+    ('market_hires'),
+    ('notifications'),
+    ('payments'),
+    ('purchases'),
+    ('quotations'),
+    ('routes'),
+    ('sales'),
+    ('transfers'),
+    ('trips'),
+    ('tyres'),
+    ('vehicles'),
+    ('vendors'),
+    ('work_orders')
 )
 
 -- ============================================================
@@ -174,19 +259,17 @@ WHERE ip.policy_name IS NULL
 UNION ALL
 
 -- ============================================================
--- C02: Extra policies (installed but not expected)
+-- C02: Extra policies (installed but not in manifest)
 -- ============================================================
 SELECT 'C02', 'extra_policies',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' extra: ' || string_agg(ip.policy_name, ', ' ORDER BY ip.policy_name)
+    ELSE 'FAIL: ' || count(*) || ' extra: ' || string_agg(ip.policy_name || ' ON ' || ip.tablename, ', ' ORDER BY ip.policy_name)
   END
 FROM installed_policies ip
 LEFT JOIN expected_policies ep ON ep.policy_name = ip.policy_name AND ep.tablename = ip.tablename
 WHERE ep.policy_name IS NULL
-  AND ip.tablename IN (SELECT t FROM business_tables)
 
 UNION ALL
-
 
 -- ============================================================
 -- C03: All policies are PERMISSIVE
@@ -196,8 +279,7 @@ SELECT 'C03', 'all_permissive',
     ELSE 'FAIL: ' || count(*) || ' non-permissive: ' || string_agg(ip.policy_name, ', ')
   END
 FROM installed_policies ip
-WHERE ip.tablename IN (SELECT t FROM business_tables)
-  AND ip.permissive != 'PERMISSIVE'
+WHERE ip.permissive != 'PERMISSIVE'
 
 UNION ALL
 
@@ -206,11 +288,10 @@ UNION ALL
 -- ============================================================
 SELECT 'C04', 'roles_exactly_authenticated',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' wrong roles: ' || string_agg(ip.policy_name || '=' || array_to_string(ip.roles_arr,','), '; ')
+    ELSE 'FAIL: ' || count(*) || ' wrong roles: ' || string_agg(ip.policy_name || '=' || array_to_string(ip.roles_arr, ','), '; ')
   END
 FROM installed_policies ip
-WHERE ip.tablename IN (SELECT t FROM business_tables)
-  AND NOT (ip.roles_arr = ARRAY['authenticated']::text[])
+WHERE NOT (ip.roles_arr = ARRAY['authenticated']::text[])
 
 UNION ALL
 
@@ -219,7 +300,7 @@ UNION ALL
 -- ============================================================
 SELECT 'C05', 'command_type_match',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' command mismatches: ' || string_agg(ep.policy_name || ' expected=' || ep.cmd || ' actual=' || ip.cmd, '; ')
+    ELSE 'FAIL: ' || count(*) || ' mismatches: ' || string_agg(ep.policy_name || '(expected=' || ep.cmd || ',actual=' || ip.cmd || ')', '; ')
   END
 FROM expected_policies ep
 JOIN installed_policies ip ON ip.policy_name = ep.policy_name AND ip.tablename = ep.tablename
@@ -228,98 +309,90 @@ WHERE ip.cmd != ep.cmd
 UNION ALL
 
 -- ============================================================
--- C06: SELECT policies have USING with org membership, no WITH CHECK
+-- C06: SELECT expression validation (USING with org checks, no WITH CHECK)
 -- ============================================================
-SELECT 'C06', 'select_expression_check',
+SELECT 'C06', 'select_expression_match',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' SELECT issues: ' || string_agg(detail, '; ')
+    ELSE 'FAIL: ' || count(*) || ' SELECT expression mismatches: ' || string_agg(detail, '; ')
   END
 FROM (
-  SELECT ip.policy_name,
+  SELECT ep.policy_name,
     CASE
-      WHEN ip.actual_using = '' THEN ip.policy_name || ': missing USING'
-      WHEN ip.actual_using NOT LIKE '%is_organization_member%' THEN ip.policy_name || ': no org membership in USING'
-      WHEN ip.actual_using NOT LIKE '%has_organization_role%' THEN ip.policy_name || ': no role check in USING'
-      WHEN ip.actual_check != '' THEN ip.policy_name || ': unexpected WITH CHECK'
+      WHEN ip.actual_check != '' THEN ep.policy_name || ': has unexpected WITH CHECK'
+      WHEN pg_temp.normalize_expr(ip.actual_using) != pg_temp.normalize_expr(ep.expected_using)
+        THEN ep.policy_name || ': USING mismatch'
       ELSE NULL
     END AS detail
-  FROM installed_policies ip
-  WHERE ip.tablename IN (SELECT t FROM business_tables)
-    AND ip.cmd = 'SELECT'
+  FROM expected_policies ep
+  JOIN installed_policies ip ON ip.policy_name = ep.policy_name AND ip.tablename = ep.tablename
+  WHERE ep.cmd = 'SELECT'
 ) sub
 WHERE detail IS NOT NULL
 
 UNION ALL
 
 -- ============================================================
--- C07: INSERT policies have WITH CHECK with org membership, no USING
+-- C07: INSERT expression validation (WITH CHECK with org checks, no USING)
 -- ============================================================
-SELECT 'C07', 'insert_expression_check',
+SELECT 'C07', 'insert_expression_match',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' INSERT issues: ' || string_agg(detail, '; ')
+    ELSE 'FAIL: ' || count(*) || ' INSERT expression mismatches: ' || string_agg(detail, '; ')
   END
 FROM (
-  SELECT ip.policy_name,
+  SELECT ep.policy_name,
     CASE
-      WHEN ip.actual_check = '' THEN ip.policy_name || ': missing WITH CHECK'
-      WHEN ip.actual_check NOT LIKE '%is_organization_member%' THEN ip.policy_name || ': no org membership in WITH CHECK'
-      WHEN ip.actual_check NOT LIKE '%has_organization_role%' THEN ip.policy_name || ': no role check in WITH CHECK'
-      WHEN ip.actual_using != '' THEN ip.policy_name || ': unexpected USING'
+      WHEN ip.actual_using != '' THEN ep.policy_name || ': has unexpected USING'
+      WHEN pg_temp.normalize_expr(ip.actual_check) != pg_temp.normalize_expr(ep.expected_check)
+        THEN ep.policy_name || ': WITH CHECK mismatch'
       ELSE NULL
     END AS detail
-  FROM installed_policies ip
-  WHERE ip.tablename IN (SELECT t FROM business_tables)
-    AND ip.cmd = 'INSERT'
-) sub
-WHERE detail IS NOT NULL
-
-UNION ALL
-
-
--- ============================================================
--- C08: UPDATE policies have USING and WITH CHECK both with org checks
---      USING == WITH CHECK ensures organization_id cannot be reassigned
--- ============================================================
-SELECT 'C08', 'update_expression_check',
-  CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' UPDATE issues: ' || string_agg(detail, '; ')
-  END
-FROM (
-  SELECT ip.policy_name,
-    CASE
-      WHEN ip.actual_using = '' THEN ip.policy_name || ': missing USING'
-      WHEN ip.actual_check = '' THEN ip.policy_name || ': missing WITH CHECK'
-      WHEN ip.actual_using NOT LIKE '%is_organization_member%' THEN ip.policy_name || ': no org membership in USING'
-      WHEN ip.actual_check NOT LIKE '%is_organization_member%' THEN ip.policy_name || ': no org membership in WITH CHECK'
-      WHEN ip.actual_using NOT LIKE '%has_organization_role%' THEN ip.policy_name || ': no role check in USING'
-      WHEN ip.actual_check NOT LIKE '%has_organization_role%' THEN ip.policy_name || ': no role check in WITH CHECK'
-      ELSE NULL
-    END AS detail
-  FROM installed_policies ip
-  WHERE ip.tablename IN (SELECT t FROM business_tables)
-    AND ip.cmd = 'UPDATE'
+  FROM expected_policies ep
+  JOIN installed_policies ip ON ip.policy_name = ep.policy_name AND ip.tablename = ep.tablename
+  WHERE ep.cmd = 'INSERT'
 ) sub
 WHERE detail IS NOT NULL
 
 UNION ALL
 
 -- ============================================================
--- C09: DELETE policies have USING with org checks + status conditions where expected
+-- C08: UPDATE expression validation (USING + WITH CHECK both match, prevents org_id reassignment)
 -- ============================================================
-SELECT 'C09', 'delete_expression_check',
+SELECT 'C08', 'update_expression_match',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' DELETE issues: ' || string_agg(detail, '; ')
+    ELSE 'FAIL: ' || count(*) || ' UPDATE expression mismatches: ' || string_agg(detail, '; ')
   END
 FROM (
   SELECT ep.policy_name,
     CASE
       WHEN ip.actual_using = '' THEN ep.policy_name || ': missing USING'
-      WHEN ip.actual_using NOT LIKE '%is_organization_member%' THEN ep.policy_name || ': no org membership'
-      WHEN ip.actual_using NOT LIKE '%has_organization_role%' THEN ep.policy_name || ': no role check'
-      WHEN ip.actual_check != '' THEN ep.policy_name || ': unexpected WITH CHECK'
-      -- Check status conditions for policies that require them
-      WHEN ep.expected_using LIKE '%status =%' AND ip.actual_using NOT LIKE '%status%' THEN ep.policy_name || ': missing status condition'
-      WHEN ep.expected_using LIKE '%payment_status =%' AND ip.actual_using NOT LIKE '%payment_status%' THEN ep.policy_name || ': missing payment_status condition'
+      WHEN ip.actual_check = '' THEN ep.policy_name || ': missing WITH CHECK'
+      WHEN pg_temp.normalize_expr(ip.actual_using) != pg_temp.normalize_expr(ep.expected_using)
+        THEN ep.policy_name || ': USING mismatch'
+      WHEN pg_temp.normalize_expr(ip.actual_check) != pg_temp.normalize_expr(ep.expected_check)
+        THEN ep.policy_name || ': WITH CHECK mismatch'
+      ELSE NULL
+    END AS detail
+  FROM expected_policies ep
+  JOIN installed_policies ip ON ip.policy_name = ep.policy_name AND ip.tablename = ep.tablename
+  WHERE ep.cmd = 'UPDATE'
+) sub
+WHERE detail IS NOT NULL
+
+UNION ALL
+
+-- ============================================================
+-- C09: DELETE expression validation (USING matches including status conditions, no WITH CHECK)
+-- ============================================================
+SELECT 'C09', 'delete_expression_match',
+  CASE WHEN count(*) = 0 THEN 'PASS'
+    ELSE 'FAIL: ' || count(*) || ' DELETE expression mismatches: ' || string_agg(detail, '; ')
+  END
+FROM (
+  SELECT ep.policy_name,
+    CASE
+      WHEN ip.actual_check != '' THEN ep.policy_name || ': has unexpected WITH CHECK'
+      WHEN pg_temp.normalize_expr(ip.actual_using) != pg_temp.normalize_expr(ep.expected_using)
+        THEN ep.policy_name || ': USING mismatch'
       ELSE NULL
     END AS detail
   FROM expected_policies ep
@@ -335,11 +408,11 @@ UNION ALL
 -- ============================================================
 SELECT 'C10', 'immutable_tables_protected',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' forbidden policies: ' || string_agg(ip.policy_name || '(' || ip.cmd || ')', ', ')
+    ELSE 'FAIL: ' || count(*) || ' forbidden policies: ' || string_agg(ip.policy_name || '(' || ip.cmd || ' ON ' || ip.tablename || ')', ', ')
   END
 FROM installed_policies ip
-WHERE ip.tablename IN ('activity_log','attendance','bank_entries','cash_entries','fuel_entries','notifications')
-  AND ip.cmd IN ('UPDATE','DELETE')
+WHERE ip.tablename IN ('activity_log','attendance','bank_entries','cash_entries','fuel_entries','notifications','purchases','sales')
+  AND ip.cmd IN ('UPDATE', 'DELETE')
 
 UNION ALL
 
@@ -348,26 +421,24 @@ UNION ALL
 -- ============================================================
 SELECT 'C11', 'function_managed_protected',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' forbidden policies: ' || string_agg(ip.policy_name || '(' || ip.cmd || ')', ', ')
+    ELSE 'FAIL: ' || count(*) || ' forbidden policies: ' || string_agg(ip.policy_name || '(' || ip.cmd || ' ON ' || ip.tablename || ')', ', ')
   END
 FROM installed_policies ip
 WHERE ip.tablename IN ('trips','invoices','payments','claims','approvals','leave_requests','ledger_accounts')
-  AND ip.cmd IN ('UPDATE','DELETE')
+  AND ip.cmd IN ('UPDATE', 'DELETE')
 
 UNION ALL
 
-
 -- ============================================================
--- C12: No driver/customer role in any policy expression
+-- C12: No driver/customer role string in any policy expression
 -- ============================================================
 SELECT 'C12', 'no_driver_customer_roles',
   CASE WHEN count(*) = 0 THEN 'PASS'
     ELSE 'FAIL: ' || count(*) || ' policies with forbidden roles: ' || string_agg(ip.policy_name, ', ')
   END
 FROM installed_policies ip
-WHERE ip.tablename IN (SELECT t FROM business_tables)
-  AND (ip.actual_using LIKE '%''driver''%' OR ip.actual_using LIKE '%''customer''%'
-    OR ip.actual_check LIKE '%''driver''%' OR ip.actual_check LIKE '%''customer''%')
+WHERE (ip.actual_using LIKE '%''driver''%' OR ip.actual_using LIKE '%''customer''%'
+  OR ip.actual_check LIKE '%''driver''%' OR ip.actual_check LIKE '%''customer''%')
 
 UNION ALL
 
@@ -376,7 +447,7 @@ UNION ALL
 -- ============================================================
 SELECT 'C13', 'no_anon_business_policies',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' anon policies found'
+    ELSE 'FAIL: ' || count(*) || ' anon-targeted policies found'
   END
 FROM pg_policy pol
 JOIN pg_class c ON c.oid = pol.polrelid
@@ -388,29 +459,30 @@ WHERE n.nspname = 'public'
 UNION ALL
 
 -- ============================================================
--- C14: Platform policies still intact (>= 10)
+-- C14: Immutable org_id trigger exists on all 36 business tables
 -- ============================================================
-SELECT 'C14', 'platform_policies_intact',
-  CASE WHEN count(*) >= 10 THEN 'PASS'
-    ELSE 'FAIL: expected >= 10 platform policies, got ' || count(*)
+SELECT 'C14', 'immutable_org_id_triggers',
+  CASE WHEN count(*) = 0 THEN 'PASS'
+    ELSE 'FAIL: ' || count(*) || ' tables missing trigger: ' || string_agg(t, ', ')
   END
-FROM pg_policy pol
-JOIN pg_class c ON c.oid = pol.polrelid
-JOIN pg_namespace n ON n.oid = c.relnamespace
-WHERE n.nspname = 'public'
-  AND c.relname IN ('organizations','organization_members','organization_settings',
-                    'organization_invitations','user_profiles','platform_admins')
+FROM (SELECT t FROM business_tables) bt
+WHERE NOT EXISTS (
+  SELECT 1 FROM pg_trigger tr
+  JOIN pg_class c ON c.oid = tr.tgrelid
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public' AND c.relname = bt.t
+    AND tr.tgname = 'enforce_immutable_organization_id'
+)
 
 UNION ALL
 
 -- ============================================================
--- C15: Total business policy count = 104
+-- C15: Total policy count = 102 (36S + 33I + 21U + 12D)
 -- ============================================================
-SELECT 'C15', 'total_count_104',
-  CASE WHEN count(*) = 104 THEN 'PASS'
-    ELSE 'FAIL: expected 104, got ' || count(*)
+SELECT 'C15', 'total_count_102',
+  CASE WHEN count(*) = 102 THEN 'PASS'
+    ELSE 'FAIL: expected 102, got ' || count(*)
   END
 FROM installed_policies ip
-WHERE ip.tablename IN (SELECT t FROM business_tables)
 
 ORDER BY check_id;
