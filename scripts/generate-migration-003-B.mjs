@@ -46,7 +46,8 @@ const header = [
   'END;',
   '$fn$ LANGUAGE plpgsql;',
   '',
-  ...allTables.map(t => 
+  ...allTables.map(t =>
+    `DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.${t};\n` +
     `CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.${t}\n` +
     `  FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();`
   ),

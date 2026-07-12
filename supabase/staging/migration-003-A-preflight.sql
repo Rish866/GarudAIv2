@@ -88,61 +88,39 @@ BEGIN
     RAISE EXCEPTION 'PREFLIGHT FAIL [5]: unexpected privileges on business tables (dormant state violated): %', array_to_string(unexpected_privileges, ', ');
   END IF;
 
-  -- 6. Helper functions: exact signatures + SECURITY DEFINER
+  -- 6. Helper functions: exact signatures + SECURITY DEFINER + STABLE on SAME row
   SELECT array_agg(issue) INTO fn_issues
   FROM (
-    -- is_organization_member(UUID) must exist, be SECURITY DEFINER, STABLE
-    SELECT 'is_organization_member: ' ||
+    SELECT
       CASE
-        WHEN NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE n.nspname = 'public' AND p.proname = 'is_organization_member'
-            AND p.pronargs = 1 AND p.proargtypes[0] = 'uuid'::regtype::oid)
-        THEN 'missing or wrong signature'
-        WHEN NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE n.nspname = 'public' AND p.proname = 'is_organization_member'
-            AND p.pronargs = 1 AND p.prosecdef = true)
-        THEN 'not SECURITY DEFINER'
-        WHEN NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE n.nspname = 'public' AND p.proname = 'is_organization_member'
-            AND p.pronargs = 1 AND p.provolatile = 's')
-        THEN 'not STABLE'
+        WHEN to_regprocedure('public.is_organization_member(uuid)') IS NULL
+          THEN 'is_organization_member(uuid): missing'
+        WHEN NOT (SELECT p.prosecdef FROM pg_proc p WHERE p.oid = to_regprocedure('public.is_organization_member(uuid)'))
+          THEN 'is_organization_member(uuid): not SECURITY DEFINER'
+        WHEN (SELECT p.provolatile FROM pg_proc p WHERE p.oid = to_regprocedure('public.is_organization_member(uuid)')) != 's'
+          THEN 'is_organization_member(uuid): not STABLE'
         ELSE NULL
       END AS issue
     UNION ALL
-    -- has_organization_role(UUID, TEXT[]) must exist, be SECURITY DEFINER, STABLE
-    SELECT 'has_organization_role: ' ||
+    SELECT
       CASE
-        WHEN NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE n.nspname = 'public' AND p.proname = 'has_organization_role'
-            AND p.pronargs = 2 AND p.proargtypes[0] = 'uuid'::regtype::oid
-            AND p.proargtypes[1] = 'text[]'::regtype::oid)
-        THEN 'missing or wrong signature'
-        WHEN NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE n.nspname = 'public' AND p.proname = 'has_organization_role'
-            AND p.pronargs = 2 AND p.prosecdef = true)
-        THEN 'not SECURITY DEFINER'
-        WHEN NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE n.nspname = 'public' AND p.proname = 'has_organization_role'
-            AND p.pronargs = 2 AND p.provolatile = 's')
-        THEN 'not STABLE'
+        WHEN to_regprocedure('public.has_organization_role(uuid, text[])') IS NULL
+          THEN 'has_organization_role(uuid,text[]): missing'
+        WHEN NOT (SELECT p.prosecdef FROM pg_proc p WHERE p.oid = to_regprocedure('public.has_organization_role(uuid, text[])'))
+          THEN 'has_organization_role(uuid,text[]): not SECURITY DEFINER'
+        WHEN (SELECT p.provolatile FROM pg_proc p WHERE p.oid = to_regprocedure('public.has_organization_role(uuid, text[])')) != 's'
+          THEN 'has_organization_role(uuid,text[]): not STABLE'
         ELSE NULL
       END AS issue
     UNION ALL
-    -- current_user_organization_ids() must exist, be SECURITY DEFINER, STABLE
-    SELECT 'current_user_organization_ids: ' ||
+    SELECT
       CASE
-        WHEN NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE n.nspname = 'public' AND p.proname = 'current_user_organization_ids'
-            AND p.pronargs = 0)
-        THEN 'missing'
-        WHEN NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE n.nspname = 'public' AND p.proname = 'current_user_organization_ids'
-            AND p.pronargs = 0 AND p.prosecdef = true)
-        THEN 'not SECURITY DEFINER'
-        WHEN NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE n.nspname = 'public' AND p.proname = 'current_user_organization_ids'
-            AND p.pronargs = 0 AND p.provolatile = 's')
-        THEN 'not STABLE'
+        WHEN to_regprocedure('public.current_user_organization_ids()') IS NULL
+          THEN 'current_user_organization_ids(): missing'
+        WHEN NOT (SELECT p.prosecdef FROM pg_proc p WHERE p.oid = to_regprocedure('public.current_user_organization_ids()'))
+          THEN 'current_user_organization_ids(): not SECURITY DEFINER'
+        WHEN (SELECT p.provolatile FROM pg_proc p WHERE p.oid = to_regprocedure('public.current_user_organization_ids()')) != 's'
+          THEN 'current_user_organization_ids(): not STABLE'
         ELSE NULL
       END AS issue
   ) checks

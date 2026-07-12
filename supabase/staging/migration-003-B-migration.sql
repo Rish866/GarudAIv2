@@ -27,76 +27,112 @@ BEGIN
 END;
 $fn$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.activity_log;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.activity_log
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.approvals;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.approvals
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.attendance;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.attendance
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.bank_entries;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.bank_entries
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.branches;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.branches
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.cash_entries;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.cash_entries
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.challans;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.challans
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.claims;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.claims
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.contracts;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.contracts
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.customers;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.customers
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.drivers;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.drivers
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.enquiries;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.enquiries
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.eway_bills;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.eway_bills
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.expenses;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.expenses
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.fuel_entries;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.fuel_entries
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.geofences;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.geofences
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.gps_devices;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.gps_devices
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.indents;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.indents
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.inventory;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.inventory
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.invoices;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.invoices
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.leave_requests;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.leave_requests
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.ledger_accounts;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.ledger_accounts
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.maintenance_records;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.maintenance_records
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.market_hires;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.market_hires
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.notifications;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.notifications
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.payments;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.payments
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.purchases;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.purchases
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.quotations;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.quotations
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.routes;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.routes
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.sales;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.sales
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.transfers;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.transfers
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.trips;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.trips
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.tyres;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.tyres
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.vehicles;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.vehicles
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.vendors;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.vendors
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
+DROP TRIGGER IF EXISTS enforce_immutable_organization_id ON public.work_orders;
 CREATE TRIGGER enforce_immutable_organization_id BEFORE UPDATE ON public.work_orders
   FOR EACH ROW EXECUTE FUNCTION public.enforce_immutable_organization_id();
 
