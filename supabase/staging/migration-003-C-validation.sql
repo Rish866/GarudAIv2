@@ -41,11 +41,18 @@ BEGIN
   -- Remove type casts: ::text[] first, then ::text (order matters)
   expr := regexp_replace(expr, '::text\[\]', '', 'g');
   expr := regexp_replace(expr, '::text', '', 'g');
+  -- Remove redundant parentheses around ARRAY constructors.
+  -- After cast removal, pg_get_expr leaves (ARRAY[...]) where source has ARRAY[...].
+  -- Pattern: '(' immediately before 'ARRAY[' with matching ')' after ']'
+  -- Safe because ARRAY constructor content never contains unbalanced brackets.
+  expr := regexp_replace(expr, '\(ARRAY\[([^\]]*)\]\)', 'ARRAY[\1]', 'g');
   -- Normalize function qualification: strip optional 'public.' prefix on known functions
   expr := replace(expr, 'public.is_organization_member', 'is_organization_member');
   expr := replace(expr, 'public.has_organization_role', 'has_organization_role');
   -- Collapse whitespace
   expr := regexp_replace(expr, '\s+', ' ', 'g');
+  -- Normalize comma spacing: remove spaces after commas for consistent comparison
+  expr := replace(expr, ', ', ',');
   -- Lowercase
   expr := lower(btrim(expr));
   RETURN expr;
@@ -486,7 +493,6 @@ FROM (
         SELECT 1 FROM pg_trigger tr
         JOIN pg_class c ON c.oid = tr.tgrelid
         JOIN pg_namespace n ON n.oid = c.relnamespace
-        JOIN pg_proc p ON p.oid = tr.tgfoid
         WHERE n.nspname = 'public' AND c.relname = bt.t
           AND tr.tgname = 'enforce_immutable_organization_id'
           AND tr.tgenabled = 'O'
@@ -494,7 +500,7 @@ FROM (
           AND (tr.tgtype::int & 2) = 2   -- BEFORE
           AND (tr.tgtype::int & 16) = 16  -- UPDATE
           AND (tr.tgtype::int & 1) = 1    -- FOR EACH ROW
-          AND p.proname = 'enforce_immutable_organization_id'
+          AND tr.tgfoid = to_regprocedure('public.enforce_immutable_organization_id()')::oid
       ) THEN bt.t
       ELSE NULL
     END AS detail
