@@ -1,0 +1,3533 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "target_project": "ybuhazlnjqjrshcvpuna",
+    "activation_migration": "013",
+    "status": "APPROVED_SCHEMA_PENDING_MANIFEST",
+    "pg_version_required": ">=15"
+  },
+  "canonical_roles": {
+    "supported": [
+      "organization_owner",
+      "admin",
+      "operations_manager",
+      "dispatcher",
+      "fleet_manager",
+      "accountant",
+      "maintenance_manager",
+      "hr_manager",
+      "viewer"
+    ],
+    "unsupported_blocked": [
+      "driver",
+      "customer"
+    ],
+    "postgres_api_role": "authenticated"
+  },
+  "business_policies": [
+    {
+      "schema": "public",
+      "table": "activity_log",
+      "table_category": "business",
+      "policy_name": "role_select_activity_log",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "approvals",
+      "table_category": "business",
+      "policy_name": "role_select_approvals",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','accountant'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "attendance",
+      "table_category": "business",
+      "policy_name": "role_select_attendance",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','hr_manager','operations_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "hr_manager",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "attendance",
+      "table_category": "business",
+      "policy_name": "role_insert_attendance",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','hr_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "hr_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "bank_entries",
+      "table_category": "business",
+      "policy_name": "role_select_bank_entries",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "bank_entries",
+      "table_category": "business",
+      "policy_name": "role_insert_bank_entries",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "branches",
+      "table_category": "business",
+      "policy_name": "role_select_branches",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "branches",
+      "table_category": "business",
+      "policy_name": "role_insert_branches",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "branches",
+      "table_category": "business",
+      "policy_name": "role_update_branches",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "cash_entries",
+      "table_category": "business",
+      "policy_name": "role_select_cash_entries",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "cash_entries",
+      "table_category": "business",
+      "policy_name": "role_insert_cash_entries",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "challans",
+      "table_category": "business",
+      "policy_name": "role_select_challans",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','operations_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "challans",
+      "table_category": "business",
+      "policy_name": "role_insert_challans",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "challans",
+      "table_category": "business",
+      "policy_name": "role_update_challans",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "claims",
+      "table_category": "business",
+      "policy_name": "role_select_claims",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','accountant'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "claims",
+      "table_category": "business",
+      "policy_name": "role_insert_claims",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "contracts",
+      "table_category": "business",
+      "policy_name": "role_select_contracts",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "contracts",
+      "table_category": "business",
+      "policy_name": "role_insert_contracts",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "contracts",
+      "table_category": "business",
+      "policy_name": "role_update_contracts",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "table_category": "business",
+      "policy_name": "role_select_customers",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher','accountant'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "id",
+        "name",
+        "contact_person",
+        "phone",
+        "email",
+        "gstin",
+        "billing_address",
+        "credit_limit",
+        "credit_days",
+        "outstanding",
+        "total_business",
+        "status",
+        "created_at"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "column_restricted",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "table_category": "business",
+      "policy_name": "role_insert_customers",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','accountant','dispatcher'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "accountant",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "id",
+        "name",
+        "contact_person",
+        "phone",
+        "email",
+        "gstin",
+        "billing_address",
+        "credit_limit",
+        "credit_days",
+        "outstanding",
+        "total_business",
+        "status",
+        "created_at"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "column_restricted",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "trigger_after_insert",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "table_category": "business",
+      "policy_name": "role_update_customers",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','accountant'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','accountant'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "name",
+        "contact_person",
+        "phone",
+        "email",
+        "gstin",
+        "billing_address",
+        "credit_limit",
+        "credit_days",
+        "outstanding",
+        "total_business",
+        "status"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "column_restricted",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "trigger_after_update",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "drivers",
+      "table_category": "business",
+      "policy_name": "role_select_drivers",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','hr_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "hr_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "id",
+        "name",
+        "license_number",
+        "license_expiry",
+        "assigned_vehicle_id",
+        "assigned_vehicle_reg",
+        "status",
+        "safety_score",
+        "total_trips",
+        "total_km",
+        "photo_url",
+        "created_at"
+      ],
+      "prohibited_columns": [
+        "phone",
+        "aadhar",
+        "address",
+        "emergency_contact",
+        "emergency_phone",
+        "base_salary",
+        "salary_type"
+      ],
+      "sensitive_data_strategy": "column_restricted",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "drivers",
+      "table_category": "business",
+      "policy_name": "role_insert_drivers",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','hr_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "hr_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "id",
+        "name",
+        "license_number",
+        "license_expiry",
+        "assigned_vehicle_id",
+        "assigned_vehicle_reg",
+        "status",
+        "safety_score",
+        "total_trips",
+        "total_km",
+        "photo_url",
+        "created_at"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "column_restricted",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "trigger_after_insert",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "drivers",
+      "table_category": "business",
+      "policy_name": "role_update_drivers",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','hr_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','hr_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "hr_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "name",
+        "license_number",
+        "license_expiry",
+        "assigned_vehicle_id",
+        "assigned_vehicle_reg",
+        "status",
+        "safety_score",
+        "total_trips",
+        "total_km",
+        "photo_url"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "column_restricted",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "trigger_after_update",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "enquiries",
+      "table_category": "business",
+      "policy_name": "role_select_enquiries",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "enquiries",
+      "table_category": "business",
+      "policy_name": "role_insert_enquiries",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "enquiries",
+      "table_category": "business",
+      "policy_name": "role_update_enquiries",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "enquiries",
+      "table_category": "business",
+      "policy_name": "role_delete_enquiries",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin']) AND status = 'new'",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": "status = 'new'",
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "eway_bills",
+      "table_category": "business",
+      "policy_name": "role_select_eway_bills",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "eway_bills",
+      "table_category": "business",
+      "policy_name": "role_insert_eway_bills",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "eway_bills",
+      "table_category": "business",
+      "policy_name": "role_update_eway_bills",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "expenses",
+      "table_category": "business",
+      "policy_name": "role_select_expenses",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant','operations_manager','dispatcher'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "expenses",
+      "table_category": "business",
+      "policy_name": "role_insert_expenses",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant','operations_manager','dispatcher'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "expenses",
+      "table_category": "business",
+      "policy_name": "role_update_expenses",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant','operations_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "fuel_entries",
+      "table_category": "business",
+      "policy_name": "role_select_fuel_entries",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','operations_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "fuel_entries",
+      "table_category": "business",
+      "policy_name": "role_insert_fuel_entries",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','operations_manager','dispatcher'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "geofences",
+      "table_category": "business",
+      "policy_name": "role_select_geofences",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','operations_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "geofences",
+      "table_category": "business",
+      "policy_name": "role_insert_geofences",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "geofences",
+      "table_category": "business",
+      "policy_name": "role_update_geofences",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "geofences",
+      "table_category": "business",
+      "policy_name": "role_delete_geofences",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "gps_devices",
+      "table_category": "business",
+      "policy_name": "role_select_gps_devices",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "gps_devices",
+      "table_category": "business",
+      "policy_name": "role_insert_gps_devices",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "gps_devices",
+      "table_category": "business",
+      "policy_name": "role_update_gps_devices",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "gps_devices",
+      "table_category": "business",
+      "policy_name": "role_delete_gps_devices",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "indents",
+      "table_category": "business",
+      "policy_name": "role_select_indents",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "indents",
+      "table_category": "business",
+      "policy_name": "role_insert_indents",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "indents",
+      "table_category": "business",
+      "policy_name": "role_update_indents",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "indents",
+      "table_category": "business",
+      "policy_name": "role_delete_indents",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin']) AND status = 'pending'",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": "status = 'pending'",
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "table_category": "business",
+      "policy_name": "role_select_inventory",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager','accountant'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "table_category": "business",
+      "policy_name": "role_insert_inventory",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "table_category": "business",
+      "policy_name": "role_update_inventory",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "table_category": "business",
+      "policy_name": "role_delete_inventory",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "invoices",
+      "table_category": "business",
+      "policy_name": "role_select_invoices",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant','operations_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "invoices",
+      "table_category": "business",
+      "policy_name": "role_insert_invoices",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "trigger_after_insert",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "leave_requests",
+      "table_category": "business",
+      "policy_name": "role_select_leave_requests",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','hr_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "hr_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "leave_requests",
+      "table_category": "business",
+      "policy_name": "role_insert_leave_requests",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','hr_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "hr_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "ledger_accounts",
+      "table_category": "business",
+      "policy_name": "role_select_ledger_accounts",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "ledger_accounts",
+      "table_category": "business",
+      "policy_name": "role_insert_ledger_accounts",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "maintenance_records",
+      "table_category": "business",
+      "policy_name": "role_select_maintenance_records",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "maintenance_records",
+      "table_category": "business",
+      "policy_name": "role_insert_maintenance_records",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "maintenance_records",
+      "table_category": "business",
+      "policy_name": "role_update_maintenance_records",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "maintenance_records",
+      "table_category": "business",
+      "policy_name": "role_delete_maintenance_records",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin']) AND status = 'scheduled'",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": "status = 'scheduled'",
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "market_hires",
+      "table_category": "business",
+      "policy_name": "role_select_market_hires",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "market_hires",
+      "table_category": "business",
+      "policy_name": "role_insert_market_hires",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "market_hires",
+      "table_category": "business",
+      "policy_name": "role_update_market_hires",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "market_hires",
+      "table_category": "business",
+      "policy_name": "role_delete_market_hires",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin']) AND payment_status = 'pending'",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": "payment_status = 'pending'",
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "notifications",
+      "table_category": "business",
+      "policy_name": "role_select_notifications",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher','fleet_manager','accountant','maintenance_manager','hr_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher",
+        "fleet_manager",
+        "accountant",
+        "maintenance_manager",
+        "hr_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "payments",
+      "table_category": "business",
+      "policy_name": "role_select_payments",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "payments",
+      "table_category": "business",
+      "policy_name": "role_insert_payments",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "trigger_after_insert",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "purchases",
+      "table_category": "business",
+      "policy_name": "role_select_purchases",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "purchases",
+      "table_category": "business",
+      "policy_name": "role_insert_purchases",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "purchases",
+      "table_category": "business",
+      "policy_name": "role_update_purchases",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "quotations",
+      "table_category": "business",
+      "policy_name": "role_select_quotations",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "quotations",
+      "table_category": "business",
+      "policy_name": "role_insert_quotations",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "quotations",
+      "table_category": "business",
+      "policy_name": "role_update_quotations",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "quotations",
+      "table_category": "business",
+      "policy_name": "role_delete_quotations",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin']) AND status = 'draft'",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": "status = 'draft'",
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "routes",
+      "table_category": "business",
+      "policy_name": "role_select_routes",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher','fleet_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher",
+        "fleet_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "routes",
+      "table_category": "business",
+      "policy_name": "role_insert_routes",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "routes",
+      "table_category": "business",
+      "policy_name": "role_update_routes",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "routes",
+      "table_category": "business",
+      "policy_name": "role_delete_routes",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "table_category": "business",
+      "policy_name": "role_select_sales",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "table_category": "business",
+      "policy_name": "role_insert_sales",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "table_category": "business",
+      "policy_name": "role_update_sales",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "transfers",
+      "table_category": "business",
+      "policy_name": "role_select_transfers",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "transfers",
+      "table_category": "business",
+      "policy_name": "role_insert_transfers",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "transfers",
+      "table_category": "business",
+      "policy_name": "role_update_transfers",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "transfers",
+      "table_category": "business",
+      "policy_name": "role_delete_transfers",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin']) AND status = 'initiated'",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": "status = 'initiated'",
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "trips",
+      "table_category": "business",
+      "policy_name": "role_select_trips",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher','accountant'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "reviewed_all_safe",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "trips",
+      "table_category": "business",
+      "policy_name": "role_insert_trips",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "reviewed_all_safe",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "trigger_after_insert",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "tyres",
+      "table_category": "business",
+      "policy_name": "role_select_tyres",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "tyres",
+      "table_category": "business",
+      "policy_name": "role_insert_tyres",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "tyres",
+      "table_category": "business",
+      "policy_name": "role_update_tyres",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "tyres",
+      "table_category": "business",
+      "policy_name": "role_delete_tyres",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin']) AND status = 'spare'",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": "status = 'spare'",
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "vehicles",
+      "table_category": "business",
+      "policy_name": "role_select_vehicles",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','operations_manager','dispatcher','fleet_manager','maintenance_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "operations_manager",
+        "dispatcher",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "id",
+        "reg_number",
+        "vehicle_type",
+        "make",
+        "model",
+        "year",
+        "ownership_type",
+        "capacity_tons",
+        "fitness_expiry",
+        "insurance_expiry",
+        "puc_expiry",
+        "permit_expiry",
+        "driver_id",
+        "driver_name",
+        "status",
+        "odometer",
+        "lat",
+        "lng",
+        "speed",
+        "last_location",
+        "last_gps_update",
+        "ignition",
+        "created_at"
+      ],
+      "prohibited_columns": [
+        "owner_name",
+        "owner_phone"
+      ],
+      "sensitive_data_strategy": "column_restricted",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "vehicles",
+      "table_category": "business",
+      "policy_name": "role_insert_vehicles",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "id",
+        "reg_number",
+        "vehicle_type",
+        "make",
+        "model",
+        "year",
+        "ownership_type",
+        "capacity_tons",
+        "fitness_expiry",
+        "insurance_expiry",
+        "puc_expiry",
+        "permit_expiry",
+        "driver_id",
+        "driver_name",
+        "status",
+        "odometer",
+        "lat",
+        "lng",
+        "speed",
+        "last_location",
+        "last_gps_update",
+        "ignition",
+        "created_at"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "column_restricted",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "trigger_after_insert",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "vehicles",
+      "table_category": "business",
+      "policy_name": "role_update_vehicles",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','operations_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "reg_number",
+        "vehicle_type",
+        "make",
+        "model",
+        "year",
+        "ownership_type",
+        "capacity_tons",
+        "fitness_expiry",
+        "insurance_expiry",
+        "puc_expiry",
+        "permit_expiry",
+        "driver_id",
+        "driver_name",
+        "status",
+        "odometer",
+        "lat",
+        "lng",
+        "speed",
+        "last_location",
+        "last_gps_update",
+        "ignition"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "column_restricted",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "trigger_after_update",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "vendors",
+      "table_category": "business",
+      "policy_name": "role_select_vendors",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant','operations_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "vendors",
+      "table_category": "business",
+      "policy_name": "role_insert_vendors",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant','operations_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant",
+        "operations_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "vendors",
+      "table_category": "business",
+      "policy_name": "role_update_vendors",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','accountant'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "accountant"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "work_orders",
+      "table_category": "business",
+      "policy_name": "role_select_work_orders",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "SELECT",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "SELECT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "work_orders",
+      "table_category": "business",
+      "policy_name": "role_insert_work_orders",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "INSERT",
+      "using_sql": null,
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "INSERT"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "work_orders",
+      "table_category": "business",
+      "policy_name": "role_update_work_orders",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "UPDATE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "with_check_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin','fleet_manager','maintenance_manager'])",
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin",
+        "fleet_manager",
+        "maintenance_manager"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": null,
+      "grant_scope": "columns",
+      "allowed_columns": [
+        "*"
+      ],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "UPDATE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    },
+    {
+      "schema": "public",
+      "table": "work_orders",
+      "table_category": "business",
+      "policy_name": "role_delete_work_orders",
+      "policy_mode": "PERMISSIVE",
+      "postgres_role": "authenticated",
+      "expected_to_roles": "authenticated",
+      "command": "DELETE",
+      "using_sql": "public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY['organization_owner','admin']) AND status = 'open'",
+      "with_check_sql": null,
+      "authorization_basis": "organization_role",
+      "canonical_roles": [
+        "organization_owner",
+        "admin"
+      ],
+      "organization_scope_column": "organization_id",
+      "status_condition": "status = 'open'",
+      "grant_scope": "columns",
+      "allowed_columns": [],
+      "prohibited_columns": [],
+      "sensitive_data_strategy": "none",
+      "direct_table_privileges": [
+        "DELETE"
+      ],
+      "audit_mechanism": "none",
+      "migration_created": "003",
+      "activation_migration": "013"
+    }
+  ],
+  "computed_totals": {
+    "business_policy_count": 104,
+    "select_count": 36,
+    "insert_count": 33,
+    "update_count": 23,
+    "delete_count": 12,
+    "tables": 36,
+    "platform_policy_count": 10,
+    "storage_policy_count": 4,
+    "function_operation_count": 22,
+    "total_rls": 118
+  }
+}

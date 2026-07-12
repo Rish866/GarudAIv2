@@ -1,0 +1,750 @@
+metadata:
+  version: '2.0'
+  target_project: ybuhazlnjqjrshcvpuna
+  activation_migration: '013'
+  status: APPROVED_SCHEMA_PENDING_MANIFEST
+  pg_version_required: '>=15'
+canonical_roles:
+  supported:
+  - organization_owner
+  - admin
+  - operations_manager
+  - dispatcher
+  - fleet_manager
+  - accountant
+  - maintenance_manager
+  - hr_manager
+  - viewer
+  unsupported_blocked:
+  - driver
+  - customer
+  postgres_api_role: authenticated
+templates:
+  using_org_role: public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[{roles_array}])
+  check_org_role: public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, ARRAY[{roles_array}])
+business_tables:
+  vehicles:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    - fleet_manager
+    - maintenance_manager
+    insert:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - operations_manager
+    update:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - operations_manager
+    delete: null
+    scope: columns
+    sensitive: column_restricted
+    select_cols:
+    - id
+    - reg_number
+    - vehicle_type
+    - make
+    - model
+    - year
+    - ownership_type
+    - capacity_tons
+    - fitness_expiry
+    - insurance_expiry
+    - puc_expiry
+    - permit_expiry
+    - driver_id
+    - driver_name
+    - status
+    - odometer
+    - lat
+    - lng
+    - speed
+    - last_location
+    - last_gps_update
+    - ignition
+    - created_at
+    prohibited_select:
+    - owner_name
+    - owner_phone
+    update_cols:
+    - reg_number
+    - vehicle_type
+    - make
+    - model
+    - year
+    - ownership_type
+    - capacity_tons
+    - fitness_expiry
+    - insurance_expiry
+    - puc_expiry
+    - permit_expiry
+    - driver_id
+    - driver_name
+    - status
+    - odometer
+    - lat
+    - lng
+    - speed
+    - last_location
+    - last_gps_update
+    - ignition
+    audit_insert: true
+    audit_update: true
+  drivers:
+    select:
+    - organization_owner
+    - admin
+    - hr_manager
+    insert:
+    - organization_owner
+    - admin
+    - hr_manager
+    update:
+    - organization_owner
+    - admin
+    - hr_manager
+    delete: null
+    scope: columns
+    sensitive: column_restricted
+    select_cols:
+    - id
+    - name
+    - license_number
+    - license_expiry
+    - assigned_vehicle_id
+    - assigned_vehicle_reg
+    - status
+    - safety_score
+    - total_trips
+    - total_km
+    - photo_url
+    - created_at
+    prohibited_select:
+    - phone
+    - aadhar
+    - address
+    - emergency_contact
+    - emergency_phone
+    - base_salary
+    - salary_type
+    update_cols:
+    - name
+    - license_number
+    - license_expiry
+    - assigned_vehicle_id
+    - assigned_vehicle_reg
+    - status
+    - safety_score
+    - total_trips
+    - total_km
+    - photo_url
+    audit_insert: true
+    audit_update: true
+  customers:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    - accountant
+    insert:
+    - organization_owner
+    - admin
+    - operations_manager
+    - accountant
+    - dispatcher
+    update:
+    - organization_owner
+    - admin
+    - operations_manager
+    - accountant
+    delete: null
+    scope: columns
+    sensitive: column_restricted
+    select_cols:
+    - id
+    - name
+    - contact_person
+    - phone
+    - email
+    - gstin
+    - billing_address
+    - credit_limit
+    - credit_days
+    - outstanding
+    - total_business
+    - status
+    - created_at
+    prohibited_select: []
+    update_cols:
+    - name
+    - contact_person
+    - phone
+    - email
+    - gstin
+    - billing_address
+    - credit_limit
+    - credit_days
+    - outstanding
+    - total_business
+    - status
+    audit_insert: true
+    audit_update: true
+  trips:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    - accountant
+    insert:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    update: null
+    delete: null
+    scope: columns
+    sensitive: reviewed_all_safe
+    fn_update: transition_trip_status
+    audit_insert: true
+  enquiries:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    insert:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    update:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      cond: status = 'new'
+  quotations:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    insert:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    update:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      cond: status = 'draft'
+  invoices:
+    select:
+    - organization_owner
+    - admin
+    - accountant
+    - operations_manager
+    insert:
+    - organization_owner
+    - admin
+    - accountant
+    update: null
+    delete: null
+    fn_update: void_invoice
+    audit_insert: true
+  payments:
+    select:
+    - organization_owner
+    - admin
+    - accountant
+    insert:
+    - organization_owner
+    - admin
+    - accountant
+    update: null
+    delete: null
+    fn_update: reverse_payment
+    audit_insert: true
+  expenses:
+    select:
+    - organization_owner
+    - admin
+    - accountant
+    - operations_manager
+    - dispatcher
+    insert:
+    - organization_owner
+    - admin
+    - accountant
+    - operations_manager
+    - dispatcher
+    update:
+    - organization_owner
+    - admin
+    - accountant
+    - operations_manager
+    delete: null
+  fuel_entries:
+    select:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - operations_manager
+    insert:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - operations_manager
+    - dispatcher
+    update: null
+    delete: null
+    immutable: true
+  maintenance_records:
+    select:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    insert:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    update:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      cond: status = 'scheduled'
+  tyres:
+    select:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    insert:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    update:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      cond: status = 'spare'
+  activity_log:
+    select:
+    - organization_owner
+    - admin
+    insert: null
+    update: null
+    delete: null
+    immutable: true
+    fn_insert: _internal_audit_log
+  notifications:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    - fleet_manager
+    - accountant
+    - maintenance_manager
+    - hr_manager
+    insert: null
+    update: null
+    delete: null
+    immutable: true
+    fn_insert: system_notification
+  eway_bills:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    insert:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    update:
+    - organization_owner
+    - admin
+    - operations_manager
+    delete: null
+  branches:
+    select:
+    - organization_owner
+    - admin
+    insert:
+    - organization_owner
+    - admin
+    update:
+    - organization_owner
+    - admin
+    delete: null
+  vendors:
+    select:
+    - organization_owner
+    - admin
+    - accountant
+    - operations_manager
+    insert:
+    - organization_owner
+    - admin
+    - accountant
+    - operations_manager
+    update:
+    - organization_owner
+    - admin
+    - accountant
+    delete: null
+  contracts:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    insert:
+    - organization_owner
+    - admin
+    - operations_manager
+    update:
+    - organization_owner
+    - admin
+    - operations_manager
+    delete: null
+  routes:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    - fleet_manager
+    insert:
+    - organization_owner
+    - admin
+    - operations_manager
+    update:
+    - organization_owner
+    - admin
+    - operations_manager
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      cond: null
+  indents:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    insert:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    update:
+    - organization_owner
+    - admin
+    - operations_manager
+    - dispatcher
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      cond: status = 'pending'
+  market_hires:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    insert:
+    - organization_owner
+    - admin
+    - operations_manager
+    update:
+    - organization_owner
+    - admin
+    - operations_manager
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      cond: payment_status = 'pending'
+  work_orders:
+    select:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    insert:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    update:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      cond: status = 'open'
+  challans:
+    select:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - operations_manager
+    insert:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - operations_manager
+    update:
+    - organization_owner
+    - admin
+    - fleet_manager
+    delete: null
+  geofences:
+    select:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - operations_manager
+    insert:
+    - organization_owner
+    - admin
+    - fleet_manager
+    update:
+    - organization_owner
+    - admin
+    - fleet_manager
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      - fleet_manager
+      cond: null
+  claims:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - accountant
+    insert:
+    - organization_owner
+    - admin
+    - operations_manager
+    update: null
+    delete: null
+    fn_update: transition_claim_status
+  approvals:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    - accountant
+    insert: null
+    update: null
+    delete: null
+    fn_insert: system_approval
+    fn_update: process_approval
+  transfers:
+    select:
+    - organization_owner
+    - admin
+    - operations_manager
+    insert:
+    - organization_owner
+    - admin
+    - operations_manager
+    update:
+    - organization_owner
+    - admin
+    - operations_manager
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      cond: status = 'initiated'
+  cash_entries:
+    select:
+    - organization_owner
+    - admin
+    - accountant
+    insert:
+    - organization_owner
+    - admin
+    - accountant
+    update: null
+    delete: null
+    immutable: true
+  bank_entries:
+    select:
+    - organization_owner
+    - admin
+    - accountant
+    insert:
+    - organization_owner
+    - admin
+    - accountant
+    update: null
+    delete: null
+    immutable: true
+  ledger_accounts:
+    select:
+    - organization_owner
+    - admin
+    - accountant
+    insert:
+    - organization_owner
+    - admin
+    - accountant
+    update: null
+    delete: null
+    fn_update: close_ledger_account
+  purchases:
+    select:
+    - organization_owner
+    - admin
+    - accountant
+    insert:
+    - organization_owner
+    - admin
+    - accountant
+    update:
+    - organization_owner
+    - admin
+    - accountant
+    delete: null
+  sales:
+    select:
+    - organization_owner
+    - admin
+    - accountant
+    insert:
+    - organization_owner
+    - admin
+    - accountant
+    update:
+    - organization_owner
+    - admin
+    - accountant
+    delete: null
+  inventory:
+    select:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    - accountant
+    insert:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    update:
+    - organization_owner
+    - admin
+    - fleet_manager
+    - maintenance_manager
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      cond: null
+  attendance:
+    select:
+    - organization_owner
+    - admin
+    - hr_manager
+    - operations_manager
+    insert:
+    - organization_owner
+    - admin
+    - hr_manager
+    update: null
+    delete: null
+    immutable: true
+    fn_update: correct_attendance
+  leave_requests:
+    select:
+    - organization_owner
+    - admin
+    - hr_manager
+    insert:
+    - organization_owner
+    - admin
+    - hr_manager
+    update: null
+    delete: null
+    fn_update: transition_leave_status
+  gps_devices:
+    select:
+    - organization_owner
+    - admin
+    - fleet_manager
+    insert:
+    - organization_owner
+    - admin
+    - fleet_manager
+    update:
+    - organization_owner
+    - admin
+    - fleet_manager
+    delete:
+      roles:
+      - organization_owner
+      - admin
+      - fleet_manager
+      cond: null
+computed_totals:
+  business_policies:
+    SELECT: 36
+    INSERT: 33
+    UPDATE: 23
+    DELETE: 12
+    total: 104
+  platform_policies: 10
+  storage_policies: 4
+  total_rls: 118
+  function_operations: 22
+  projections: 5
+  immutable_tables:
+  - activity_log
+  - attendance
+  - bank_entries
+  - cash_entries
+  - fuel_entries
+  - notifications
