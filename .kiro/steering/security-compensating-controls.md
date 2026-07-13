@@ -43,7 +43,6 @@ Every migration's Block C validation must verify that newly created objects have
 The supabase_admin unsafe defaults can be resolved by:
 1. Supabase Dashboard > Database > Roles (if feature exists)
 2. Supabase support ticket requesting default ACL remediation
-3. supabase CLI with service_role key (if ALTER DEFAULT PRIVILEGES is supported)
-4. Direct connection as supabase_admin (platform-internal only)
+3. Direct connection as supabase_admin (platform-internal only)
 
 Do NOT use SET ROLE, privilege escalation, service keys directly, internal functions, or ownership changes to work around this.
