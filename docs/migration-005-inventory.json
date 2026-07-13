@@ -1,0 +1,76 @@
+{
+  "metadata": {
+    "migration": "005",
+    "purpose": "Same-organization relational integrity: declarative composite FKs for all 34 authoritative references",
+    "staging_project": "ybuhazlnjqjrshcvpuna",
+    "prerequisite": "Migration 004 completed (22 TEXT→UUID + 16 org_id NOT NULL)",
+    "tables_empty": true,
+    "version": "1.0"
+  },
+  "relationships": [
+    {"source_table": "attendance", "source_column": "employee_id", "target_table": "drivers", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "attendance_employee_id_fkey"},
+    {"source_table": "challans", "source_column": "driver_id", "target_table": "drivers", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "challans_driver_id_fkey"},
+    {"source_table": "challans", "source_column": "vehicle_id", "target_table": "vehicles", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "challans_vehicle_id_fkey"},
+    {"source_table": "claims", "source_column": "trip_id", "target_table": "trips", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "claims_trip_id_fkey"},
+    {"source_table": "contracts", "source_column": "customer_id", "target_table": "customers", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "contracts_customer_id_fkey"},
+    {"source_table": "drivers", "source_column": "assigned_vehicle_id", "target_table": "vehicles", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "enquiries", "source_column": "customer_id", "target_table": "customers", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "eway_bills", "source_column": "transporter_id", "target_table": "vendors", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "eway_bills", "source_column": "trip_id", "target_table": "trips", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "expenses", "source_column": "trip_id", "target_table": "trips", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "expenses", "source_column": "vehicle_id", "target_table": "vehicles", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "fuel_entries", "source_column": "driver_id", "target_table": "drivers", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "fuel_entries", "source_column": "trip_id", "target_table": "trips", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "fuel_entries", "source_column": "vehicle_id", "target_table": "vehicles", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "gps_devices", "source_column": "vehicle_id", "target_table": "vehicles", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "gps_devices_vehicle_id_fkey"},
+    {"source_table": "indents", "source_column": "customer_id", "target_table": "customers", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "indents_customer_id_fkey"},
+    {"source_table": "indents", "source_column": "trip_id", "target_table": "trips", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "indents_trip_id_fkey"},
+    {"source_table": "invoices", "source_column": "customer_id", "target_table": "customers", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "leave_requests", "source_column": "employee_id", "target_table": "drivers", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "leave_requests_employee_id_fkey"},
+    {"source_table": "maintenance_records", "source_column": "vehicle_id", "target_table": "vehicles", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "payments", "source_column": "customer_id", "target_table": "customers", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "payments", "source_column": "invoice_id", "target_table": "invoices", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "quotations", "source_column": "customer_id", "target_table": "customers", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "quotations", "source_column": "enquiry_id", "target_table": "enquiries", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "transfers", "source_column": "from_branch", "target_table": "branches", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "transfers_from_branch_fkey"},
+    {"source_table": "transfers", "source_column": "to_branch", "target_table": "branches", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "transfers_to_branch_fkey"},
+    {"source_table": "trips", "source_column": "customer_id", "target_table": "customers", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "trips", "source_column": "driver_id", "target_table": "drivers", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "trips", "source_column": "enquiry_id", "target_table": "enquiries", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "trips", "source_column": "quotation_id", "target_table": "quotations", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "trips", "source_column": "vehicle_id", "target_table": "vehicles", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "tyres", "source_column": "vehicle_id", "target_table": "vehicles", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "vehicles", "source_column": "driver_id", "target_table": "drivers", "target_column": "id", "nullable": true, "category": "m004_converted", "old_fk_name": null},
+    {"source_table": "work_orders", "source_column": "vehicle_id", "target_table": "vehicles", "target_column": "id", "nullable": true, "category": "existing_uuid_fk", "old_fk_name": "work_orders_vehicle_id_fkey"}
+  ],
+  "target_tables_needing_unique": [
+    "branches",
+    "customers",
+    "drivers",
+    "enquiries",
+    "invoices",
+    "quotations",
+    "trips",
+    "vehicles",
+    "vendors"
+  ],
+  "circular_nullable_pairs": [
+    {"table_a": "vehicles", "column_a": "driver_id", "table_b": "drivers", "column_b": "assigned_vehicle_id", "note": "Both nullable; MATCH SIMPLE allows NULL without deadlock"}
+  ],
+  "naming_conventions": {
+    "unique_constraint": "uq_{target_table}_org_id",
+    "composite_fk": "fk_{source_table}_{source_column}_org",
+    "match_type": "SIMPLE",
+    "on_update": "NO ACTION",
+    "on_delete": "NO ACTION"
+  },
+  "all_36_business_tables": [
+    "activity_log", "approvals", "attendance", "bank_entries", "branches",
+    "cash_entries", "challans", "claims", "contracts", "customers",
+    "drivers", "enquiries", "eway_bills", "expenses", "fuel_entries",
+    "geofences", "gps_devices", "indents", "inventory", "invoices",
+    "leave_requests", "ledger_accounts", "maintenance_records", "market_hires",
+    "notifications", "payments", "purchases", "quotations", "routes",
+    "sales", "transfers", "trips", "tyres", "vehicles", "vendors", "work_orders"
+  ]
+}
