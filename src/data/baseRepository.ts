@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { sanitizeForTable } from '../lib/sanitize';
+import { sanitizeForTable, sanitizeForTableSafe } from '../lib/sanitize';
 
 export interface RepositoryResult<T> {
   data: T | null;
@@ -52,14 +52,18 @@ export function createRepository<T extends { id: string }>(tableName: string) {
     async create(organizationId: string, input: Omit<T, 'id' | 'organization_id' | 'created_at' | 'updated_at'>): Promise<RepositoryResult<T>> {
       if (!organizationId) return { data: null, error: 'No organization ID provided' };
 
-      const record = sanitizeForTable(tableName, {
+      // Structured error: sanitizer failures return error (not throw)
+      const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(tableName, {
         ...input,
         organization_id: organizationId,
       });
+      if (sanitizeErrors.length > 0) {
+        return { data: null, error: sanitizeErrors.map(e => e.message).join('; ') };
+      }
 
       const { data, error } = await supabase
         .from(tableName)
-        .insert(record)
+        .insert(sanitized as Record<string, unknown>)
         .select()
         .single();
 
@@ -74,9 +78,15 @@ export function createRepository<T extends { id: string }>(tableName: string) {
       // Never allow organization_id to be changed
       const { organization_id, ...safeInput } = input as any;
 
+      // Structured error: sanitizer failures return error (not throw)
+      const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(tableName, { ...safeInput, updated_at: new Date().toISOString() });
+      if (sanitizeErrors.length > 0) {
+        return { data: null, error: sanitizeErrors.map(e => e.message).join('; ') };
+      }
+
       const { data, error } = await supabase
         .from(tableName)
-        .update(sanitizeForTable(tableName, { ...safeInput, updated_at: new Date().toISOString() }))
+        .update(sanitized as Record<string, unknown>)
         .eq('organization_id', organizationId)
         .eq('id', id)
         .select()

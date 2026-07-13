@@ -3,7 +3,7 @@
 // RLS provides database-level enforcement; this provides app-level safety
 
 import { supabase } from '../../lib/supabase';
-import { sanitizeForTable } from '../../lib/sanitize';
+import { sanitizeForTable, sanitizeForTableSafe } from '../../lib/sanitize';
 
 export interface TenantQueryOptions {
   organizationId: string;
@@ -60,10 +60,14 @@ export class TenantRepository<T extends TenantRecord> {
    * Create a new record (organization_id is mandatory)
    */
   async create(record: Omit<T, 'id'>, organizationId: string): Promise<{ data: T | null; error: string | null }> {
-    const row: Record<string, unknown> = sanitizeForTable(this.tableName, { ...record, organization_id: organizationId });
+    // Structured error: sanitizer failures return error (not throw)
+    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(this.tableName, { ...record, organization_id: organizationId });
+    if (sanitizeErrors.length > 0) {
+      return { data: null, error: sanitizeErrors.map(e => e.message).join('; ') };
+    }
     const { data, error } = await supabase
       .from(this.tableName)
-      .insert(row)
+      .insert(sanitized as Record<string, unknown>)
       .select()
       .single();
     return { data: data as T | null, error: error?.message || null };
@@ -73,10 +77,14 @@ export class TenantRepository<T extends TenantRecord> {
    * Update a record (RLS ensures you can only update your org's records)
    */
   async update(id: string, updates: Partial<T>, organizationId: string): Promise<{ data: T | null; error: string | null }> {
-    const patch: Record<string, unknown> = sanitizeForTable(this.tableName, { ...updates });
+    // Structured error: sanitizer failures return error (not throw)
+    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(this.tableName, { ...updates });
+    if (sanitizeErrors.length > 0) {
+      return { data: null, error: sanitizeErrors.map(e => e.message).join('; ') };
+    }
     const { data, error } = await supabase
       .from(this.tableName)
-      .update(patch)
+      .update(sanitized as Record<string, unknown>)
       .eq('id', id)
       .eq('organization_id', organizationId)
       .select()

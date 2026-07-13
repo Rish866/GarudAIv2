@@ -112,14 +112,17 @@ WHERE table_schema = 'public' AND column_name = 'organization_id' AND is_nullabl
 
 UNION ALL
 
--- C04: Zero invalid values (verified via pg_typeof on actual data)
-SELECT 'C04', 'zero_invalid_values',
+-- C04: No FK/UNIQUE constraints exist on converted UUID columns
+-- (Migration 005 adds composite FKs later; premature constraints = error)
+SELECT 'C04', 'no_premature_fk_unique',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' columns are not uuid type'
+    ELSE 'FAIL: ' || count(*) || ' unexpected FK/UNIQUE constraints: ' || string_agg(conname, ', ')
   END
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND (table_name, column_name) IN (
+FROM pg_constraint con
+JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey)
+WHERE con.connamespace = 'public'::regnamespace
+  AND con.contype IN ('f', 'u')
+  AND (con.conrelid::regclass::text, a.attname) IN (
     ('drivers', 'assigned_vehicle_id'),
     ('enquiries', 'customer_id'),
     ('eway_bills', 'transporter_id'),
@@ -142,7 +145,7 @@ WHERE table_schema = 'public'
     ('trips', 'vehicle_id'),
     ('tyres', 'vehicle_id'),
     ('vehicles', 'driver_id')
-  ) AND udt_name != 'uuid'
+  )
 
 UNION ALL
 

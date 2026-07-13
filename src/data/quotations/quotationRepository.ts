@@ -1,6 +1,6 @@
 import { createRepository } from '../baseRepository';
 import { supabase } from '../../lib/supabase';
-import { sanitizeForTable } from '../../lib/sanitize';
+import { sanitizeForTable, sanitizeForTableSafe } from '../../lib/sanitize';
 
 const base = createRepository<any>('quotations');
 
@@ -46,9 +46,14 @@ export const quotationRepository = {
       trip_number: `TR-${Date.now().toString(36).toUpperCase()}`,
     };
 
+    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe('trips', trip);
+    if (sanitizeErrors.length > 0) {
+      return { data: null, error: sanitizeErrors.map(e => e.message).join('; ') };
+    }
+
     const { data: newTrip, error: createErr } = await supabase
       .from('trips')
-      .insert(sanitizeForTable('trips', trip))
+      .insert(sanitized as Record<string, unknown>)
       .select()
       .single();
 

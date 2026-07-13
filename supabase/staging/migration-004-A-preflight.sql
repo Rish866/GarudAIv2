@@ -2,14 +2,18 @@
 -- Migration 004 Preflight: Schema normalization prerequisites
 -- Target: staging ybuhazlnjqjrshcvpuna
 -- Read-only: raises exception on failure, emits PASS on success
--- Checks (7 total):
+-- Checks (11 total):
 --   1. All 12 affected tables exist
 --   2. Target columns are currently TEXT type (not already converted)
 --   3. Zero non-NULL, non-empty, invalid UUID values in 22 columns
 --   4. Zero NULL organization_id values in 16 tables needing NOT NULL
---   5. Zero effective privileges for anon/authenticated/PUBLIC (dormant state)
+--   5. Zero effective privileges for anon/authenticated (dormant state)
 --   6. organization_id exists as UUID on all 16 tables
 --   7. No conflicting partially-applied state (column already UUID = prior run)
+--   8. No unexpected column types on converted columns
+--   9. No unexpected FK/UNIQUE constraints involving converted fields
+--  10. No leftover Migration 005 functions, triggers, or constraints
+--  11. No partially applied organization_id NOT NULL changes
 
 DO $preflight$
 DECLARE
@@ -301,7 +305,9 @@ BEGIN
   END IF;
   issues := NULL;
 
-  -- Check 5: Zero effective privileges for anon/authenticated/PUBLIC
+  -- Check 5: Zero effective privileges for anon/authenticated (dormant state)
+  -- Version-compatible: checks SELECT/INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER
+  -- MAINTAIN privilege checked separately via pg_class ACL for PG17+ compatibility
   SELECT array_agg(t || ':' || r || ':' || p) INTO issues
   FROM (
     SELECT t.t, r.r, p.p
@@ -312,6 +318,33 @@ BEGIN
   ) violations;
   IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
     RAISE EXCEPTION 'PREFLIGHT FAIL [5]: effective privileges found (dormant state violated): %', array_to_string(issues, ', ');
+  END IF;
+  issues := NULL;
+
+  -- Check 5b: MAINTAIN privilege (PG17+, graceful degradation)
+  IF current_setting('server_version_num')::int >= 170000 THEN
+    SELECT array_agg(t || ':' || r || ':MAINTAIN') INTO issues
+    FROM (
+      SELECT t.t, r.r
+      FROM (VALUES ('activity_log'),('approvals'),('attendance'),('bank_entries'),('branches'),('cash_entries'),('challans'),('claims'),('contracts'),('customers'),('drivers'),('enquiries'),('eway_bills'),('expenses'),('fuel_entries'),('geofences'),('gps_devices'),('indents'),('inventory'),('invoices'),('leave_requests'),('ledger_accounts'),('maintenance_records'),('market_hires'),('notifications'),('payments'),('purchases'),('quotations'),('routes'),('sales'),('transfers'),('trips'),('tyres'),('vehicles'),('vendors'),('work_orders')) AS t(t)
+      CROSS JOIN (VALUES ('anon'),('authenticated')) AS r(r)
+      WHERE has_table_privilege(r.r, 'public.' || t.t, 'MAINTAIN')
+    ) violations;
+    IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
+      RAISE EXCEPTION 'PREFLIGHT FAIL [5b]: MAINTAIN privileges found: %', array_to_string(issues, ', ');
+    END IF;
+    issues := NULL;
+  END IF;
+
+  -- Check 5c: PUBLIC role grants via pg_class ACL
+  SELECT array_agg(c.relname || ':PUBLIC:' || acl.privilege_type) INTO issues
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
+  CROSS JOIN LATERAL aclexplode(c.relacl) AS acl
+  WHERE c.relkind = 'r' AND acl.grantee = 0
+    AND c.relname IN ('activity_log','approvals','attendance','bank_entries','branches','cash_entries','challans','claims','contracts','customers','drivers','enquiries','eway_bills','expenses','fuel_entries','geofences','gps_devices','indents','inventory','invoices','leave_requests','ledger_accounts','maintenance_records','market_hires','notifications','payments','purchases','quotations','routes','sales','transfers','trips','tyres','vehicles','vendors','work_orders');
+  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
+    RAISE EXCEPTION 'PREFLIGHT FAIL [5c]: PUBLIC grants found: %', array_to_string(issues, ', ');
   END IF;
   issues := NULL;
 
@@ -362,8 +395,127 @@ BEGIN
   IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
     RAISE EXCEPTION 'PREFLIGHT FAIL [7]: columns already UUID (partial prior execution?): %', array_to_string(issues, ', ');
   END IF;
+  issues := NULL;
 
-  RAISE NOTICE 'PREFLIGHT PASS: all 7 checks passed. Safe to execute Block B.';
+  -- Check 8: No unexpected column types on converted columns (must be text pre-migration)
+  SELECT array_agg(t || '.' || c || '=' || actual_type) INTO issues
+  FROM (
+    SELECT expected.t, expected.c, cols.data_type AS actual_type
+    FROM (VALUES
+      ('drivers', 'assigned_vehicle_id'),
+      ('enquiries', 'customer_id'),
+      ('eway_bills', 'transporter_id'),
+      ('eway_bills', 'trip_id'),
+      ('expenses', 'trip_id'),
+      ('expenses', 'vehicle_id'),
+      ('fuel_entries', 'driver_id'),
+      ('fuel_entries', 'trip_id'),
+      ('fuel_entries', 'vehicle_id'),
+      ('invoices', 'customer_id'),
+      ('maintenance_records', 'vehicle_id'),
+      ('payments', 'customer_id'),
+      ('payments', 'invoice_id'),
+      ('quotations', 'customer_id'),
+      ('quotations', 'enquiry_id'),
+      ('trips', 'customer_id'),
+      ('trips', 'driver_id'),
+      ('trips', 'enquiry_id'),
+      ('trips', 'quotation_id'),
+      ('trips', 'vehicle_id'),
+      ('tyres', 'vehicle_id'),
+      ('vehicles', 'driver_id')
+    ) AS expected(t, c)
+    LEFT JOIN information_schema.columns cols
+      ON cols.table_schema = 'public' AND cols.table_name = expected.t AND cols.column_name = expected.c
+    WHERE cols.data_type IS NOT NULL AND cols.data_type NOT IN ('text', 'uuid')
+  ) mistyped;
+  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
+    RAISE EXCEPTION 'PREFLIGHT FAIL [8]: unexpected column types (expected text): %', array_to_string(issues, ', ');
+  END IF;
+  issues := NULL;
+
+  -- Check 9: No unexpected FK/UNIQUE constraints involving converted fields
+  SELECT array_agg(conname || ' on ' || conrelid::regclass::text || '(' || a.attname || ')') INTO issues
+  FROM pg_constraint con
+  JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey)
+  WHERE con.connamespace = 'public'::regnamespace
+    AND con.contype IN ('f', 'u')
+    AND (con.conrelid::regclass::text, a.attname) IN (
+      ('drivers', 'assigned_vehicle_id'),
+      ('enquiries', 'customer_id'),
+      ('eway_bills', 'transporter_id'),
+      ('eway_bills', 'trip_id'),
+      ('expenses', 'trip_id'),
+      ('expenses', 'vehicle_id'),
+      ('fuel_entries', 'driver_id'),
+      ('fuel_entries', 'trip_id'),
+      ('fuel_entries', 'vehicle_id'),
+      ('invoices', 'customer_id'),
+      ('maintenance_records', 'vehicle_id'),
+      ('payments', 'customer_id'),
+      ('payments', 'invoice_id'),
+      ('quotations', 'customer_id'),
+      ('quotations', 'enquiry_id'),
+      ('trips', 'customer_id'),
+      ('trips', 'driver_id'),
+      ('trips', 'enquiry_id'),
+      ('trips', 'quotation_id'),
+      ('trips', 'vehicle_id'),
+      ('tyres', 'vehicle_id'),
+      ('vehicles', 'driver_id')
+    );
+  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
+    RAISE EXCEPTION 'PREFLIGHT FAIL [9]: FK/UNIQUE constraints on converted columns (remove first): %', array_to_string(issues, ', ');
+  END IF;
+  issues := NULL;
+
+  -- Check 10: No leftover Migration 005 functions, triggers, or constraints
+  -- Functions: enforce_* (composite FK enforcement functions)
+  SELECT array_agg(proname) INTO issues
+  FROM pg_proc
+  WHERE pronamespace = 'public'::regnamespace
+    AND proname LIKE 'enforce_%_fk%';
+  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
+    RAISE EXCEPTION 'PREFLIGHT FAIL [10a]: leftover M005 functions: %', array_to_string(issues, ', ');
+  END IF;
+  issues := NULL;
+
+  -- Triggers: trg_enforce_* (composite FK triggers)
+  SELECT array_agg(tgname || ' on ' || tgrelid::regclass::text) INTO issues
+  FROM pg_trigger
+  WHERE tgname LIKE 'trg_enforce_%'
+    AND tgrelid::regclass::text IN ('activity_log','approvals','attendance','bank_entries','branches','cash_entries','challans','claims','contracts','customers','drivers','enquiries','eway_bills','expenses','fuel_entries','geofences','gps_devices','indents','inventory','invoices','leave_requests','ledger_accounts','maintenance_records','market_hires','notifications','payments','purchases','quotations','routes','sales','transfers','trips','tyres','vehicles','vendors','work_orders');
+  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
+    RAISE EXCEPTION 'PREFLIGHT FAIL [10b]: leftover M005 triggers: %', array_to_string(issues, ', ');
+  END IF;
+  issues := NULL;
+
+  -- Constraints: composite FK constraints from M005
+  SELECT array_agg(conname || ' on ' || conrelid::regclass::text) INTO issues
+  FROM pg_constraint
+  WHERE connamespace = 'public'::regnamespace
+    AND conname LIKE '%_org_fk%';
+  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
+    RAISE EXCEPTION 'PREFLIGHT FAIL [10c]: leftover M005 constraints: %', array_to_string(issues, ', ');
+  END IF;
+  issues := NULL;
+
+  -- Check 11: Partially applied organization_id NOT NULL (some converted, some not)
+  -- All 16 tables must be nullable (pre-migration) or all NOT NULL (post-migration)
+  -- A mix indicates partial prior execution
+  SELECT array_agg(table_name || '=' || is_nullable) INTO issues
+  FROM information_schema.columns
+  WHERE table_schema = 'public'
+    AND column_name = 'organization_id'
+    AND table_name IN ('activity_log','branches','customers','drivers','enquiries','eway_bills','expenses','fuel_entries','invoices','maintenance_records','notifications','payments','quotations','trips','tyres','vehicles')
+    AND is_nullable = 'NO';
+  -- If some but not all 16 are NOT NULL, it's partial
+  IF issues IS NOT NULL AND array_length(issues, 1) > 0 AND array_length(issues, 1) < 16 THEN
+    RAISE EXCEPTION 'PREFLIGHT FAIL [11]: partially applied NOT NULL (% of 16): %', array_length(issues, 1), array_to_string(issues, ', ');
+  END IF;
+  issues := NULL;
+
+  RAISE NOTICE 'PREFLIGHT PASS: all 11 checks passed. Safe to execute Block B.';
 END $preflight$;
 
-SELECT 'PREFLIGHT PASS: all 7 checks passed. 22 columns ready for TEXT→UUID, 16 tables ready for NOT NULL.' AS result;
+SELECT 'PREFLIGHT PASS: all 11 checks passed. 22 columns ready for TEXT->UUID, 16 tables ready for NOT NULL.' AS result;

@@ -17,7 +17,9 @@
     "typecheck": "tsc --noEmit",
     "security:generate": "node scripts/generate-authorization-manifest.mjs",
     "security:validate": "node scripts/validate-authorization-manifest.mjs",
-    "security:check": "npm run security:generate && npm run security:validate"
+    "security:check": "npm run security:generate && npm run security:validate",
+    "migration:generate": "node scripts/generate-migration-004.mjs",
+    "migration:check": "node scripts/generate-migration-004.mjs --check"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",

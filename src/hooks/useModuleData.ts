@@ -11,7 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useOrganization } from '../contexts/OrganizationContext';
-import { sanitizeForTable } from '../lib/sanitize';
+import { sanitizeForTable, sanitizeForTableSafe } from '../lib/sanitize';
 
 export interface ModuleDataResult<T> {
   data: T[];
@@ -95,10 +95,15 @@ export function useModuleData<T extends { id: string }>(
   const create = useCallback(async (record: Partial<T>): Promise<{ data: T | null; error: string | null }> => {
     if (!organizationId) return { data: null, error: 'No organization' };
 
-    const row: Record<string, unknown> = sanitizeForTable(tableName, { ...record, organization_id: organizationId });
+    // Structured error: sanitizer failures return error rather than rejecting
+    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(tableName, { ...record, organization_id: organizationId });
+    if (sanitizeErrors.length > 0) {
+      return { data: null, error: sanitizeErrors.map(e => e.message).join('; ') };
+    }
+
     const { data: created, error: createError } = await supabase
       .from(tableName)
-      .insert(row)
+      .insert(sanitized as Record<string, unknown>)
       .select()
       .single();
 
@@ -112,7 +117,13 @@ export function useModuleData<T extends { id: string }>(
   const update = useCallback(async (id: string, updates: Partial<T>): Promise<{ error: string | null }> => {
     if (!organizationId) return { error: 'No organization' };
 
-    const patch: Record<string, unknown> = sanitizeForTable(tableName, { ...updates });
+    // Structured error: sanitizer failures return error rather than rejecting
+    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(tableName, { ...updates });
+    if (sanitizeErrors.length > 0) {
+      return { error: sanitizeErrors.map(e => e.message).join('; ') };
+    }
+
+    const patch = sanitized as Record<string, unknown>;
     const { error: updateError } = await supabase
       .from(tableName)
       .update(patch)
@@ -120,7 +131,8 @@ export function useModuleData<T extends { id: string }>(
       .eq('organization_id', organizationId);
 
     if (!updateError) {
-      setData(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+      // Use the SANITIZED patch for local state so DB and UI agree
+      setData(prev => prev.map(item => item.id === id ? { ...item, ...patch } : item));
     }
 
     return { error: updateError?.message || null };

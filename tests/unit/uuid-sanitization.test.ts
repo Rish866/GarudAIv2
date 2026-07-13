@@ -1,12 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
   sanitizeForTable,
+  sanitizeForTableSafe,
   sanitizeUuidFields,
   validateUuidField,
   UUID_REFERENCE_COLUMNS,
   ALL_UUID_COLUMNS,
   UUID_REGEX,
 } from '../../src/lib/sanitize';
+import type { SanitizationError } from '../../src/lib/sanitize';
 
 // ============================================================
 // Fix 1: Inventory-driven sanitization (only 22 UUID columns affected)
@@ -345,5 +347,117 @@ describe('validateUuidField', () => {
   it('number → error message', () => {
     const err = validateUuidField('x', 123);
     expect(err).toContain('expected string or null');
+  });
+});
+
+
+
+// ============================================================
+// Fix 4: Validate every present affected value — reject invalid types
+// ============================================================
+
+describe('sanitizeForTable — type validation (numbers, booleans, arrays, objects)', () => {
+  it('throws on number in UUID field', () => {
+    expect(() => sanitizeForTable('trips', { customer_id: 42 }))
+      .toThrow(/expected string or null.*number/i);
+  });
+
+  it('throws on boolean in UUID field', () => {
+    expect(() => sanitizeForTable('expenses', { trip_id: true }))
+      .toThrow(/expected string or null.*boolean/i);
+  });
+
+  it('throws on array in UUID field', () => {
+    expect(() => sanitizeForTable('payments', { invoice_id: ['a', 'b'] }))
+      .toThrow(/expected string or null.*array/i);
+  });
+
+  it('throws on object in UUID field', () => {
+    expect(() => sanitizeForTable('quotations', { enquiry_id: { id: 'x' } }))
+      .toThrow(/expected string or null.*object/i);
+  });
+
+  it('does not reject non-UUID columns with non-string values', () => {
+    // amount is not a UUID column, so numbers are fine
+    const result = sanitizeForTable('expenses', { amount: 5000, trip_id: null });
+    expect(result.amount).toBe(5000);
+  });
+});
+
+// ============================================================
+// Fix 8: sanitizeForTableSafe — structured errors (no throws)
+// ============================================================
+
+describe('sanitizeForTableSafe — structured error contract', () => {
+  it('returns errors array for invalid UUID', () => {
+    const { data, errors } = sanitizeForTableSafe('trips', { customer_id: 'bad' });
+    expect(data).toBeNull();
+    expect(errors.length).toBe(1);
+    expect(errors[0].field).toBe('customer_id');
+    expect(errors[0].message).toContain('invalid UUID');
+  });
+
+  it('returns errors for multiple invalid fields', () => {
+    const { data, errors } = sanitizeForTableSafe('trips', {
+      customer_id: 42,
+      vehicle_id: true,
+    });
+    expect(data).toBeNull();
+    expect(errors.length).toBe(2);
+  });
+
+  it('returns sanitized data for valid input', () => {
+    const { data, errors } = sanitizeForTableSafe('trips', {
+      customer_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+      vehicle_id: '',
+      origin: 'Delhi',
+    });
+    expect(errors).toHaveLength(0);
+    expect(data).not.toBeNull();
+    expect(data!.vehicle_id).toBeNull();
+    expect(data!.origin).toBe('Delhi');
+  });
+
+  it('never throws — always returns result', () => {
+    // Should not throw even with wildly invalid input
+    const { data, errors } = sanitizeForTableSafe('trips', {
+      customer_id: [1, 2, 3],
+      vehicle_id: { nested: true },
+      driver_id: 99999,
+      quotation_id: false,
+      enquiry_id: Symbol('test') as any,
+    });
+    expect(data).toBeNull();
+    expect(errors.length).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================
+// validateUuidField — extended type coverage
+// ============================================================
+
+describe('validateUuidField — extended type rejection', () => {
+  it('rejects number with descriptive message', () => {
+    const err = validateUuidField('trip_id', 42);
+    expect(err).toContain('expected string or null');
+    expect(err).toContain('number');
+  });
+
+  it('rejects boolean with descriptive message', () => {
+    const err = validateUuidField('vehicle_id', false);
+    expect(err).toContain('expected string or null');
+    expect(err).toContain('boolean');
+  });
+
+  it('rejects array with descriptive message', () => {
+    const err = validateUuidField('driver_id', [1, 2]);
+    expect(err).toContain('expected string or null');
+    expect(err).toContain('array');
+  });
+
+  it('rejects object with descriptive message', () => {
+    const err = validateUuidField('customer_id', { foo: 'bar' });
+    expect(err).toContain('expected string or null');
+    expect(err).toContain('object');
   });
 });

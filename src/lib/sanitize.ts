@@ -1,13 +1,33 @@
 /**
  * Inventory-Driven UUID Sanitization for Migration 004
- * 
+ *
  * ONLY the 22 approved nullable UUID reference columns are sanitized.
  * Unrelated TEXT fields (names, descriptions, status, etc.) remain unchanged.
- * 
+ *
  * After Migration 004 converts these columns from TEXT to UUID, PostgreSQL
  * rejects empty strings as invalid UUID. This sanitizer converts '' and
  * whitespace-only strings to null ONLY for the listed fields.
+ *
+ * Validation (requirement 4): Every present affected value is validated.
+ * Invalid strings, numbers, booleans, arrays, and objects are rejected
+ * with a structured error rather than an unexpected promise rejection.
  */
+
+/**
+ * Structured error returned by sanitization failures.
+ * Method contracts: sanitizer failures return/set these rather than throwing.
+ */
+export interface SanitizationError {
+  field: string;
+  message: string;
+  value?: unknown;
+}
+
+export interface SanitizationResult<T> {
+  data: T | null;
+  errors: SanitizationError[];
+}
+
 
 /**
  * Canonical inventory of nullable UUID reference columns per table.
@@ -42,29 +62,76 @@ export const ALL_UUID_COLUMNS: Set<string> = new Set(
  */
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+
 /**
  * Validate that a value is null, undefined, empty (will be sanitized), or a valid UUID.
  * Returns an error message if invalid, or null if valid.
+ *
+ * Rejects: non-string types (numbers, booleans, arrays, objects), invalid UUID strings.
  */
 export function validateUuidField(fieldName: string, value: unknown): string | null {
   if (value === null || value === undefined) return null;
+  if (typeof value === 'number') return `${fieldName}: expected string or null, got number (${value})`;
+  if (typeof value === 'boolean') return `${fieldName}: expected string or null, got boolean (${value})`;
+  if (Array.isArray(value)) return `${fieldName}: expected string or null, got array`;
+  if (typeof value === 'object') return `${fieldName}: expected string or null, got object`;
   if (typeof value !== 'string') return `${fieldName}: expected string or null, got ${typeof value}`;
   if (value.trim() === '') return null; // Will be sanitized to null
   if (!UUID_REGEX.test(value)) return `${fieldName}: invalid UUID format '${value}'`;
   return null;
 }
 
+
 /**
- * Sanitize a record for a SPECIFIC table.
+ * Sanitize a record for a SPECIFIC table — structured error variant.
+ * Returns { data, errors } instead of throwing, preserving method contracts.
+ *
+ * Validates every present affected value. Rejects invalid strings, numbers,
+ * booleans, arrays, and objects before calling Supabase.
+ */
+export function sanitizeForTableSafe<T extends Record<string, unknown>>(
+  tableName: string,
+  record: T
+): SanitizationResult<T> {
+  const uuidCols = UUID_REFERENCE_COLUMNS[tableName];
+  if (!uuidCols || uuidCols.size === 0) return { data: record, errors: [] };
+
+  const errors: SanitizationError[] = [];
+  const sanitized = { ...record };
+
+  for (const col of uuidCols) {
+    if (!(col in sanitized)) continue;
+    const value = sanitized[col];
+
+    const err = validateUuidField(col, value);
+    if (err) {
+      errors.push({ field: col, message: err, value });
+      continue;
+    }
+
+    // Sanitize empty/whitespace strings to null
+    if (typeof value === 'string' && value.trim() === '') {
+      (sanitized as Record<string, unknown>)[col] = null;
+    }
+  }
+
+  if (errors.length > 0) return { data: null, errors };
+  return { data: sanitized, errors: [] };
+}
+
+
+/**
+ * Sanitize a record for a SPECIFIC table (throwing variant, backward-compatible).
  * Only converts empty/whitespace strings to null for the 22 approved UUID columns.
  * All other fields pass through unchanged.
- * 
- * Also validates UUID format for affected columns — throws if invalid.
- * 
+ *
+ * Also validates UUID format AND type for affected columns — throws if invalid.
+ * Rejects: non-string types (numbers, booleans, arrays, objects), invalid UUID strings.
+ *
  * @param tableName - The target table (must be in UUID_REFERENCE_COLUMNS)
  * @param record - The insert/update payload
  * @returns Sanitized record (shallow copy)
- * @throws Error if a UUID column contains an invalid non-empty value
+ * @throws Error if a UUID column contains an invalid value
  */
 export function sanitizeForTable<T extends Record<string, unknown>>(
   tableName: string,
@@ -77,22 +144,24 @@ export function sanitizeForTable<T extends Record<string, unknown>>(
   for (const col of uuidCols) {
     if (!(col in sanitized)) continue;
     const value = sanitized[col];
-    if (typeof value === 'string') {
-      if (value.trim() === '') {
-        (sanitized as Record<string, unknown>)[col] = null;
-      } else {
-        const err = validateUuidField(col, value);
-        if (err) throw new Error(`sanitizeForTable(${tableName}): ${err}`);
-      }
+
+    // Validate type and format for every present affected value
+    const err = validateUuidField(col, value);
+    if (err) throw new Error(`sanitizeForTable(${tableName}): ${err}`);
+
+    // Sanitize empty/whitespace strings to null
+    if (typeof value === 'string' && value.trim() === '') {
+      (sanitized as Record<string, unknown>)[col] = null;
     }
   }
   return sanitized;
 }
 
+
 /**
  * Table-agnostic sanitization — for use when table name is passed separately.
  * Applies the same logic using the ALL_UUID_COLUMNS set.
- * 
+ *
  * Use sanitizeForTable() when the table name is known (preferred).
  */
 export function sanitizeUuidFields<T extends Record<string, unknown>>(record: T): T {
@@ -100,12 +169,12 @@ export function sanitizeUuidFields<T extends Record<string, unknown>>(record: T)
   for (const col of ALL_UUID_COLUMNS) {
     if (!(col in sanitized)) continue;
     const value = sanitized[col];
-    if (typeof value === 'string') {
-      if (value.trim() === '') {
-        (sanitized as Record<string, unknown>)[col] = null;
-      } else if (!UUID_REGEX.test(value)) {
-        throw new Error(`sanitizeUuidFields: invalid UUID in '${col}': '${value}'`);
-      }
+
+    const err = validateUuidField(col, value);
+    if (err) throw new Error(`sanitizeUuidFields: ${err}`);
+
+    if (typeof value === 'string' && value.trim() === '') {
+      (sanitized as Record<string, unknown>)[col] = null;
     }
   }
   return sanitized;
