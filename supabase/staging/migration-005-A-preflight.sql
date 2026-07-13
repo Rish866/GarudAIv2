@@ -119,11 +119,11 @@ BEGIN
   SELECT array_agg(
     e.expected_name || ': ' || CASE
       WHEN con.conname IS NULL THEN 'MISSING'
-      WHEN con.contype != 'f' THEN 'not FK (type=' || con.contype || ')'
+      WHEN con.contype != 'f' THEN 'not FK (type=' || con.contype::text || ')'
       WHEN NOT con.convalidated THEN 'NOT VALIDATED'
-      WHEN con.confmatchtype != 's' THEN 'MATCH type=' || con.confmatchtype
-      WHEN con.confupdtype != 'a' THEN 'ON UPDATE=' || con.confupdtype
-      WHEN con.confdeltype != 'a' THEN 'ON DELETE=' || con.confdeltype
+      WHEN con.confmatchtype != 's' THEN 'MATCH type=' || con.confmatchtype::text
+      WHEN con.confupdtype != 'a' THEN 'ON UPDATE=' || con.confupdtype::text
+      WHEN con.confdeltype != 'a' THEN 'ON DELETE=' || con.confdeltype::text
       WHEN con.conrelid::regclass::text != e.expected_src_table THEN 'src_table=' || con.conrelid::regclass::text
       WHEN array_length(con.conkey, 1) != 1 THEN 'src_cols=' || array_length(con.conkey, 1)
       WHEN (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1]) != e.expected_src_col

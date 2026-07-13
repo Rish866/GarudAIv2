@@ -91,7 +91,7 @@ UNION ALL
 
 SELECT 'C05', 'fk_validated_match_actions',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || string_agg(i.conname || '(v=' || i.convalidated || ',m=' || i.confmatchtype || ',u=' || i.confupdtype || ',d=' || i.confdeltype || ')', ', ')
+    ELSE 'FAIL: ' || string_agg(i.conname || '(v=' || i.convalidated::text || ',m=' || i.confmatchtype::text || ',u=' || i.confupdtype::text || ',d=' || i.confdeltype::text || ')', ', ')
   END
 FROM installed_fks i WHERE NOT i.convalidated OR i.confmatchtype != 's' OR i.confupdtype != 'a' OR i.confdeltype != 'a'
 

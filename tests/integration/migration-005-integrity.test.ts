@@ -177,26 +177,31 @@ describe('Migration 005 — Block C is Read-Only', () => {
 describe('Migration 005 — Block D Transactional Tests', () => {
   const blockD = readFileSync('supabase/staging/migration-005-D-transactional-tests.sql', 'utf8');
 
-  it('creates baseline table BEFORE BEGIN (survives ROLLBACK)', () => {
-    const beginIdx = blockD.indexOf('BEGIN;');
-    const baselineIdx = blockD.indexOf('_m005_baselines');
-    expect(baselineIdx).toBeLessThan(beginIdx);
-    expect(blockD).toContain('DROP TABLE IF EXISTS pg_temp._m005_baselines');
-    expect(blockD).toContain('ON COMMIT PRESERVE ROWS');
+  it('uses outer DO $wrapper$ block (no temp tables needed)', () => {
+    expect(blockD).toContain('DO $wrapper$');
+    expect(blockD).not.toContain('CREATE TEMP TABLE');
+    expect(blockD).not.toContain('BEGIN;');  // No explicit BEGIN/ROLLBACK — uses exception subtransaction
   });
 
-  it('begins a transaction after baselines', () => {
-    expect(blockD).toContain('BEGIN;');
+  it('captures baselines in PL/pgSQL variables', () => {
+    expect(blockD).toContain('b_organizations');
+    expect(blockD).toContain('b_customers');
+    expect(blockD).toContain('b_expenses');
   });
 
-  it('always rolls back', () => {
-    expect(blockD).toContain('ROLLBACK;');
-    expect(blockD).not.toContain('COMMIT;');
+  it('uses inner BEGIN/EXCEPTION subtransaction for automatic rollback', () => {
+    expect(blockD).toContain('_m005_deliberate_rollback');
+    expect(blockD).toContain('EXCEPTION WHEN OTHERS THEN');
+  });
+
+  it('compares post-rollback counts to baselines', () => {
+    expect(blockD).toContain('a_organizations');
+    expect(blockD).toContain('mismatches');
+    expect(blockD).toContain('row_counts_match_baselines');
   });
 
   it('exercises same-org reference', () => {
     expect(blockD).toContain('TEST 1');
-    expect(blockD).toContain('same-org reference succeeds');
   });
 
   it('exercises cross-org rejection', () => {
@@ -211,17 +216,15 @@ describe('Migration 005 — Block D Transactional Tests', () => {
 
   it('exercises NULL optional reference', () => {
     expect(blockD).toContain('TEST 4');
-    expect(blockD).toContain('NULL');
   });
 
   it('exercises circular vehicles↔drivers', () => {
     expect(blockD).toContain('TEST 5');
-    expect(blockD).toContain('driver_id');
     expect(blockD).toContain('assigned_vehicle_id');
   });
 
-  it('verifies row counts match baselines after rollback', () => {
-    expect(blockD).toContain('row_counts_match_baselines');
+  it('exercises cross-org circular rejection', () => {
+    expect(blockD).toContain('TEST 6');
   });
 
   it('is clearly labeled as transactional DML (not read-only)', () => {
