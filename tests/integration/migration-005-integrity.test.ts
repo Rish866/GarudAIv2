@@ -212,8 +212,8 @@ describe('Migration 005 — Block D Transactional Tests', () => {
     expect(blockD).toContain('assigned_vehicle_id');
   });
 
-  it('verifies zero rows after rollback', () => {
-    expect(blockD).toContain('zero_rows_after_rollback');
+  it('verifies row counts match baselines after rollback', () => {
+    expect(blockD).toContain('row_counts_match_baselines');
   });
 
   it('is clearly labeled as transactional DML (not read-only)', () => {

@@ -7,6 +7,20 @@
 
 BEGIN;
 
+-- Record baseline row counts BEFORE test data (do not assume zero)
+CREATE TEMP TABLE _m005_baselines(tbl TEXT PRIMARY KEY, cnt BIGINT);
+INSERT INTO _m005_baselines VALUES ('organizations',(SELECT count(*) FROM public.organizations));
+INSERT INTO _m005_baselines VALUES ('customers',(SELECT count(*) FROM public.customers));
+INSERT INTO _m005_baselines VALUES ('drivers',(SELECT count(*) FROM public.drivers));
+INSERT INTO _m005_baselines VALUES ('vehicles',(SELECT count(*) FROM public.vehicles));
+INSERT INTO _m005_baselines VALUES ('trips',(SELECT count(*) FROM public.trips));
+INSERT INTO _m005_baselines VALUES ('enquiries',(SELECT count(*) FROM public.enquiries));
+INSERT INTO _m005_baselines VALUES ('quotations',(SELECT count(*) FROM public.quotations));
+INSERT INTO _m005_baselines VALUES ('invoices',(SELECT count(*) FROM public.invoices));
+INSERT INTO _m005_baselines VALUES ('vendors',(SELECT count(*) FROM public.vendors));
+INSERT INTO _m005_baselines VALUES ('branches',(SELECT count(*) FROM public.branches));
+INSERT INTO _m005_baselines VALUES ('expenses',(SELECT count(*) FROM public.expenses));
+
 DO $tests$
 DECLARE
   org_a UUID := gen_random_uuid();
@@ -35,7 +49,7 @@ BEGIN
   INSERT INTO public.drivers (id, organization_id, name) VALUES (drv_a, org_a, 'Driver A');
   INSERT INTO public.vehicles (id, organization_id, reg_number) VALUES (veh_a, org_a, 'KA01XX1234');
   INSERT INTO public.trips (id, organization_id, customer_id, status, trip_number) VALUES (trip_a, org_a, cust_a, 'booked', 'TR-TEST1');
-  INSERT INTO public.enquiries (id, organization_id, customer_id, status) VALUES (enq_a, org_a, cust_a, 'open');
+  INSERT INTO public.enquiries (id, organization_id, customer_id, status) VALUES (enq_a, org_a, cust_a, 'new');
   INSERT INTO public.quotations (id, organization_id, customer_id, enquiry_id, status, quotation_number) VALUES (quot_a, org_a, cust_a, enq_a, 'draft', 'QT-TEST1');
   INSERT INTO public.invoices (id, organization_id, customer_id, invoice_number, status) VALUES (inv_a, org_a, cust_a, 'INV-TEST1', 'draft');
   INSERT INTO public.vendors (id, organization_id, name) VALUES (vendor_a, org_a, 'Vendor A');
@@ -120,16 +134,29 @@ BEGIN
   RAISE NOTICE 'ALL 6 TRANSACTIONAL TESTS PASSED';
 END $tests$;
 
--- Always rollback: leaves zero rows
+-- Always rollback: leaves row counts unchanged
 ROLLBACK;
 
--- Verify zero rows remain in application tables after rollback
-SELECT 'D_ROLLBACK' AS check_id, 'zero_rows_after_rollback' AS check_name,
-  CASE WHEN (SELECT count(*) FROM public.expenses) = 0
-    AND (SELECT count(*) FROM public.trips) = 0
-    AND (SELECT count(*) FROM public.customers) = 0
-    AND (SELECT count(*) FROM public.vehicles) = 0
-    AND (SELECT count(*) FROM public.drivers) = 0
-    THEN 'PASS'
-    ELSE 'FAIL: rows remain after ROLLBACK'
-  END AS result;
+-- Verify row counts match baselines after rollback (proves transactional safety)
+SELECT 'D_ROLLBACK' AS check_id, 'row_counts_match_baselines' AS check_name,
+  CASE WHEN count(*) = 0 THEN 'PASS'
+    ELSE 'FAIL: row count changed for: ' || string_agg(tbl || '(baseline=' || baseline || ',now=' || current_cnt || ')', ', ')
+  END AS result
+FROM (
+  SELECT b.tbl, b.cnt AS baseline, CASE b.tbl
+    WHEN 'organizations' THEN (SELECT count(*) FROM public.organizations)
+    WHEN 'customers' THEN (SELECT count(*) FROM public.customers)
+    WHEN 'drivers' THEN (SELECT count(*) FROM public.drivers)
+    WHEN 'vehicles' THEN (SELECT count(*) FROM public.vehicles)
+    WHEN 'trips' THEN (SELECT count(*) FROM public.trips)
+    WHEN 'enquiries' THEN (SELECT count(*) FROM public.enquiries)
+    WHEN 'quotations' THEN (SELECT count(*) FROM public.quotations)
+    WHEN 'invoices' THEN (SELECT count(*) FROM public.invoices)
+    WHEN 'vendors' THEN (SELECT count(*) FROM public.vendors)
+    WHEN 'branches' THEN (SELECT count(*) FROM public.branches)
+    WHEN 'expenses' THEN (SELECT count(*) FROM public.expenses)
+  END AS current_cnt
+  FROM _m005_baselines b
+) cmp WHERE baseline != current_cnt;
+
+DROP TABLE IF EXISTS _m005_baselines;

@@ -69,7 +69,7 @@ SELECT 'C02', 'fk_source_columns',
     ELSE 'FAIL: ' || string_agg(i.conname || '(' || i.src_col1 || ',' || i.src_col2 || ')', ', ')
   END
 FROM installed_fks i JOIN expected_fks e ON e.fk_name = i.conname
-WHERE i.src_col_count != 2 OR i.src_col1 != 'organization_id' OR i.src_col2 != e.src_col
+WHERE i.src_col_count != 2 OR i.src_table != e.src_table OR i.src_col1 != 'organization_id' OR i.src_col2 != e.src_col
 
 UNION ALL
 
@@ -99,10 +99,12 @@ UNION ALL
 
 SELECT 'C06', 'no_extra_composite_fks',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' unexpected: ' || string_agg(conname, ', ')
+    ELSE 'FAIL: ' || count(*) || ' unexpected: ' || string_agg(conname || ' on ' || conrelid::regclass::text, ', ')
   END
 FROM pg_constraint WHERE connamespace = 'public'::regnamespace AND contype = 'f'
-  AND array_length(conkey, 1) = 2 AND conname LIKE 'fk_%_org'
+  AND array_length(conkey, 1) = 2
+  AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = conrelid AND a.attnum = conkey[1]) = 'organization_id'
+  AND conrelid::regclass::text IN ('attendance','challans','claims','contracts','drivers','enquiries','eway_bills','expenses','fuel_entries','gps_devices','indents','invoices','leave_requests','maintenance_records','payments','quotations','transfers','trips','tyres','vehicles','work_orders')
   AND conname NOT IN ('fk_attendance_employee_id_org','fk_challans_driver_id_org','fk_challans_vehicle_id_org','fk_claims_trip_id_org','fk_contracts_customer_id_org','fk_drivers_assigned_vehicle_id_org','fk_enquiries_customer_id_org','fk_eway_bills_transporter_id_org','fk_eway_bills_trip_id_org','fk_expenses_trip_id_org','fk_expenses_vehicle_id_org','fk_fuel_entries_driver_id_org','fk_fuel_entries_trip_id_org','fk_fuel_entries_vehicle_id_org','fk_gps_devices_vehicle_id_org','fk_indents_customer_id_org','fk_indents_trip_id_org','fk_invoices_customer_id_org','fk_leave_requests_employee_id_org','fk_maintenance_records_vehicle_id_org','fk_payments_customer_id_org','fk_payments_invoice_id_org','fk_quotations_customer_id_org','fk_quotations_enquiry_id_org','fk_transfers_from_branch_org','fk_transfers_to_branch_org','fk_trips_customer_id_org','fk_trips_driver_id_org','fk_trips_enquiry_id_org','fk_trips_quotation_id_org','fk_trips_vehicle_id_org','fk_tyres_vehicle_id_org','fk_vehicles_driver_id_org','fk_work_orders_vehicle_id_org')
 
 UNION ALL
@@ -135,11 +137,12 @@ FROM (
   ) AS e(uq_name, expected_table)
   LEFT JOIN pg_constraint con ON con.connamespace = 'public'::regnamespace
     AND con.conname = e.uq_name AND con.contype = 'u'
+    AND con.conrelid::regclass::text = e.expected_table
 ) sub WHERE issue IS NOT NULL
 
 UNION ALL
 
--- C08: No unexpected equivalent UNIQUE(org_id,id) duplicates
+-- C08: No unexpected equivalent UNIQUE(organization_id,id) duplicates (exact ordered columns)
 SELECT 'C08', 'no_duplicate_uniques',
   CASE WHEN count(*) = 0 THEN 'PASS'
     ELSE 'FAIL: ' || string_agg(conname || ' on ' || conrelid::regclass::text, ', ')
@@ -147,6 +150,8 @@ SELECT 'C08', 'no_duplicate_uniques',
 FROM pg_constraint WHERE connamespace = 'public'::regnamespace AND contype = 'u'
   AND conrelid::regclass::text IN ('branches','customers','drivers','enquiries','invoices','quotations','trips','vehicles','vendors')
   AND array_length(conkey, 1) = 2
+  AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = conrelid AND a.attnum = conkey[1]) = 'organization_id'
+  AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = conrelid AND a.attnum = conkey[2]) = 'id'
   AND conname NOT IN ('uq_branches_org_id','uq_customers_org_id','uq_drivers_org_id','uq_enquiries_org_id','uq_invoices_org_id','uq_quotations_org_id','uq_trips_org_id','uq_vehicles_org_id','uq_vendors_org_id')
 
 UNION ALL
@@ -225,7 +230,7 @@ FROM pg_constraint WHERE connamespace = 'public'::regnamespace
 UNION ALL
 
 -- C12: Zero effective privileges (anon/authenticated/PUBLIC/MAINTAIN)
-SELECT 'C12', 'zero_privileges',
+SELECT 'C12', 'zero_anon_auth_privileges',
   CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL: ' || count(*) || ' privileges' END
 FROM (
   SELECT 1 FROM (VALUES ('activity_log'),('approvals'),('attendance'),('bank_entries'),('branches'),('cash_entries'),('challans'),('claims'),('contracts'),('customers'),('drivers'),('enquiries'),('eway_bills'),('expenses'),('fuel_entries'),('geofences'),('gps_devices'),('indents'),('inventory'),('invoices'),('leave_requests'),('ledger_accounts'),('maintenance_records'),('market_hires'),('notifications'),('payments'),('purchases'),('quotations'),('routes'),('sales'),('transfers'),('trips'),('tyres'),('vehicles'),('vendors'),('work_orders')) AS t(t)
@@ -233,5 +238,30 @@ FROM (
   CROSS JOIN (VALUES ('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')) AS p(p)
   WHERE has_table_privilege(r.r, 'public.'||t.t, p.p)
 ) v
+
+UNION ALL
+
+-- C13: Zero MAINTAIN privilege (PG17+, graceful skip on older)
+SELECT 'C13', 'zero_maintain_privilege',
+  CASE
+    WHEN current_setting('server_version_num')::int < 170000 THEN 'PASS (skipped: server < PG17)'
+    WHEN count(*) = 0 THEN 'PASS'
+    ELSE 'FAIL: ' || count(*) || ' MAINTAIN privileges'
+  END
+FROM (
+  SELECT 1 FROM (VALUES ('activity_log'),('approvals'),('attendance'),('bank_entries'),('branches'),('cash_entries'),('challans'),('claims'),('contracts'),('customers'),('drivers'),('enquiries'),('eway_bills'),('expenses'),('fuel_entries'),('geofences'),('gps_devices'),('indents'),('inventory'),('invoices'),('leave_requests'),('ledger_accounts'),('maintenance_records'),('market_hires'),('notifications'),('payments'),('purchases'),('quotations'),('routes'),('sales'),('transfers'),('trips'),('tyres'),('vehicles'),('vendors'),('work_orders')) AS t(t)
+  CROSS JOIN (VALUES ('anon'),('authenticated')) AS r(r)
+  WHERE current_setting('server_version_num')::int >= 170000
+    AND has_table_privilege(r.r, 'public.'||t.t, 'MAINTAIN')
+) v
+
+UNION ALL
+
+-- C14: Zero PUBLIC grants
+SELECT 'C14', 'zero_public_grants',
+  CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL: ' || count(*) || ' PUBLIC grants' END
+FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace AND n.nspname='public'
+CROSS JOIN LATERAL aclexplode(c.relacl) AS acl WHERE c.relkind='r' AND acl.grantee=0
+  AND c.relname IN ('activity_log','approvals','attendance','bank_entries','branches','cash_entries','challans','claims','contracts','customers','drivers','enquiries','eway_bills','expenses','fuel_entries','geofences','gps_devices','indents','inventory','invoices','leave_requests','ledger_accounts','maintenance_records','market_hires','notifications','payments','purchases','quotations','routes','sales','transfers','trips','tyres','vehicles','vendors','work_orders')
 
 ORDER BY check_id;

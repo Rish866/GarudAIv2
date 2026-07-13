@@ -114,8 +114,8 @@ BEGIN
   issues := NULL;
 
   -- Check 4: Old simple FKs verified by exact catalog mapping
-  -- Verifies: name, source schema/table, source columns, target schema/table,
-  --   target columns, contype=f, convalidated=true, MATCH SIMPLE, NO ACTION
+  -- Verifies: name, source table, exact source column, target table, target column=id,
+  --   contype=f, convalidated=true, MATCH SIMPLE, NO ACTION
   SELECT array_agg(
     e.expected_name || ': ' || CASE
       WHEN con.conname IS NULL THEN 'MISSING'
@@ -126,24 +126,28 @@ BEGIN
       WHEN con.confdeltype != 'a' THEN 'ON DELETE=' || con.confdeltype
       WHEN con.conrelid::regclass::text != e.expected_src_table THEN 'src_table=' || con.conrelid::regclass::text
       WHEN array_length(con.conkey, 1) != 1 THEN 'src_cols=' || array_length(con.conkey, 1)
+      WHEN (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1]) != e.expected_src_col
+        THEN 'src_col=' || (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1])
       WHEN con.confrelid::regclass::text != e.expected_tgt_table THEN 'tgt_table=' || con.confrelid::regclass::text
       WHEN array_length(con.confkey, 1) != 1 THEN 'tgt_cols=' || array_length(con.confkey, 1)
+      WHEN (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.confrelid AND a.attnum = con.confkey[1]) != 'id'
+        THEN 'tgt_col=' || (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.confrelid AND a.attnum = con.confkey[1])
       ELSE NULL END
   ) INTO issues
   FROM (VALUES
-    ('attendance_employee_id_fkey', 'attendance', 'drivers'),
-    ('challans_driver_id_fkey', 'challans', 'drivers'),
-    ('challans_vehicle_id_fkey', 'challans', 'vehicles'),
-    ('claims_trip_id_fkey', 'claims', 'trips'),
-    ('contracts_customer_id_fkey', 'contracts', 'customers'),
-    ('gps_devices_vehicle_id_fkey', 'gps_devices', 'vehicles'),
-    ('indents_customer_id_fkey', 'indents', 'customers'),
-    ('indents_trip_id_fkey', 'indents', 'trips'),
-    ('leave_requests_employee_id_fkey', 'leave_requests', 'drivers'),
-    ('transfers_from_branch_fkey', 'transfers', 'branches'),
-    ('transfers_to_branch_fkey', 'transfers', 'branches'),
-    ('work_orders_vehicle_id_fkey', 'work_orders', 'vehicles')
-  ) AS e(expected_name, expected_src_table, expected_tgt_table)
+    ('attendance_employee_id_fkey', 'attendance', 'employee_id', 'drivers'),
+    ('challans_driver_id_fkey', 'challans', 'driver_id', 'drivers'),
+    ('challans_vehicle_id_fkey', 'challans', 'vehicle_id', 'vehicles'),
+    ('claims_trip_id_fkey', 'claims', 'trip_id', 'trips'),
+    ('contracts_customer_id_fkey', 'contracts', 'customer_id', 'customers'),
+    ('gps_devices_vehicle_id_fkey', 'gps_devices', 'vehicle_id', 'vehicles'),
+    ('indents_customer_id_fkey', 'indents', 'customer_id', 'customers'),
+    ('indents_trip_id_fkey', 'indents', 'trip_id', 'trips'),
+    ('leave_requests_employee_id_fkey', 'leave_requests', 'employee_id', 'drivers'),
+    ('transfers_from_branch_fkey', 'transfers', 'from_branch', 'branches'),
+    ('transfers_to_branch_fkey', 'transfers', 'to_branch', 'branches'),
+    ('work_orders_vehicle_id_fkey', 'work_orders', 'vehicle_id', 'vehicles')
+  ) AS e(expected_name, expected_src_table, expected_src_col, expected_tgt_table)
   LEFT JOIN pg_constraint con ON con.connamespace = 'public'::regnamespace AND con.conname = e.expected_name
   WHERE con.conname IS NULL
     OR con.contype != 'f'
@@ -153,8 +157,10 @@ BEGIN
     OR con.confdeltype != 'a'
     OR con.conrelid::regclass::text != e.expected_src_table
     OR array_length(con.conkey, 1) != 1
+    OR (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1]) != e.expected_src_col
     OR con.confrelid::regclass::text != e.expected_tgt_table
-    OR array_length(con.confkey, 1) != 1;
+    OR array_length(con.confkey, 1) != 1
+    OR (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.confrelid AND a.attnum = con.confkey[1]) != 'id';
   IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
     RAISE EXCEPTION 'PREFLIGHT FAIL [4]: old FK catalog mismatch: %', array_to_string(issues, ', ');
   END IF;
@@ -169,11 +175,12 @@ BEGIN
   END IF;
   issues := NULL;
 
-  -- Check 6: No equivalent composite FK (any name) on expected source relationships
+  -- Check 6: No equivalent composite FK (any name) with exact (organization_id, source_col)
   SELECT array_agg(con.conname || ' on ' || con.conrelid::regclass::text) INTO issues
   FROM pg_constraint con
   WHERE con.connamespace = 'public'::regnamespace AND con.contype = 'f'
     AND array_length(con.conkey, 1) = 2
+    AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1]) = 'organization_id'
     AND (con.conrelid::regclass::text, (
       SELECT a.attname FROM pg_attribute a
       WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[2]
@@ -218,14 +225,16 @@ BEGIN
   END IF;
   issues := NULL;
 
-  -- Check 7: No existing UNIQUE/index covering (organization_id, id) on target tables
+  -- Check 7: No existing UNIQUE with exact ordered columns (organization_id, id) on target tables
   SELECT array_agg(con.conname || ' on ' || con.conrelid::regclass::text) INTO issues
   FROM pg_constraint con
   WHERE con.connamespace = 'public'::regnamespace AND con.contype = 'u'
     AND con.conrelid::regclass::text IN ('branches','customers','drivers','enquiries','invoices','quotations','trips','vehicles','vendors')
-    AND array_length(con.conkey, 1) = 2;
+    AND array_length(con.conkey, 1) = 2
+    AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1]) = 'organization_id'
+    AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[2]) = 'id';
   IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
-    RAISE EXCEPTION 'PREFLIGHT FAIL [7]: equivalent UNIQUE constraints found: %', array_to_string(issues, ', ');
+    RAISE EXCEPTION 'PREFLIGHT FAIL [7]: equivalent UNIQUE(organization_id,id) found: %', array_to_string(issues, ', ');
   END IF;
   issues := NULL;
 

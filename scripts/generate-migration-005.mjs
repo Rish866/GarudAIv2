@@ -108,8 +108,8 @@ function generateBlockA() {
 function generateBlockA_check4(L) {
   // Check 4: Old simple FKs verified by exact catalog mapping (all 9 attributes)
   L.push('  -- Check 4: Old simple FKs verified by exact catalog mapping');
-  L.push('  -- Verifies: name, source schema/table, source columns, target schema/table,');
-  L.push('  --   target columns, contype=f, convalidated=true, MATCH SIMPLE, NO ACTION');
+  L.push('  -- Verifies: name, source table, exact source column, target table, target column=id,');
+  L.push('  --   contype=f, convalidated=true, MATCH SIMPLE, NO ACTION');
   L.push('  SELECT array_agg(');
   L.push("    e.expected_name || ': ' || CASE");
   L.push("      WHEN con.conname IS NULL THEN 'MISSING'");
@@ -120,17 +120,21 @@ function generateBlockA_check4(L) {
   L.push("      WHEN con.confdeltype != 'a' THEN 'ON DELETE=' || con.confdeltype");
   L.push("      WHEN con.conrelid::regclass::text != e.expected_src_table THEN 'src_table=' || con.conrelid::regclass::text");
   L.push("      WHEN array_length(con.conkey, 1) != 1 THEN 'src_cols=' || array_length(con.conkey, 1)");
+  L.push("      WHEN (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1]) != e.expected_src_col");
+  L.push("        THEN 'src_col=' || (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1])");
   L.push("      WHEN con.confrelid::regclass::text != e.expected_tgt_table THEN 'tgt_table=' || con.confrelid::regclass::text");
   L.push("      WHEN array_length(con.confkey, 1) != 1 THEN 'tgt_cols=' || array_length(con.confkey, 1)");
+  L.push("      WHEN (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.confrelid AND a.attnum = con.confkey[1]) != 'id'");
+  L.push("        THEN 'tgt_col=' || (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.confrelid AND a.attnum = con.confkey[1])");
   L.push("      ELSE NULL END");
   L.push('  ) INTO issues');
   L.push('  FROM (VALUES');
   for (let i = 0; i < oldFKs.length; i++) {
     const r = oldFKs[i];
     const comma = i < oldFKs.length - 1 ? ',' : '';
-    L.push(`    ('${r.old_fk_name}', '${r.source_table}', '${r.target_table}')${comma}`);
+    L.push(`    ('${r.old_fk_name}', '${r.source_table}', '${r.source_column}', '${r.target_table}')${comma}`);
   }
-  L.push('  ) AS e(expected_name, expected_src_table, expected_tgt_table)');
+  L.push('  ) AS e(expected_name, expected_src_table, expected_src_col, expected_tgt_table)');
   L.push("  LEFT JOIN pg_constraint con ON con.connamespace = 'public'::regnamespace AND con.conname = e.expected_name");
   L.push('  WHERE con.conname IS NULL');
   L.push("    OR con.contype != 'f'");
@@ -140,8 +144,10 @@ function generateBlockA_check4(L) {
   L.push("    OR con.confdeltype != 'a'");
   L.push("    OR con.conrelid::regclass::text != e.expected_src_table");
   L.push('    OR array_length(con.conkey, 1) != 1');
+  L.push("    OR (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1]) != e.expected_src_col");
   L.push("    OR con.confrelid::regclass::text != e.expected_tgt_table");
-  L.push('    OR array_length(con.confkey, 1) != 1;');
+  L.push('    OR array_length(con.confkey, 1) != 1');
+  L.push("    OR (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.confrelid AND a.attnum = con.confkey[1]) != 'id';");
   L.push('  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN');
   L.push("    RAISE EXCEPTION 'PREFLIGHT FAIL [4]: old FK catalog mismatch: %', array_to_string(issues, ', ');");
   L.push('  END IF;');
@@ -163,12 +169,13 @@ function generateBlockA_checks5to10(L) {
   L.push('  issues := NULL;');
   L.push('');
 
-  // Check 6: No equivalent composite FK regardless of name
-  L.push('  -- Check 6: No equivalent composite FK (any name) on expected source relationships');
+  // Check 6: No equivalent composite FK regardless of name — exact ordered columns
+  L.push('  -- Check 6: No equivalent composite FK (any name) with exact (organization_id, source_col)');
   L.push('  SELECT array_agg(con.conname || \' on \' || con.conrelid::regclass::text) INTO issues');
   L.push('  FROM pg_constraint con');
   L.push("  WHERE con.connamespace = 'public'::regnamespace AND con.contype = 'f'");
   L.push('    AND array_length(con.conkey, 1) = 2');
+  L.push("    AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1]) = 'organization_id'");
   L.push('    AND (con.conrelid::regclass::text, (');
   L.push('      SELECT a.attname FROM pg_attribute a');
   L.push('      WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[2]');
@@ -181,15 +188,17 @@ function generateBlockA_checks5to10(L) {
   L.push('  issues := NULL;');
   L.push('');
 
-  // Check 7: No conflicting/equivalent UNIQUE(org_id,id) on target tables
-  L.push('  -- Check 7: No existing UNIQUE/index covering (organization_id, id) on target tables');
+  // Check 7: No conflicting/equivalent UNIQUE(org_id,id) — exact ordered columns
+  L.push('  -- Check 7: No existing UNIQUE with exact ordered columns (organization_id, id) on target tables');
   L.push('  SELECT array_agg(con.conname || \' on \' || con.conrelid::regclass::text) INTO issues');
   L.push('  FROM pg_constraint con');
   L.push("  WHERE con.connamespace = 'public'::regnamespace AND con.contype = 'u'");
   L.push(`    AND con.conrelid::regclass::text IN (${targetTables.map(t => `'${t}'`).join(',')})`);
-  L.push('    AND array_length(con.conkey, 1) = 2;');
+  L.push('    AND array_length(con.conkey, 1) = 2');
+  L.push("    AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[1]) = 'organization_id'");
+  L.push("    AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = con.conkey[2]) = 'id';");
   L.push('  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN');
-  L.push("    RAISE EXCEPTION 'PREFLIGHT FAIL [7]: equivalent UNIQUE constraints found: %', array_to_string(issues, ', ');");
+  L.push("    RAISE EXCEPTION 'PREFLIGHT FAIL [7]: equivalent UNIQUE(organization_id,id) found: %', array_to_string(issues, ', ');");
   L.push('  END IF;');
   L.push('  issues := NULL;');
   L.push('');
@@ -348,7 +357,7 @@ function generateBlockC() {
   L.push("    ELSE 'FAIL: ' || string_agg(i.conname || '(' || i.src_col1 || ',' || i.src_col2 || ')', ', ')");
   L.push('  END');
   L.push("FROM installed_fks i JOIN expected_fks e ON e.fk_name = i.conname");
-  L.push("WHERE i.src_col_count != 2 OR i.src_col1 != 'organization_id' OR i.src_col2 != e.src_col");
+  L.push("WHERE i.src_col_count != 2 OR i.src_table != e.src_table OR i.src_col1 != 'organization_id' OR i.src_col2 != e.src_col");
   L.push('');
   L.push('UNION ALL');
   L.push('');
@@ -383,13 +392,15 @@ function generateBlockC() {
   L.push('UNION ALL');
   L.push('');
 
-  // C06: No extra/unexpected composite FKs
+  // C06: No extra/unexpected composite FKs — by catalog structure (not naming convention)
   L.push("SELECT 'C06', 'no_extra_composite_fks',");
   L.push("  CASE WHEN count(*) = 0 THEN 'PASS'");
-  L.push("    ELSE 'FAIL: ' || count(*) || ' unexpected: ' || string_agg(conname, ', ')");
+  L.push("    ELSE 'FAIL: ' || count(*) || ' unexpected: ' || string_agg(conname || ' on ' || conrelid::regclass::text, ', ')");
   L.push('  END');
   L.push("FROM pg_constraint WHERE connamespace = 'public'::regnamespace AND contype = 'f'");
-  L.push("  AND array_length(conkey, 1) = 2 AND conname LIKE 'fk_%_org'");
+  L.push("  AND array_length(conkey, 1) = 2");
+  L.push("  AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = conrelid AND a.attnum = conkey[1]) = 'organization_id'");
+  L.push(`  AND conrelid::regclass::text IN (${[...new Set(rels.map(r => r.source_table))].sort().map(t => `'${t}'`).join(',')})`);
   L.push(`  AND conname NOT IN (${rels.map(r => `'${fkName(r)}'`).join(',')})`);
   L.push('');
   L.push('UNION ALL');
@@ -420,13 +431,14 @@ function generateBlockC_uq_and_privs(L) {
   L.push('  ) AS e(uq_name, expected_table)');
   L.push("  LEFT JOIN pg_constraint con ON con.connamespace = 'public'::regnamespace");
   L.push("    AND con.conname = e.uq_name AND con.contype = 'u'");
+  L.push("    AND con.conrelid::regclass::text = e.expected_table");
   L.push(') sub WHERE issue IS NOT NULL');
   L.push('');
   L.push('UNION ALL');
   L.push('');
 
-  // C08: No duplicate/equivalent UNIQUE on target tables
-  L.push("-- C08: No unexpected equivalent UNIQUE(org_id,id) duplicates");
+  // C08: No duplicate/equivalent UNIQUE on target tables — exact (organization_id, id) columns only
+  L.push("-- C08: No unexpected equivalent UNIQUE(organization_id,id) duplicates (exact ordered columns)");
   L.push("SELECT 'C08', 'no_duplicate_uniques',");
   L.push("  CASE WHEN count(*) = 0 THEN 'PASS'");
   L.push("    ELSE 'FAIL: ' || string_agg(conname || ' on ' || conrelid::regclass::text, ', ')");
@@ -434,6 +446,8 @@ function generateBlockC_uq_and_privs(L) {
   L.push("FROM pg_constraint WHERE connamespace = 'public'::regnamespace AND contype = 'u'");
   L.push(`  AND conrelid::regclass::text IN (${targetTables.map(t => `'${t}'`).join(',')})`);
   L.push('  AND array_length(conkey, 1) = 2');
+  L.push("  AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = conrelid AND a.attnum = conkey[1]) = 'organization_id'");
+  L.push("  AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid = conrelid AND a.attnum = conkey[2]) = 'id'");
   L.push(`  AND conname NOT IN (${targetTables.map(t => `'${uqName(t)}'`).join(',')})`);
   L.push('');
   L.push('UNION ALL');
@@ -487,7 +501,7 @@ function generateBlockC_uq_and_privs(L) {
 
   // C12: Zero privileges (anon/authenticated + MAINTAIN + PUBLIC)
   L.push('-- C12: Zero effective privileges (anon/authenticated/PUBLIC/MAINTAIN)');
-  L.push("SELECT 'C12', 'zero_privileges',");
+  L.push("SELECT 'C12', 'zero_anon_auth_privileges',");
   L.push("  CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL: ' || count(*) || ' privileges' END");
   L.push('FROM (');
   L.push(`  SELECT 1 FROM (VALUES ${ALL_36.map(t => `('${t}')`).join(',')}) AS t(t)`);
@@ -495,6 +509,31 @@ function generateBlockC_uq_and_privs(L) {
   L.push("  CROSS JOIN (VALUES ('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')) AS p(p)");
   L.push("  WHERE has_table_privilege(r.r, 'public.'||t.t, p.p)");
   L.push(') v');
+  L.push('');
+  L.push('UNION ALL');
+  L.push('');
+  L.push("-- C13: Zero MAINTAIN privilege (PG17+, graceful skip on older)");
+  L.push("SELECT 'C13', 'zero_maintain_privilege',");
+  L.push("  CASE");
+  L.push("    WHEN current_setting('server_version_num')::int < 170000 THEN 'PASS (skipped: server < PG17)'");
+  L.push("    WHEN count(*) = 0 THEN 'PASS'");
+  L.push("    ELSE 'FAIL: ' || count(*) || ' MAINTAIN privileges'");
+  L.push('  END');
+  L.push('FROM (');
+  L.push(`  SELECT 1 FROM (VALUES ${ALL_36.map(t => `('${t}')`).join(',')}) AS t(t)`);
+  L.push("  CROSS JOIN (VALUES ('anon'),('authenticated')) AS r(r)");
+  L.push("  WHERE current_setting('server_version_num')::int >= 170000");
+  L.push("    AND has_table_privilege(r.r, 'public.'||t.t, 'MAINTAIN')");
+  L.push(') v');
+  L.push('');
+  L.push('UNION ALL');
+  L.push('');
+  L.push("-- C14: Zero PUBLIC grants");
+  L.push("SELECT 'C14', 'zero_public_grants',");
+  L.push("  CASE WHEN count(*) = 0 THEN 'PASS' ELSE 'FAIL: ' || count(*) || ' PUBLIC grants' END");
+  L.push("FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace AND n.nspname='public'");
+  L.push("CROSS JOIN LATERAL aclexplode(c.relacl) AS acl WHERE c.relkind='r' AND acl.grantee=0");
+  L.push(`  AND c.relname IN (${ALL_36.map(t => `'${t}'`).join(',')})`);
   L.push('');
   L.push('ORDER BY check_id;');
   L.push('');
@@ -520,6 +559,20 @@ function generateBlockD() {
   L.push('-- Expected: All assertions pass, zero rows remain after ROLLBACK.');
   L.push('');
   L.push('BEGIN;');
+  L.push('');
+  L.push('-- Record baseline row counts BEFORE test data (do not assume zero)');
+  L.push('CREATE TEMP TABLE _m005_baselines(tbl TEXT PRIMARY KEY, cnt BIGINT);');
+  L.push("INSERT INTO _m005_baselines VALUES ('organizations',(SELECT count(*) FROM public.organizations));");
+  L.push("INSERT INTO _m005_baselines VALUES ('customers',(SELECT count(*) FROM public.customers));");
+  L.push("INSERT INTO _m005_baselines VALUES ('drivers',(SELECT count(*) FROM public.drivers));");
+  L.push("INSERT INTO _m005_baselines VALUES ('vehicles',(SELECT count(*) FROM public.vehicles));");
+  L.push("INSERT INTO _m005_baselines VALUES ('trips',(SELECT count(*) FROM public.trips));");
+  L.push("INSERT INTO _m005_baselines VALUES ('enquiries',(SELECT count(*) FROM public.enquiries));");
+  L.push("INSERT INTO _m005_baselines VALUES ('quotations',(SELECT count(*) FROM public.quotations));");
+  L.push("INSERT INTO _m005_baselines VALUES ('invoices',(SELECT count(*) FROM public.invoices));");
+  L.push("INSERT INTO _m005_baselines VALUES ('vendors',(SELECT count(*) FROM public.vendors));");
+  L.push("INSERT INTO _m005_baselines VALUES ('branches',(SELECT count(*) FROM public.branches));");
+  L.push("INSERT INTO _m005_baselines VALUES ('expenses',(SELECT count(*) FROM public.expenses));");
   L.push('');
   L.push('DO $tests$');
   L.push('DECLARE');
@@ -549,7 +602,7 @@ function generateBlockD() {
   L.push("  INSERT INTO public.drivers (id, organization_id, name) VALUES (drv_a, org_a, 'Driver A');");
   L.push("  INSERT INTO public.vehicles (id, organization_id, reg_number) VALUES (veh_a, org_a, 'KA01XX1234');");
   L.push("  INSERT INTO public.trips (id, organization_id, customer_id, status, trip_number) VALUES (trip_a, org_a, cust_a, 'booked', 'TR-TEST1');");
-  L.push("  INSERT INTO public.enquiries (id, organization_id, customer_id, status) VALUES (enq_a, org_a, cust_a, 'open');");
+  L.push("  INSERT INTO public.enquiries (id, organization_id, customer_id, status) VALUES (enq_a, org_a, cust_a, 'new');");
   L.push("  INSERT INTO public.quotations (id, organization_id, customer_id, enquiry_id, status, quotation_number) VALUES (quot_a, org_a, cust_a, enq_a, 'draft', 'QT-TEST1');");
   L.push("  INSERT INTO public.invoices (id, organization_id, customer_id, invoice_number, status) VALUES (inv_a, org_a, cust_a, 'INV-TEST1', 'draft');");
   L.push("  INSERT INTO public.vendors (id, organization_id, name) VALUES (vendor_a, org_a, 'Vendor A');");
@@ -645,19 +698,32 @@ function generateBlockD() {
   L.push("  RAISE NOTICE 'ALL 6 TRANSACTIONAL TESTS PASSED';");
   L.push('END $tests$;');
   L.push('');
-  L.push('-- Always rollback: leaves zero rows');
+  L.push('-- Always rollback: leaves row counts unchanged');
   L.push('ROLLBACK;');
   L.push('');
-  L.push('-- Verify zero rows remain in application tables after rollback');
-  L.push("SELECT 'D_ROLLBACK' AS check_id, 'zero_rows_after_rollback' AS check_name,");
-  L.push("  CASE WHEN (SELECT count(*) FROM public.expenses) = 0");
-  L.push("    AND (SELECT count(*) FROM public.trips) = 0");
-  L.push("    AND (SELECT count(*) FROM public.customers) = 0");
-  L.push("    AND (SELECT count(*) FROM public.vehicles) = 0");
-  L.push("    AND (SELECT count(*) FROM public.drivers) = 0");
-  L.push("    THEN 'PASS'");
-  L.push("    ELSE 'FAIL: rows remain after ROLLBACK'");
-  L.push('  END AS result;');
+  L.push('-- Verify row counts match baselines after rollback (proves transactional safety)');
+  L.push("SELECT 'D_ROLLBACK' AS check_id, 'row_counts_match_baselines' AS check_name,");
+  L.push("  CASE WHEN count(*) = 0 THEN 'PASS'");
+  L.push("    ELSE 'FAIL: row count changed for: ' || string_agg(tbl || '(baseline=' || baseline || ',now=' || current_cnt || ')', ', ')");
+  L.push('  END AS result');
+  L.push('FROM (');
+  L.push("  SELECT b.tbl, b.cnt AS baseline, CASE b.tbl");
+  L.push("    WHEN 'organizations' THEN (SELECT count(*) FROM public.organizations)");
+  L.push("    WHEN 'customers' THEN (SELECT count(*) FROM public.customers)");
+  L.push("    WHEN 'drivers' THEN (SELECT count(*) FROM public.drivers)");
+  L.push("    WHEN 'vehicles' THEN (SELECT count(*) FROM public.vehicles)");
+  L.push("    WHEN 'trips' THEN (SELECT count(*) FROM public.trips)");
+  L.push("    WHEN 'enquiries' THEN (SELECT count(*) FROM public.enquiries)");
+  L.push("    WHEN 'quotations' THEN (SELECT count(*) FROM public.quotations)");
+  L.push("    WHEN 'invoices' THEN (SELECT count(*) FROM public.invoices)");
+  L.push("    WHEN 'vendors' THEN (SELECT count(*) FROM public.vendors)");
+  L.push("    WHEN 'branches' THEN (SELECT count(*) FROM public.branches)");
+  L.push("    WHEN 'expenses' THEN (SELECT count(*) FROM public.expenses)");
+  L.push('  END AS current_cnt');
+  L.push('  FROM _m005_baselines b');
+  L.push(') cmp WHERE baseline != current_cnt;');
+  L.push('');
+  L.push('DROP TABLE IF EXISTS _m005_baselines;');
   L.push('');
   return L.join('\n');
 }
