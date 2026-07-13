@@ -12,7 +12,7 @@ import { OrganizationProvider, useOrganization } from './contexts/OrganizationCo
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
 import { signIn, isPlatformAdmin, getAllTenants, switchTenant } from './lib/auth';
-import { supabase } from './lib/supabase';
+import { supabase, supabaseConfigurationError } from './lib/supabase';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -126,6 +126,30 @@ function LoadingFallback() {
       <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
         Loading module...
       </p>
+    </div>
+  );
+}
+
+function ConfigurationErrorScreen({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen bg-slate-950 px-6 py-12 text-slate-100">
+      <div className="mx-auto flex min-h-[70vh] max-w-xl items-center justify-center">
+        <div className="w-full rounded-2xl border border-amber-500/30 bg-slate-900 p-8 shadow-2xl">
+          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10">
+            <Shield className="text-amber-400" size={26} />
+          </div>
+          <h1 className="text-2xl font-semibold">Application configuration required</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-300">
+            This deployment is not connected to Supabase. No database request was made.
+          </p>
+          <div className="mt-5 rounded-lg bg-slate-950 p-4 font-mono text-xs text-amber-300">
+            {message}
+          </div>
+          <p className="mt-5 text-sm text-slate-400">
+            Ask the deployment administrator to configure the staging environment and rebuild the app.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -639,6 +663,11 @@ export default function App() {
   // Auth bootstrap: verify Supabase session on mount.
   // If Zustand says logged in but Supabase session is gone, log out.
   useEffect(() => {
+    if (supabaseConfigurationError) {
+      setAuthChecking(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session && isLoggedIn) {
         // Supabase session expired/missing — force logout
@@ -656,6 +685,10 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  if (supabaseConfigurationError) {
+    return <ConfigurationErrorScreen message={supabaseConfigurationError} />;
+  }
 
   // Show loading while verifying auth
   if (authChecking) {

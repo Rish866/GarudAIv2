@@ -1,10 +1,14 @@
 // Supabase Client for Garud AI Transport ERP (Multi-Tenant)
 import { createClient } from '@supabase/supabase-js';
+import { resolveSupabaseConfig } from './supabaseConfig';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://emcynvexbauhohpwcqaw.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_MQxqdtD5HRHHsIxhmIjHrQ_XS4jyXWh';
+const runtimeConfig = resolveSupabaseConfig(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+);
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabaseConfigurationError = runtimeConfig.error;
+export const supabase = createClient(runtimeConfig.url, runtimeConfig.anonKey);
 
 /**
  * Login user via Supabase Auth
