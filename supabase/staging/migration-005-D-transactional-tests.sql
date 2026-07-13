@@ -5,10 +5,9 @@
 -- and ALWAYS rolls back. Run ONLY after Block C passes and operator confirms.
 -- Expected: All assertions pass, zero rows remain after ROLLBACK.
 
-BEGIN;
-
--- Record baseline row counts BEFORE test data (do not assume zero)
-CREATE TEMP TABLE _m005_baselines(tbl TEXT PRIMARY KEY, cnt BIGINT);
+-- Create baseline table OUTSIDE the transaction so it survives ROLLBACK
+DROP TABLE IF EXISTS pg_temp._m005_baselines;
+CREATE TEMP TABLE _m005_baselines(tbl TEXT PRIMARY KEY, cnt BIGINT) ON COMMIT PRESERVE ROWS;
 INSERT INTO _m005_baselines VALUES ('organizations',(SELECT count(*) FROM public.organizations));
 INSERT INTO _m005_baselines VALUES ('customers',(SELECT count(*) FROM public.customers));
 INSERT INTO _m005_baselines VALUES ('drivers',(SELECT count(*) FROM public.drivers));
@@ -20,6 +19,9 @@ INSERT INTO _m005_baselines VALUES ('invoices',(SELECT count(*) FROM public.invo
 INSERT INTO _m005_baselines VALUES ('vendors',(SELECT count(*) FROM public.vendors));
 INSERT INTO _m005_baselines VALUES ('branches',(SELECT count(*) FROM public.branches));
 INSERT INTO _m005_baselines VALUES ('expenses',(SELECT count(*) FROM public.expenses));
+
+-- BEGIN the transaction that will be rolled back
+BEGIN;
 
 DO $tests$
 DECLARE
@@ -134,7 +136,7 @@ BEGIN
   RAISE NOTICE 'ALL 6 TRANSACTIONAL TESTS PASSED';
 END $tests$;
 
--- Always rollback: leaves row counts unchanged
+-- ROLLBACK undoes all test DML; baseline table survives (created outside txn)
 ROLLBACK;
 
 -- Verify row counts match baselines after rollback (proves transactional safety)

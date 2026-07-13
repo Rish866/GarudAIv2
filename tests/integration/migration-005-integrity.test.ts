@@ -177,7 +177,15 @@ describe('Migration 005 — Block C is Read-Only', () => {
 describe('Migration 005 — Block D Transactional Tests', () => {
   const blockD = readFileSync('supabase/staging/migration-005-D-transactional-tests.sql', 'utf8');
 
-  it('begins a transaction', () => {
+  it('creates baseline table BEFORE BEGIN (survives ROLLBACK)', () => {
+    const beginIdx = blockD.indexOf('BEGIN;');
+    const baselineIdx = blockD.indexOf('_m005_baselines');
+    expect(baselineIdx).toBeLessThan(beginIdx);
+    expect(blockD).toContain('DROP TABLE IF EXISTS pg_temp._m005_baselines');
+    expect(blockD).toContain('ON COMMIT PRESERVE ROWS');
+  });
+
+  it('begins a transaction after baselines', () => {
     expect(blockD).toContain('BEGIN;');
   });
 

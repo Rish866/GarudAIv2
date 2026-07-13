@@ -558,10 +558,9 @@ function generateBlockD() {
   L.push('-- and ALWAYS rolls back. Run ONLY after Block C passes and operator confirms.');
   L.push('-- Expected: All assertions pass, zero rows remain after ROLLBACK.');
   L.push('');
-  L.push('BEGIN;');
-  L.push('');
-  L.push('-- Record baseline row counts BEFORE test data (do not assume zero)');
-  L.push('CREATE TEMP TABLE _m005_baselines(tbl TEXT PRIMARY KEY, cnt BIGINT);');
+  L.push('-- Create baseline table OUTSIDE the transaction so it survives ROLLBACK');
+  L.push('DROP TABLE IF EXISTS pg_temp._m005_baselines;');
+  L.push('CREATE TEMP TABLE _m005_baselines(tbl TEXT PRIMARY KEY, cnt BIGINT) ON COMMIT PRESERVE ROWS;');
   L.push("INSERT INTO _m005_baselines VALUES ('organizations',(SELECT count(*) FROM public.organizations));");
   L.push("INSERT INTO _m005_baselines VALUES ('customers',(SELECT count(*) FROM public.customers));");
   L.push("INSERT INTO _m005_baselines VALUES ('drivers',(SELECT count(*) FROM public.drivers));");
@@ -573,6 +572,9 @@ function generateBlockD() {
   L.push("INSERT INTO _m005_baselines VALUES ('vendors',(SELECT count(*) FROM public.vendors));");
   L.push("INSERT INTO _m005_baselines VALUES ('branches',(SELECT count(*) FROM public.branches));");
   L.push("INSERT INTO _m005_baselines VALUES ('expenses',(SELECT count(*) FROM public.expenses));");
+  L.push('');
+  L.push('-- BEGIN the transaction that will be rolled back');
+  L.push('BEGIN;');
   L.push('');
   L.push('DO $tests$');
   L.push('DECLARE');
@@ -698,7 +700,7 @@ function generateBlockD() {
   L.push("  RAISE NOTICE 'ALL 6 TRANSACTIONAL TESTS PASSED';");
   L.push('END $tests$;');
   L.push('');
-  L.push('-- Always rollback: leaves row counts unchanged');
+  L.push('-- ROLLBACK undoes all test DML; baseline table survives (created outside txn)');
   L.push('ROLLBACK;');
   L.push('');
   L.push('-- Verify row counts match baselines after rollback (proves transactional safety)');
