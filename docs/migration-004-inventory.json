@@ -1,0 +1,762 @@
+{
+  "metadata": {
+    "migration": "004",
+    "purpose": "Schema normalization: TEXT entity references \u2192 nullable UUID + organization_id NOT NULL",
+    "staging_project": "ybuhazlnjqjrshcvpuna",
+    "prerequisite": "Migrations 000-003 + Remediations 001-002 executed",
+    "tables_empty": true,
+    "version": "2.0"
+  },
+  "conversions": [
+    {
+      "table": "drivers",
+      "column": "assigned_vehicle_id",
+      "target_table": "vehicles",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "enquiries",
+      "column": "customer_id",
+      "target_table": "customers",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "eway_bills",
+      "column": "transporter_id",
+      "target_table": "vendors",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "eway_bills",
+      "column": "trip_id",
+      "target_table": "trips",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "expenses",
+      "column": "trip_id",
+      "target_table": "trips",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "expenses",
+      "column": "vehicle_id",
+      "target_table": "vehicles",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "fuel_entries",
+      "column": "driver_id",
+      "target_table": "drivers",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "fuel_entries",
+      "column": "trip_id",
+      "target_table": "trips",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "fuel_entries",
+      "column": "vehicle_id",
+      "target_table": "vehicles",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "invoices",
+      "column": "customer_id",
+      "target_table": "customers",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "maintenance_records",
+      "column": "vehicle_id",
+      "target_table": "vehicles",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "payments",
+      "column": "customer_id",
+      "target_table": "customers",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "payments",
+      "column": "invoice_id",
+      "target_table": "invoices",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "quotations",
+      "column": "customer_id",
+      "target_table": "customers",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "quotations",
+      "column": "enquiry_id",
+      "target_table": "enquiries",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "trips",
+      "column": "customer_id",
+      "target_table": "customers",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "trips",
+      "column": "driver_id",
+      "target_table": "drivers",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "trips",
+      "column": "enquiry_id",
+      "target_table": "enquiries",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "trips",
+      "column": "quotation_id",
+      "target_table": "quotations",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "trips",
+      "column": "vehicle_id",
+      "target_table": "vehicles",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "tyres",
+      "column": "vehicle_id",
+      "target_table": "vehicles",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    },
+    {
+      "table": "vehicles",
+      "column": "driver_id",
+      "target_table": "drivers",
+      "target_column": "id",
+      "nullable": true,
+      "category": "authoritative_entity_reference",
+      "future_enforcement": "Migration 005 composite FK"
+    }
+  ],
+  "existing_uuid_references": [
+    {
+      "table": "contracts",
+      "column": "customer_id",
+      "target_table": "customers",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    },
+    {
+      "table": "indents",
+      "column": "customer_id",
+      "target_table": "customers",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    },
+    {
+      "table": "indents",
+      "column": "trip_id",
+      "target_table": "trips",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    },
+    {
+      "table": "work_orders",
+      "column": "vehicle_id",
+      "target_table": "vehicles",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    },
+    {
+      "table": "challans",
+      "column": "vehicle_id",
+      "target_table": "vehicles",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    },
+    {
+      "table": "challans",
+      "column": "driver_id",
+      "target_table": "drivers",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    },
+    {
+      "table": "claims",
+      "column": "trip_id",
+      "target_table": "trips",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    },
+    {
+      "table": "transfers",
+      "column": "from_branch",
+      "target_table": "branches",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    },
+    {
+      "table": "transfers",
+      "column": "to_branch",
+      "target_table": "branches",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    },
+    {
+      "table": "attendance",
+      "column": "employee_id",
+      "target_table": "drivers",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    },
+    {
+      "table": "leave_requests",
+      "column": "employee_id",
+      "target_table": "drivers",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    },
+    {
+      "table": "gps_devices",
+      "column": "vehicle_id",
+      "target_table": "vehicles",
+      "category": "existing_uuid_fk",
+      "future_enforcement": "Migration 005 composite FK upgrade"
+    }
+  ],
+  "polymorphic_references": [
+    {
+      "table": "activity_log",
+      "column": "entity_id",
+      "type": "TEXT",
+      "category": "polymorphic",
+      "target": "multiple tables based on entity_type",
+      "future_enforcement": "Migration 007+ constrained RPC validation"
+    },
+    {
+      "table": "approvals",
+      "column": "entity_id",
+      "type": "TEXT",
+      "category": "polymorphic",
+      "target": "expense/payment/trip based on approval type",
+      "future_enforcement": "Migration 007+ constrained RPC validation"
+    },
+    {
+      "table": "notifications",
+      "column": "link_id",
+      "type": "TEXT",
+      "category": "polymorphic",
+      "target": "any entity (trip/invoice/vehicle)",
+      "future_enforcement": "Migration 007+ constrained RPC validation"
+    },
+    {
+      "table": "transfers",
+      "column": "item_id",
+      "type": "UUID",
+      "category": "polymorphic_uuid",
+      "target": "vehicle/driver/inventory based on transfers.type",
+      "future_enforcement": "Migration 007+ type-dispatched trigger or CHECK constraint"
+    }
+  ],
+  "json_references": [
+    {
+      "table": "invoices",
+      "column": "trip_ids",
+      "type": "JSONB (string[])",
+      "category": "json_entity_array",
+      "target": "trips.id (array of UUIDs in JSONB)",
+      "future_enforcement": "Migration 007+ trigger validating array elements"
+    },
+    {
+      "table": "indents",
+      "column": "allocated_vehicles",
+      "type": "JSONB",
+      "category": "json_structured",
+      "target": "vehicles (array of {id, reg, driver_id, driver_name})",
+      "future_enforcement": "Migration 007+ trigger validating nested IDs"
+    },
+    {
+      "table": "claims",
+      "column": "evidence",
+      "type": "JSONB",
+      "category": "json_metadata",
+      "target": "storage paths (not entity references)",
+      "future_enforcement": "none required (not cross-table)"
+    }
+  ],
+  "display_snapshots": [
+    {
+      "table": "challans",
+      "column": "vehicle_reg"
+    },
+    {
+      "table": "challans",
+      "column": "driver_name"
+    },
+    {
+      "table": "claims",
+      "column": "vehicle_reg"
+    },
+    {
+      "table": "claims",
+      "column": "driver_name"
+    },
+    {
+      "table": "claims",
+      "column": "customer_name"
+    },
+    {
+      "table": "claims",
+      "column": "trip_number"
+    },
+    {
+      "table": "contracts",
+      "column": "customer_name"
+    },
+    {
+      "table": "drivers",
+      "column": "assigned_vehicle_reg"
+    },
+    {
+      "table": "expenses",
+      "column": "vehicle_reg"
+    },
+    {
+      "table": "eway_bills",
+      "column": "vehicle_reg"
+    },
+    {
+      "table": "eway_bills",
+      "column": "trip_number"
+    },
+    {
+      "table": "fuel_entries",
+      "column": "vehicle_reg"
+    },
+    {
+      "table": "fuel_entries",
+      "column": "driver_name"
+    },
+    {
+      "table": "gps_devices",
+      "column": "vehicle_reg"
+    },
+    {
+      "table": "indents",
+      "column": "customer_name"
+    },
+    {
+      "table": "maintenance_records",
+      "column": "vehicle_reg"
+    },
+    {
+      "table": "market_hires",
+      "column": "market_vehicle_reg"
+    },
+    {
+      "table": "market_hires",
+      "column": "trip_number"
+    },
+    {
+      "table": "trips",
+      "column": "vehicle_reg"
+    },
+    {
+      "table": "trips",
+      "column": "driver_name"
+    },
+    {
+      "table": "trips",
+      "column": "customer_name"
+    },
+    {
+      "table": "tyres",
+      "column": "vehicle_reg"
+    },
+    {
+      "table": "work_orders",
+      "column": "vehicle_reg"
+    }
+  ],
+  "external_identifiers": [
+    {
+      "table": "drivers",
+      "column": "license_number"
+    },
+    {
+      "table": "drivers",
+      "column": "aadhar"
+    },
+    {
+      "table": "vehicles",
+      "column": "reg_number"
+    },
+    {
+      "table": "vendors",
+      "column": "gstin"
+    },
+    {
+      "table": "vendors",
+      "column": "pan"
+    },
+    {
+      "table": "vendors",
+      "column": "account_number"
+    },
+    {
+      "table": "vendors",
+      "column": "ifsc"
+    },
+    {
+      "table": "customers",
+      "column": "gstin"
+    },
+    {
+      "table": "tyres",
+      "column": "serial_number"
+    },
+    {
+      "table": "gps_devices",
+      "column": "device_id"
+    },
+    {
+      "table": "eway_bills",
+      "column": "eway_number"
+    },
+    {
+      "table": "payments",
+      "column": "reference_number"
+    }
+  ],
+  "legacy_tenant_columns": [
+    {
+      "table": "vehicles",
+      "column": "company_id"
+    },
+    {
+      "table": "vehicles",
+      "column": "branch_id"
+    },
+    {
+      "table": "drivers",
+      "column": "company_id"
+    },
+    {
+      "table": "drivers",
+      "column": "branch_id"
+    },
+    {
+      "table": "customers",
+      "column": "company_id"
+    },
+    {
+      "table": "customers",
+      "column": "branch_id"
+    },
+    {
+      "table": "trips",
+      "column": "company_id"
+    },
+    {
+      "table": "trips",
+      "column": "branch_id"
+    },
+    {
+      "table": "enquiries",
+      "column": "company_id"
+    },
+    {
+      "table": "enquiries",
+      "column": "branch_id"
+    },
+    {
+      "table": "quotations",
+      "column": "company_id"
+    },
+    {
+      "table": "quotations",
+      "column": "branch_id"
+    },
+    {
+      "table": "invoices",
+      "column": "company_id"
+    },
+    {
+      "table": "invoices",
+      "column": "branch_id"
+    },
+    {
+      "table": "payments",
+      "column": "company_id"
+    },
+    {
+      "table": "payments",
+      "column": "branch_id"
+    },
+    {
+      "table": "expenses",
+      "column": "company_id"
+    },
+    {
+      "table": "expenses",
+      "column": "branch_id"
+    },
+    {
+      "table": "fuel_entries",
+      "column": "company_id"
+    },
+    {
+      "table": "fuel_entries",
+      "column": "branch_id"
+    },
+    {
+      "table": "maintenance_records",
+      "column": "company_id"
+    },
+    {
+      "table": "maintenance_records",
+      "column": "branch_id"
+    },
+    {
+      "table": "tyres",
+      "column": "company_id"
+    },
+    {
+      "table": "tyres",
+      "column": "branch_id"
+    },
+    {
+      "table": "activity_log",
+      "column": "company_id"
+    },
+    {
+      "table": "notifications",
+      "column": "company_id"
+    },
+    {
+      "table": "eway_bills",
+      "column": "company_id"
+    },
+    {
+      "table": "branches",
+      "column": "company_id"
+    }
+  ],
+  "organization_id_not_null": {
+    "description": "Enforce NOT NULL on organization_id for 16 Migration-001 tables (added as nullable)",
+    "tables_needing_not_null": [
+      "activity_log",
+      "branches",
+      "customers",
+      "drivers",
+      "enquiries",
+      "eway_bills",
+      "expenses",
+      "fuel_entries",
+      "invoices",
+      "maintenance_records",
+      "notifications",
+      "payments",
+      "quotations",
+      "trips",
+      "tyres",
+      "vehicles"
+    ],
+    "tables_already_not_null": [
+      "approvals",
+      "attendance",
+      "bank_entries",
+      "cash_entries",
+      "challans",
+      "claims",
+      "contracts",
+      "geofences",
+      "gps_devices",
+      "indents",
+      "inventory",
+      "leave_requests",
+      "ledger_accounts",
+      "market_hires",
+      "purchases",
+      "routes",
+      "sales",
+      "transfers",
+      "vendors",
+      "work_orders"
+    ]
+  },
+  "write_path_matrix": {
+    "description": "Maps each converted table.column to all frontend write paths that touch it",
+    "paths": {
+      "trips.customer_id": [
+        "quotationRepository.convertToTrip (direct insert)",
+        "useModuleData.create('trips')",
+        "baseRepository.create('trips')"
+      ],
+      "trips.vehicle_id": [
+        "tripRepository.assignVehicle (base.update)",
+        "useModuleData.create('trips')",
+        "baseRepository.create('trips')"
+      ],
+      "trips.driver_id": [
+        "tripRepository.assignDriver (base.update)",
+        "useModuleData.create('trips')",
+        "baseRepository.create('trips')"
+      ],
+      "trips.quotation_id": [
+        "quotationRepository.convertToTrip (direct insert)",
+        "useModuleData.create('trips')"
+      ],
+      "trips.enquiry_id": [
+        "quotationRepository.convertToTrip (direct insert)"
+      ],
+      "expenses.trip_id": [
+        "useModuleData.create('expenses')",
+        "tenantRepository.create('expenses')"
+      ],
+      "expenses.vehicle_id": [
+        "useModuleData.create('expenses')",
+        "tenantRepository.create('expenses')"
+      ],
+      "fuel_entries.vehicle_id": [
+        "useModuleData.create('fuel_entries')",
+        "baseRepository.create('fuel_entries')"
+      ],
+      "fuel_entries.driver_id": [
+        "useModuleData.create('fuel_entries')",
+        "baseRepository.create('fuel_entries')"
+      ],
+      "fuel_entries.trip_id": [
+        "useModuleData.create('fuel_entries')",
+        "baseRepository.create('fuel_entries')"
+      ],
+      "invoices.customer_id": [
+        "useModuleData.create('invoices')",
+        "tenantRepository.create('invoices')"
+      ],
+      "payments.customer_id": [
+        "useModuleData.create('payments')",
+        "tenantRepository.create('payments')"
+      ],
+      "payments.invoice_id": [
+        "useModuleData.create('payments')",
+        "tenantRepository.create('payments')"
+      ],
+      "quotations.enquiry_id": [
+        "enquiryRepository.convertToQuotation (direct insert)",
+        "useModuleData.create('quotations')"
+      ],
+      "quotations.customer_id": [
+        "enquiryRepository.convertToQuotation (direct insert)",
+        "useModuleData.create('quotations')"
+      ],
+      "maintenance_records.vehicle_id": [
+        "useModuleData.create('maintenance_records')",
+        "baseRepository.create('maintenance_records')"
+      ],
+      "tyres.vehicle_id": [
+        "useModuleData.create('tyres')",
+        "baseRepository.create('tyres')"
+      ],
+      "vehicles.driver_id": [
+        "vehicleRepository.assignDriver (base.update)",
+        "useModuleData.update('vehicles')"
+      ],
+      "drivers.assigned_vehicle_id": [
+        "driverRepository.assignVehicle (base.update)",
+        "useModuleData.update('drivers')"
+      ],
+      "enquiries.customer_id": [
+        "useModuleData.create('enquiries')",
+        "baseRepository.create('enquiries')"
+      ],
+      "eway_bills.trip_id": [
+        "useModuleData.create('eway_bills')",
+        "baseRepository.create('eway_bills')"
+      ],
+      "eway_bills.transporter_id": [
+        "useModuleData.create('eway_bills')",
+        "baseRepository.create('eway_bills')"
+      ]
+    },
+    "sanitized_write_abstractions": [
+      "baseRepository.create() \u2014 sanitizeForTable(tableName, record)",
+      "baseRepository.update() \u2014 sanitizeForTable(tableName, record)",
+      "useModuleData.create() \u2014 sanitizeForTable(tableName, record)",
+      "useModuleData.update() \u2014 sanitizeForTable(tableName, record)",
+      "TenantRepository.create() \u2014 sanitizeForTable(this.tableName, record)",
+      "TenantRepository.update() \u2014 sanitizeForTable(this.tableName, record)",
+      "enquiryRepository.convertToQuotation \u2014 sanitizeForTable('quotations', quotation)",
+      "quotationRepository.convertToTrip \u2014 sanitizeForTable('trips', trip)"
+    ]
+  }
+}

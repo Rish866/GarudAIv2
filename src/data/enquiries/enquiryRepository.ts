@@ -1,5 +1,6 @@
 import { createRepository } from '../baseRepository';
 import { supabase } from '../../lib/supabase';
+import { sanitizeForTable } from '../../lib/sanitize';
 
 const base = createRepository<any>('enquiries');
 
@@ -64,7 +65,7 @@ export const enquiryRepository = {
 
     const { data: newQuotation, error: createErr } = await supabase
       .from('quotations')
-      .insert(quotation)
+      .insert(sanitizeForTable('quotations', quotation))
       .select()
       .single();
 

@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useOrganization } from '../contexts/OrganizationContext';
+import { sanitizeForTable } from '../lib/sanitize';
 
 export interface ModuleDataResult<T> {
   data: T[];
@@ -94,7 +95,7 @@ export function useModuleData<T extends { id: string }>(
   const create = useCallback(async (record: Partial<T>): Promise<{ data: T | null; error: string | null }> => {
     if (!organizationId) return { data: null, error: 'No organization' };
 
-    const row: Record<string, unknown> = { ...record, organization_id: organizationId };
+    const row: Record<string, unknown> = sanitizeForTable(tableName, { ...record, organization_id: organizationId });
     const { data: created, error: createError } = await supabase
       .from(tableName)
       .insert(row)
@@ -111,7 +112,7 @@ export function useModuleData<T extends { id: string }>(
   const update = useCallback(async (id: string, updates: Partial<T>): Promise<{ error: string | null }> => {
     if (!organizationId) return { error: 'No organization' };
 
-    const patch: Record<string, unknown> = { ...updates };
+    const patch: Record<string, unknown> = sanitizeForTable(tableName, { ...updates });
     const { error: updateError } = await supabase
       .from(tableName)
       .update(patch)

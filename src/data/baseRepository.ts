@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { sanitizeForTable } from '../lib/sanitize';
 
 export interface RepositoryResult<T> {
   data: T | null;
@@ -14,6 +15,9 @@ export interface ListResult<T> {
  * Base repository for Supabase operations with organization scoping.
  * All methods require an organizationId — never trust browser state alone.
  * RLS provides the final security layer; these checks are defense-in-depth.
+ * 
+ * UUID sanitization: Only the 22 approved nullable UUID reference columns
+ * are sanitized (empty string → null). All other TEXT fields pass unchanged.
  */
 export function createRepository<T extends { id: string }>(tableName: string) {
   return {
@@ -48,10 +52,10 @@ export function createRepository<T extends { id: string }>(tableName: string) {
     async create(organizationId: string, input: Omit<T, 'id' | 'organization_id' | 'created_at' | 'updated_at'>): Promise<RepositoryResult<T>> {
       if (!organizationId) return { data: null, error: 'No organization ID provided' };
 
-      const record = {
+      const record = sanitizeForTable(tableName, {
         ...input,
         organization_id: organizationId,
-      };
+      });
 
       const { data, error } = await supabase
         .from(tableName)
@@ -72,7 +76,7 @@ export function createRepository<T extends { id: string }>(tableName: string) {
 
       const { data, error } = await supabase
         .from(tableName)
-        .update({ ...safeInput, updated_at: new Date().toISOString() })
+        .update(sanitizeForTable(tableName, { ...safeInput, updated_at: new Date().toISOString() }))
         .eq('organization_id', organizationId)
         .eq('id', id)
         .select()

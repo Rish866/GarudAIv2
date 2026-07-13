@@ -3,6 +3,7 @@
 // RLS provides database-level enforcement; this provides app-level safety
 
 import { supabase } from '../../lib/supabase';
+import { sanitizeForTable } from '../../lib/sanitize';
 
 export interface TenantQueryOptions {
   organizationId: string;
@@ -59,7 +60,7 @@ export class TenantRepository<T extends TenantRecord> {
    * Create a new record (organization_id is mandatory)
    */
   async create(record: Omit<T, 'id'>, organizationId: string): Promise<{ data: T | null; error: string | null }> {
-    const row: Record<string, unknown> = { ...record, organization_id: organizationId };
+    const row: Record<string, unknown> = sanitizeForTable(this.tableName, { ...record, organization_id: organizationId });
     const { data, error } = await supabase
       .from(this.tableName)
       .insert(row)
@@ -72,7 +73,7 @@ export class TenantRepository<T extends TenantRecord> {
    * Update a record (RLS ensures you can only update your org's records)
    */
   async update(id: string, updates: Partial<T>, organizationId: string): Promise<{ data: T | null; error: string | null }> {
-    const patch: Record<string, unknown> = { ...updates };
+    const patch: Record<string, unknown> = sanitizeForTable(this.tableName, { ...updates });
     const { data, error } = await supabase
       .from(this.tableName)
       .update(patch)
