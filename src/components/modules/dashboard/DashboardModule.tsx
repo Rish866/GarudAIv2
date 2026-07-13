@@ -202,10 +202,15 @@ export default function DashboardModule() {
   };
 
   const vehiclesWithLocation = vehicles.filter(
-    (v: any) => v.lat !== undefined && v.lng !== undefined
+    (v: any) =>
+      v != null &&
+      v.lat != null &&
+      v.lng != null &&
+      Number.isFinite(Number(v.lat)) &&
+      Number.isFinite(Number(v.lng))
   );
-  const onlineVehicles = vehicles.filter(
-    (v: any) => v.status === 'on_trip' && v.lat !== undefined
+  const onlineVehicles = vehiclesWithLocation.filter(
+    (v: any) => v.status === 'on_trip'
   );
 
   // Dynamic chart data from actual Supabase data
@@ -526,7 +531,7 @@ export default function DashboardModule() {
             {vehiclesWithLocation.map((vehicle) => (
               <Marker
                 key={vehicle.id}
-                position={[vehicle.lat!, vehicle.lng!]}
+                position={[Number(vehicle.lat), Number(vehicle.lng)]}
               >
                 <Popup>
                   <div className="text-sm space-y-1 min-w-[180px]">

@@ -79,7 +79,9 @@ export function useModuleData<T extends { id: string }>(
         setError(fetchError.message);
         setData([]);
       } else {
-        setData((result as T[]) || []);
+        // PostgREST normally returns rows only, but defensive filtering keeps
+        // malformed/null records from crashing module render functions.
+        setData((((result as T[]) || []).filter(Boolean)) as T[]);
       }
     } catch (e: any) {
       setError(e.message || 'Failed to fetch data');

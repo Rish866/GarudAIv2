@@ -81,7 +81,14 @@ export default function FleetModule() {
     return matchesSearch && matchesStatus;
   });
 
-  const vehiclesWithLocation = vehicles.filter((v) => v.lat && v.lng);
+  const vehiclesWithLocation = vehicles.filter(
+    (v) =>
+      v != null &&
+      v.lat != null &&
+      v.lng != null &&
+      Number.isFinite(Number(v.lat)) &&
+      Number.isFinite(Number(v.lng))
+  );
 
 
   const openAddModal = () => {
@@ -434,7 +441,7 @@ export default function FleetModule() {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               {vehiclesWithLocation.map((vehicle) => (
-                <Marker key={vehicle.id} position={[vehicle.lat!, vehicle.lng!]}>
+                <Marker key={vehicle.id} position={[Number(vehicle.lat), Number(vehicle.lng)]}>
                   <Popup>
                     <div className="text-sm">
                       <p className="font-bold">{vehicle.reg_number}</p>

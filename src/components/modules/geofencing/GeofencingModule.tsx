@@ -73,7 +73,22 @@ export default function GeofencingModule() {
     radius: '1000',
   });
 
-  const vehiclesWithLocation = vehicles.filter((v) => v.lat && v.lng);
+  const vehiclesWithLocation = vehicles.filter(
+    (v) =>
+      v != null &&
+      v.lat != null &&
+      v.lng != null &&
+      Number.isFinite(Number(v.lat)) &&
+      Number.isFinite(Number(v.lng))
+  );
+  const geofencesWithLocation = geofences.filter(
+    (gf) =>
+      gf != null &&
+      gf.lat != null &&
+      gf.lng != null &&
+      Number.isFinite(Number(gf.lat)) &&
+      Number.isFinite(Number(gf.lng))
+  );
 
   const handleAddGeofence = () => {
     if (!newGeofence.name || !newGeofence.lat || !newGeofence.lng) return;
@@ -165,16 +180,16 @@ export default function GeofencingModule() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {geofences.filter((gf) => gf.status === 'active').map((gf) => (
+            {geofencesWithLocation.filter((gf) => gf.status === 'active').map((gf) => (
               <Circle
                 key={gf.id}
-                center={[gf.lat, gf.lng]}
+                center={[Number(gf.lat), Number(gf.lng)]}
                 radius={gf.radius}
                 pathOptions={{ color: getGeofenceColor(gf.type), fillColor: getGeofenceColor(gf.type), fillOpacity: 0.2 }}
               />
             ))}
             {vehiclesWithLocation.map((v) => (
-              <Marker key={v.id} position={[v.lat!, v.lng!]}>
+              <Marker key={v.id} position={[Number(v.lat), Number(v.lng)]}>
                 <Popup>
                   <div className="text-sm">
                     <strong>{v.reg_number}</strong>
