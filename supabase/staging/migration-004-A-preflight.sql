@@ -469,34 +469,43 @@ BEGIN
   END IF;
   issues := NULL;
 
-  -- Check 10: No leftover Migration 005 functions, triggers, or constraints
-  -- Functions: enforce_* (composite FK enforcement functions)
-  SELECT array_agg(proname) INTO issues
+  -- Check 10: No leftover Migration 005 artifacts (exact-name inventory)
+  -- Functions: enforce_same_org_* (12 per-table validation functions)
+  SELECT array_agg(proname || '(' || pg_get_function_identity_arguments(oid) || ')') INTO issues
   FROM pg_proc
   WHERE pronamespace = 'public'::regnamespace
-    AND proname LIKE 'enforce_%_fk%';
+    AND proname IN ('enforce_same_org_drivers','enforce_same_org_enquiries','enforce_same_org_eway_bills','enforce_same_org_expenses','enforce_same_org_fuel_entries','enforce_same_org_invoices','enforce_same_org_maintenance_records','enforce_same_org_payments','enforce_same_org_quotations','enforce_same_org_trips','enforce_same_org_tyres','enforce_same_org_vehicles');
   IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
     RAISE EXCEPTION 'PREFLIGHT FAIL [10a]: leftover M005 functions: %', array_to_string(issues, ', ');
   END IF;
   issues := NULL;
 
-  -- Triggers: trg_enforce_* (composite FK triggers)
+  -- Triggers: enforce_same_org_refs_* (12 per-table triggers)
   SELECT array_agg(tgname || ' on ' || tgrelid::regclass::text) INTO issues
   FROM pg_trigger
-  WHERE tgname LIKE 'trg_enforce_%'
-    AND tgrelid::regclass::text IN ('activity_log','approvals','attendance','bank_entries','branches','cash_entries','challans','claims','contracts','customers','drivers','enquiries','eway_bills','expenses','fuel_entries','geofences','gps_devices','indents','inventory','invoices','leave_requests','ledger_accounts','maintenance_records','market_hires','notifications','payments','purchases','quotations','routes','sales','transfers','trips','tyres','vehicles','vendors','work_orders');
+  WHERE tgname IN ('enforce_same_org_refs_drivers','enforce_same_org_refs_enquiries','enforce_same_org_refs_eway_bills','enforce_same_org_refs_expenses','enforce_same_org_refs_fuel_entries','enforce_same_org_refs_invoices','enforce_same_org_refs_maintenance_records','enforce_same_org_refs_payments','enforce_same_org_refs_quotations','enforce_same_org_refs_trips','enforce_same_org_refs_tyres','enforce_same_org_refs_vehicles');
   IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
     RAISE EXCEPTION 'PREFLIGHT FAIL [10b]: leftover M005 triggers: %', array_to_string(issues, ', ');
   END IF;
   issues := NULL;
 
-  -- Constraints: composite FK constraints from M005
+  -- FK constraints: fk_*_org (12 composite FK constraints)
   SELECT array_agg(conname || ' on ' || conrelid::regclass::text) INTO issues
   FROM pg_constraint
   WHERE connamespace = 'public'::regnamespace
-    AND conname LIKE '%_org_fk%';
+    AND conname IN ('fk_contracts_customer_id_org','fk_indents_customer_id_org','fk_indents_trip_id_org','fk_work_orders_vehicle_id_org','fk_challans_vehicle_id_org','fk_challans_driver_id_org','fk_claims_trip_id_org','fk_transfers_from_branch_org','fk_transfers_to_branch_org','fk_attendance_employee_id_org','fk_leave_requests_employee_id_org','fk_gps_devices_vehicle_id_org');
   IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
-    RAISE EXCEPTION 'PREFLIGHT FAIL [10c]: leftover M005 constraints: %', array_to_string(issues, ', ');
+    RAISE EXCEPTION 'PREFLIGHT FAIL [10c]: leftover M005 FK constraints: %', array_to_string(issues, ', ');
+  END IF;
+  issues := NULL;
+
+  -- Unique constraints: uq_*_org_id (9 composite UNIQUE constraints)
+  SELECT array_agg(conname || ' on ' || conrelid::regclass::text) INTO issues
+  FROM pg_constraint
+  WHERE connamespace = 'public'::regnamespace
+    AND conname IN ('uq_customers_org_id','uq_trips_org_id','uq_vehicles_org_id','uq_drivers_org_id','uq_branches_org_id','uq_enquiries_org_id','uq_quotations_org_id','uq_invoices_org_id','uq_vendors_org_id');
+  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN
+    RAISE EXCEPTION 'PREFLIGHT FAIL [10d]: leftover M005 UNIQUE constraints: %', array_to_string(issues, ', ');
   END IF;
   issues := NULL;
 

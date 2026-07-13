@@ -235,34 +235,79 @@ function generateBlockA() {
   lines.push('');
 
   // Check 10: No leftover Migration 005 functions, triggers, or constraints
-  lines.push(`  -- Check 10: No leftover Migration 005 functions, triggers, or constraints`);
-  lines.push(`  -- Functions: enforce_* (composite FK enforcement functions)`);
-  lines.push(`  SELECT array_agg(proname) INTO issues`);
+  // Uses exact-name inventory from the known rejected Migration 005 package
+  lines.push(`  -- Check 10: No leftover Migration 005 artifacts (exact-name inventory)`);
+  lines.push(`  -- Functions: enforce_same_org_* (12 per-table validation functions)`);
+  const m005Functions = [
+    'enforce_same_org_drivers', 'enforce_same_org_enquiries',
+    'enforce_same_org_eway_bills', 'enforce_same_org_expenses',
+    'enforce_same_org_fuel_entries', 'enforce_same_org_invoices',
+    'enforce_same_org_maintenance_records', 'enforce_same_org_payments',
+    'enforce_same_org_quotations', 'enforce_same_org_trips',
+    'enforce_same_org_tyres', 'enforce_same_org_vehicles',
+  ];
+  lines.push(`  SELECT array_agg(proname || '(' || pg_get_function_identity_arguments(oid) || ')') INTO issues`);
   lines.push(`  FROM pg_proc`);
   lines.push(`  WHERE pronamespace = 'public'::regnamespace`);
-  lines.push(`    AND proname LIKE 'enforce_%_fk%';`);
+  lines.push(`    AND proname IN (${m005Functions.map(f => `'${f}'`).join(',')});`);
   lines.push(`  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN`);
   lines.push(`    RAISE EXCEPTION 'PREFLIGHT FAIL [10a]: leftover M005 functions: %', array_to_string(issues, ', ');`);
   lines.push(`  END IF;`);
   lines.push(`  issues := NULL;`);
   lines.push('');
-  lines.push(`  -- Triggers: trg_enforce_* (composite FK triggers)`);
+
+  // Triggers: enforce_same_org_refs_* (12 BEFORE INSERT OR UPDATE triggers)
+  const m005Triggers = [
+    'enforce_same_org_refs_drivers', 'enforce_same_org_refs_enquiries',
+    'enforce_same_org_refs_eway_bills', 'enforce_same_org_refs_expenses',
+    'enforce_same_org_refs_fuel_entries', 'enforce_same_org_refs_invoices',
+    'enforce_same_org_refs_maintenance_records', 'enforce_same_org_refs_payments',
+    'enforce_same_org_refs_quotations', 'enforce_same_org_refs_trips',
+    'enforce_same_org_refs_tyres', 'enforce_same_org_refs_vehicles',
+  ];
+  lines.push(`  -- Triggers: enforce_same_org_refs_* (12 per-table triggers)`);
   lines.push(`  SELECT array_agg(tgname || ' on ' || tgrelid::regclass::text) INTO issues`);
   lines.push(`  FROM pg_trigger`);
-  lines.push(`  WHERE tgname LIKE 'trg_enforce_%'`);
-  lines.push(`    AND tgrelid::regclass::text IN (${ALL_36.map(t => `'${t}'`).join(',')});`);
+  lines.push(`  WHERE tgname IN (${m005Triggers.map(t => `'${t}'`).join(',')});`);
   lines.push(`  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN`);
   lines.push(`    RAISE EXCEPTION 'PREFLIGHT FAIL [10b]: leftover M005 triggers: %', array_to_string(issues, ', ');`);
   lines.push(`  END IF;`);
   lines.push(`  issues := NULL;`);
   lines.push('');
-  lines.push(`  -- Constraints: composite FK constraints from M005`);
+
+  // FK constraints: fk_*_org (11 composite FK constraints)
+  const m005FKs = [
+    'fk_contracts_customer_id_org', 'fk_indents_customer_id_org',
+    'fk_indents_trip_id_org', 'fk_work_orders_vehicle_id_org',
+    'fk_challans_vehicle_id_org', 'fk_challans_driver_id_org',
+    'fk_claims_trip_id_org', 'fk_transfers_from_branch_org',
+    'fk_transfers_to_branch_org', 'fk_attendance_employee_id_org',
+    'fk_leave_requests_employee_id_org', 'fk_gps_devices_vehicle_id_org',
+  ];
+  lines.push(`  -- FK constraints: fk_*_org (12 composite FK constraints)`);
   lines.push(`  SELECT array_agg(conname || ' on ' || conrelid::regclass::text) INTO issues`);
   lines.push(`  FROM pg_constraint`);
   lines.push(`  WHERE connamespace = 'public'::regnamespace`);
-  lines.push(`    AND conname LIKE '%_org_fk%';`);
+  lines.push(`    AND conname IN (${m005FKs.map(c => `'${c}'`).join(',')});`);
   lines.push(`  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN`);
-  lines.push(`    RAISE EXCEPTION 'PREFLIGHT FAIL [10c]: leftover M005 constraints: %', array_to_string(issues, ', ');`);
+  lines.push(`    RAISE EXCEPTION 'PREFLIGHT FAIL [10c]: leftover M005 FK constraints: %', array_to_string(issues, ', ');`);
+  lines.push(`  END IF;`);
+  lines.push(`  issues := NULL;`);
+  lines.push('');
+
+  // Unique constraints: uq_*_org_id (9 composite UNIQUE constraints)
+  const m005Uniques = [
+    'uq_customers_org_id', 'uq_trips_org_id', 'uq_vehicles_org_id',
+    'uq_drivers_org_id', 'uq_branches_org_id', 'uq_enquiries_org_id',
+    'uq_quotations_org_id', 'uq_invoices_org_id', 'uq_vendors_org_id',
+  ];
+  lines.push(`  -- Unique constraints: uq_*_org_id (9 composite UNIQUE constraints)`);
+  lines.push(`  SELECT array_agg(conname || ' on ' || conrelid::regclass::text) INTO issues`);
+  lines.push(`  FROM pg_constraint`);
+  lines.push(`  WHERE connamespace = 'public'::regnamespace`);
+  lines.push(`    AND conname IN (${m005Uniques.map(c => `'${c}'`).join(',')});`);
+  lines.push(`  IF issues IS NOT NULL AND array_length(issues, 1) > 0 THEN`);
+  lines.push(`    RAISE EXCEPTION 'PREFLIGHT FAIL [10d]: leftover M005 UNIQUE constraints: %', array_to_string(issues, ', ');`);
   lines.push(`  END IF;`);
   lines.push(`  issues := NULL;`);
   lines.push('');
@@ -351,7 +396,7 @@ function generateBlockC() {
   lines.push('-- Migration 004 Validation: Schema normalization verification');
   lines.push('-- Target: staging ybuhazlnjqjrshcvpuna');
   lines.push('-- Read-only. All results derived from catalog state.');
-  lines.push('-- Expected: ALL 7 CHECKS PASS');
+  lines.push('-- Expected: ALL 8 CHECKS PASS');
   lines.push('');
 
   // C01: All 22 converted columns are UUID type
@@ -470,6 +515,25 @@ function generateBlockC() {
   lines.push(`WHERE c.relkind = 'r' AND acl.grantee = 0`);
   lines.push(`  AND c.relname IN (${ALL_36.map(t => `'${t}'`).join(',')})`);
   lines.push('');
+  lines.push('UNION ALL');
+  lines.push('');
+
+  // C08: Zero MAINTAIN privilege for anon/authenticated (PG17+, graceful skip)
+  lines.push('-- C08: Zero MAINTAIN privilege for anon/authenticated (PG17+; PASS on older)');
+  lines.push("SELECT 'C08', 'zero_maintain_privilege',");
+  lines.push(`  CASE`);
+  lines.push(`    WHEN current_setting('server_version_num')::int < 170000 THEN 'PASS (skipped: server < PG17)'`);
+  lines.push(`    WHEN count(*) = 0 THEN 'PASS'`);
+  lines.push(`    ELSE 'FAIL: ' || count(*) || ' MAINTAIN privileges: ' || string_agg(t || ':' || r, ', ' ORDER BY t,r)`);
+  lines.push(`  END`);
+  lines.push(`FROM (`);
+  lines.push(`  SELECT t.t, r.r`);
+  lines.push(`  FROM (VALUES ${ALL_36.map(t => `('${t}')`).join(',')}) AS t(t)`);
+  lines.push(`  CROSS JOIN (VALUES ('anon'),('authenticated')) AS r(r)`);
+  lines.push(`  WHERE current_setting('server_version_num')::int >= 170000`);
+  lines.push(`    AND has_table_privilege(r.r, 'public.' || t.t, 'MAINTAIN')`);
+  lines.push(`) violations`);
+  lines.push('');
   lines.push('ORDER BY check_id;');
   lines.push('');
 
@@ -497,20 +561,21 @@ function sha256(content) {
 const checkMode = process.argv.includes('--check');
 
 if (checkMode) {
-  // Reproducibility check: compare generated content against committed files
+  // Reproducibility check: compare generated content against committed files.
+  // Normalize CRLF→LF on read so Windows checkouts pass even without .gitattributes.
   let allMatch = true;
   console.log('Migration 004 Reproducibility Check:');
   for (const [path, content] of Object.entries(OUTPUT_FILES)) {
     const generatedHash = sha256(content);
-    let committedHash;
+    let committedContent;
     try {
-      const committed = readFileSync(path, 'utf8');
-      committedHash = sha256(committed);
+      committedContent = readFileSync(path, 'utf8').replace(/\r\n/g, '\n');
     } catch (e) {
       console.log(`  FAIL: ${path} — file not found`);
       allMatch = false;
       continue;
     }
+    const committedHash = sha256(committedContent);
     const match = generatedHash === committedHash;
     const status = match ? 'MATCH' : 'MISMATCH';
     console.log(`  ${status}: ${path}`);

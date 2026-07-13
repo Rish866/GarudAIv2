@@ -2,7 +2,7 @@
 -- Migration 004 Validation: Schema normalization verification
 -- Target: staging ybuhazlnjqjrshcvpuna
 -- Read-only. All results derived from catalog state.
--- Expected: ALL 7 CHECKS PASS
+-- Expected: ALL 8 CHECKS PASS
 
 -- C01: All 22 converted columns are UUID type
 SELECT 'C01' AS check_id, 'columns_are_uuid' AS check_name,
@@ -208,5 +208,22 @@ JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
 CROSS JOIN LATERAL aclexplode(c.relacl) AS acl
 WHERE c.relkind = 'r' AND acl.grantee = 0
   AND c.relname IN ('activity_log','approvals','attendance','bank_entries','branches','cash_entries','challans','claims','contracts','customers','drivers','enquiries','eway_bills','expenses','fuel_entries','geofences','gps_devices','indents','inventory','invoices','leave_requests','ledger_accounts','maintenance_records','market_hires','notifications','payments','purchases','quotations','routes','sales','transfers','trips','tyres','vehicles','vendors','work_orders')
+
+UNION ALL
+
+-- C08: Zero MAINTAIN privilege for anon/authenticated (PG17+; PASS on older)
+SELECT 'C08', 'zero_maintain_privilege',
+  CASE
+    WHEN current_setting('server_version_num')::int < 170000 THEN 'PASS (skipped: server < PG17)'
+    WHEN count(*) = 0 THEN 'PASS'
+    ELSE 'FAIL: ' || count(*) || ' MAINTAIN privileges: ' || string_agg(t || ':' || r, ', ' ORDER BY t,r)
+  END
+FROM (
+  SELECT t.t, r.r
+  FROM (VALUES ('activity_log'),('approvals'),('attendance'),('bank_entries'),('branches'),('cash_entries'),('challans'),('claims'),('contracts'),('customers'),('drivers'),('enquiries'),('eway_bills'),('expenses'),('fuel_entries'),('geofences'),('gps_devices'),('indents'),('inventory'),('invoices'),('leave_requests'),('ledger_accounts'),('maintenance_records'),('market_hires'),('notifications'),('payments'),('purchases'),('quotations'),('routes'),('sales'),('transfers'),('trips'),('tyres'),('vehicles'),('vendors'),('work_orders')) AS t(t)
+  CROSS JOIN (VALUES ('anon'),('authenticated')) AS r(r)
+  WHERE current_setting('server_version_num')::int >= 170000
+    AND has_table_privilege(r.r, 'public.' || t.t, 'MAINTAIN')
+) violations
 
 ORDER BY check_id;

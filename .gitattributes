@@ -1,0 +1,5 @@
+# Enforce LF line endings for generated SQL and generator inputs.
+# Ensures byte-exact regeneration regardless of platform (Windows CRLF checkout).
+supabase/staging/*.sql text eol=lf
+scripts/generate-migration-004.mjs text eol=lf
+docs/migration-004-inventory.json text eol=lf

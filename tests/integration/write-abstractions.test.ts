@@ -211,11 +211,11 @@ describe('TenantRepository — sanitized write path', () => {
 
 
 // ============================================================
-// useModuleData create/update (logic path, not hook rendering)
-// Tests the sanitizeForTableSafe path that useModuleData uses
+// useModuleData create/update — see useModuleData-hook.test.tsx for real hook tests
+// The sanitizeForTableSafe function tests below verify the underlying logic.
 // ============================================================
-describe('useModuleData write path (sanitizeForTableSafe)', () => {
-  describe('create', () => {
+describe('sanitizeForTableSafe — underlying useModuleData logic', () => {
+  describe('create path', () => {
     it('sanitizes empty strings to null', () => {
       const { data, errors } = sanitizeForTableSafe('trips', {
         customer_id: VALID_UUID,
