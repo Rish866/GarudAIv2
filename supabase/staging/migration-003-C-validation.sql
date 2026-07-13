@@ -46,6 +46,12 @@ BEGIN
   -- Pattern: '(' immediately before 'ARRAY[' with matching ')' after ']'
   -- Safe because ARRAY constructor content never contains unbalanced brackets.
   expr := regexp_replace(expr, '\(ARRAY\[([^\]]*)\]\)', 'ARRAY[\1]', 'g');
+  -- Remove redundant parentheses around simple column references: (column_name) → column_name
+  -- Matches (word) where word is a simple identifier (letters, digits, underscore)
+  expr := regexp_replace(expr, '\(([a-z_][a-z0-9_]*)\)', '\1', 'g');
+  -- Remove redundant parentheses around simple equality comparisons:
+  -- (identifier = 'literal') → identifier = 'literal'
+  expr := regexp_replace(expr, '\(([a-z_][a-z0-9_]* = ''[^'']*'')\)', '\1', 'g');
   -- Normalize function qualification: strip optional 'public.' prefix on known functions
   expr := replace(expr, 'public.is_organization_member', 'is_organization_member');
   expr := replace(expr, 'public.has_organization_role', 'has_organization_role');
@@ -87,7 +93,14 @@ BEGIN
     RAISE EXCEPTION 'normalize_expr fixture 3 FAILED: different status values incorrectly matched';
   END IF;
 
-  RAISE NOTICE 'normalize_expr: all 3 validation fixtures passed';
+  -- Fixture 4: pg_get_expr style with cast and parens on status condition must match source
+  src := 'is_organization_member(organization_id) AND has_organization_role(organization_id, ARRAY[''organization_owner'',''admin'']) AND status = ''pending''';
+  pgstyle := '(public.is_organization_member(organization_id) AND public.has_organization_role(organization_id, (ARRAY[''organization_owner''::text, ''admin''::text])::text[]) AND ((status)::text = ''pending''::text))';
+  IF pg_temp.normalize_expr(src) != pg_temp.normalize_expr(pgstyle) THEN
+    RAISE EXCEPTION 'normalize_expr fixture 4 FAILED: DELETE status condition with casts/parens does not match source';
+  END IF;
+
+  RAISE NOTICE 'normalize_expr: all 4 validation fixtures passed';
 END $fixtures$;
 
 WITH expected_policies(policy_name, tablename, cmd, expected_using, expected_check) AS (
