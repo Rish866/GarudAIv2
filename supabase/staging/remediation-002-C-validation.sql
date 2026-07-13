@@ -2,48 +2,23 @@
 -- Default ACL Remediation: Validation
 -- Target: staging ybuhazlnjqjrshcvpuna
 -- Read-only: no persistent changes
--- Validates that default ACLs no longer auto-grant unsafe privileges
--- Expected: ALL 5 CHECKS PASS
+-- Validates postgres-owned defaults are clean.
+-- Reports supabase_admin defaults as BLOCKER (not PASS).
+-- Expected: C01-C04 PASS, C05 BLOCKER (informational)
 
 -- ============================================================
--- C01: Zero default TABLE grants to PUBLIC/anon/authenticated under supabase_admin
+-- C01: Zero postgres-owned default TABLE grants to PUBLIC/anon/authenticated
 -- ============================================================
 SELECT
   'C01' AS check_id,
-  'zero_table_defaults_supabase_admin' AS check_name,
+  'zero_postgres_table_defaults' AS check_name,
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' unsafe table defaults remain for supabase_admin: ' ||
+    ELSE 'FAIL: ' || count(*) || ' postgres table defaults remain: ' ||
       string_agg(
         CASE acl.grantee WHEN 0 THEN 'PUBLIC' ELSE acl.grantee::regrole::text END
         || ':' || acl.privilege_type, ', '
       )
   END AS result
-FROM pg_default_acl
-CROSS JOIN LATERAL aclexplode(defaclacl) AS acl
-WHERE defaclobjtype = 'r'
-  AND defaclrole = (SELECT oid FROM pg_roles WHERE rolname = 'supabase_admin')
-  AND (defaclnamespace = 0 OR defaclnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public'))
-  AND acl.grantee IN (
-    0,
-    (SELECT oid FROM pg_roles WHERE rolname = 'anon'),
-    (SELECT oid FROM pg_roles WHERE rolname = 'authenticated')
-  )
-
-UNION ALL
-
--- ============================================================
--- C02: Zero default TABLE grants to PUBLIC/anon/authenticated under postgres
--- ============================================================
-SELECT
-  'C02',
-  'zero_table_defaults_postgres',
-  CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' unsafe table defaults remain for postgres: ' ||
-      string_agg(
-        CASE acl.grantee WHEN 0 THEN 'PUBLIC' ELSE acl.grantee::regrole::text END
-        || ':' || acl.privilege_type, ', '
-      )
-  END
 FROM pg_default_acl
 CROSS JOIN LATERAL aclexplode(defaclacl) AS acl
 WHERE defaclobjtype = 'r'
@@ -58,15 +33,14 @@ WHERE defaclobjtype = 'r'
 UNION ALL
 
 -- ============================================================
--- C03: Zero default SEQUENCE grants to PUBLIC/anon/authenticated (both owners)
+-- C02: Zero postgres-owned default SEQUENCE grants to PUBLIC/anon/authenticated
 -- ============================================================
 SELECT
-  'C03',
-  'zero_sequence_defaults',
+  'C02',
+  'zero_postgres_sequence_defaults',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' unsafe sequence defaults remain: ' ||
+    ELSE 'FAIL: ' || count(*) || ' postgres sequence defaults remain: ' ||
       string_agg(
-        defaclrole::regrole::text || '→' ||
         CASE acl.grantee WHEN 0 THEN 'PUBLIC' ELSE acl.grantee::regrole::text END
         || ':' || acl.privilege_type, ', '
       )
@@ -74,6 +48,7 @@ SELECT
 FROM pg_default_acl
 CROSS JOIN LATERAL aclexplode(defaclacl) AS acl
 WHERE defaclobjtype = 'S'
+  AND defaclrole = (SELECT oid FROM pg_roles WHERE rolname = 'postgres')
   AND (defaclnamespace = 0 OR defaclnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public'))
   AND acl.grantee IN (
     0,
@@ -84,16 +59,14 @@ WHERE defaclobjtype = 'S'
 UNION ALL
 
 -- ============================================================
--- C04: Zero default FUNCTION EXECUTE grants to PUBLIC, anon, and authenticated (both owners)
--- Deny-by-default: future functions must receive explicit GRANT EXECUTE
+-- C03: Zero postgres-owned default FUNCTION EXECUTE for PUBLIC/anon/authenticated
 -- ============================================================
 SELECT
-  'C04',
-  'zero_function_defaults_all_api_roles',
+  'C03',
+  'zero_postgres_function_defaults',
   CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' function defaults remain: ' ||
+    ELSE 'FAIL: ' || count(*) || ' postgres function defaults remain: ' ||
       string_agg(
-        defaclrole::regrole::text || '→' ||
         CASE acl.grantee WHEN 0 THEN 'PUBLIC' ELSE acl.grantee::regrole::text END
         || ':' || acl.privilege_type, ', '
       )
@@ -101,6 +74,7 @@ SELECT
 FROM pg_default_acl
 CROSS JOIN LATERAL aclexplode(defaclacl) AS acl
 WHERE defaclobjtype = 'f'
+  AND defaclrole = (SELECT oid FROM pg_roles WHERE rolname = 'postgres')
   AND (defaclnamespace = 0 OR defaclnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public'))
   AND acl.grantee IN (
     0,
@@ -111,25 +85,49 @@ WHERE defaclobjtype = 'f'
 UNION ALL
 
 -- ============================================================
--- C05: Comprehensive check — no default ACL entry for TABLE or SEQUENCE
---      grants any privilege to PUBLIC/anon/authenticated under any owner
+-- C04: Comprehensive — zero postgres-owned unsafe defaults (TABLE + SEQUENCE + FUNCTION)
+-- ============================================================
+SELECT
+  'C04',
+  'zero_all_postgres_unsafe_defaults',
+  CASE WHEN count(*) = 0 THEN 'PASS'
+    ELSE 'FAIL: ' || count(*) || ' postgres unsafe defaults remain'
+  END
+FROM pg_default_acl
+CROSS JOIN LATERAL aclexplode(defaclacl) AS acl
+WHERE defaclobjtype IN ('r', 'S', 'f')
+  AND defaclrole = (SELECT oid FROM pg_roles WHERE rolname = 'postgres')
+  AND (defaclnamespace = 0 OR defaclnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public'))
+  AND acl.grantee IN (
+    0,
+    (SELECT oid FROM pg_roles WHERE rolname = 'anon'),
+    (SELECT oid FROM pg_roles WHERE rolname = 'authenticated')
+  )
+
+UNION ALL
+
+-- ============================================================
+-- C05: supabase_admin unsafe defaults — EXTERNAL BLOCKER (not PASS/FAIL)
+-- This check intentionally does NOT return PASS when unsafe defaults exist.
+-- It reports the blocker count so it is visible and tracked.
+-- Resolution requires Supabase platform mechanism or support.
 -- ============================================================
 SELECT
   'C05',
-  'zero_unsafe_future_table_seq_grants',
-  CASE WHEN count(*) = 0 THEN 'PASS'
-    ELSE 'FAIL: ' || count(*) || ' unsafe defaults still exist: ' ||
+  'supabase_admin_defaults_BLOCKER',
+  CASE WHEN count(*) = 0 THEN 'RESOLVED: no supabase_admin unsafe defaults remain'
+    ELSE 'BLOCKER: ' || count(*) || ' supabase_admin unsafe defaults unresolved — requires platform mechanism: ' ||
       string_agg(
-        defaclrole::regrole::text || '(' ||
-        CASE defaclobjtype WHEN 'r' THEN 'TABLE' WHEN 'S' THEN 'SEQUENCE' END
-        || ')→' ||
+        CASE defaclobjtype WHEN 'r' THEN 'TABLE' WHEN 'S' THEN 'SEQUENCE' WHEN 'f' THEN 'FUNCTION' END
+        || '→' ||
         CASE acl.grantee WHEN 0 THEN 'PUBLIC' ELSE acl.grantee::regrole::text END
         || ':' || acl.privilege_type, ', '
       )
   END
 FROM pg_default_acl
 CROSS JOIN LATERAL aclexplode(defaclacl) AS acl
-WHERE defaclobjtype IN ('r', 'S')
+WHERE defaclobjtype IN ('r', 'S', 'f')
+  AND defaclrole = (SELECT oid FROM pg_roles WHERE rolname = 'supabase_admin')
   AND (defaclnamespace = 0 OR defaclnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public'))
   AND acl.grantee IN (
     0,
