@@ -13,6 +13,14 @@ import { supabase } from '../lib/supabase';
 import { useOrganization } from '../contexts/OrganizationContext';
 import { sanitizeForTableSafe, UUID_REGEX } from '../lib/sanitize';
 import { showToast } from '../components/ui/Toast';
+import {
+  archiveStatusForTable,
+  fromDatabaseRecord,
+  immutableDeleteMessage,
+  resolveTableName,
+  shouldHideArchivedRecord,
+  toDatabaseRecord,
+} from '../lib/legacyTableAdapter';
 
 export interface ModuleDataResult<T> {
   data: T[];
@@ -48,6 +56,7 @@ export function useModuleData<T extends { id: string }>(
 
   const enabled = options?.enabled !== false;
   const isOrgReady = !orgLoading && !!organizationId;
+  const databaseTableName = resolveTableName(tableName);
 
   const refresh = useCallback(async () => {
     if (!organizationId || !enabled) {
@@ -61,7 +70,7 @@ export function useModuleData<T extends { id: string }>(
 
     try {
       let query = supabase
-        .from(tableName)
+        .from(databaseTableName)
         .select('*')
         .eq('organization_id', organizationId)
         .order(options?.orderBy || 'created_at', { ascending: options?.orderDirection === 'asc' });
@@ -81,7 +90,12 @@ export function useModuleData<T extends { id: string }>(
       } else {
         // PostgREST normally returns rows only, but defensive filtering keeps
         // malformed/null records from crashing module render functions.
-        setData((((result as T[]) || []).filter(Boolean)) as T[]);
+        setData(
+          (((result as T[]) || [])
+            .filter(Boolean)
+            .filter(row => !shouldHideArchivedRecord(tableName, row as Record<string, unknown>))
+            .map(row => fromDatabaseRecord(tableName, row as Record<string, unknown>) as T))
+        );
       }
     } catch (e: any) {
       setError(e.message || 'Failed to fetch data');
@@ -89,7 +103,7 @@ export function useModuleData<T extends { id: string }>(
     } finally {
       setLoading(false);
     }
-  }, [organizationId, tableName, enabled, options?.orderBy, options?.orderDirection]);
+  }, [organizationId, tableName, databaseTableName, enabled, options?.orderBy, options?.orderDirection]);
 
   useEffect(() => {
     if (!orgLoading) refresh();
@@ -98,10 +112,10 @@ export function useModuleData<T extends { id: string }>(
   const create = useCallback(async (record: Partial<T>): Promise<{ data: T | null; error: string | null }> => {
     if (!organizationId) return { data: null, error: 'No organization' };
 
-    const createPayload: Record<string, unknown> = {
+    const createPayload = toDatabaseRecord(tableName, {
       ...(record as Record<string, unknown>),
       organization_id: organizationId,
-    };
+    });
 
     // Legacy modules generated browser-only text IDs (for example `vnd_...`).
     // Every business-table primary key is UUID, so omit invalid IDs and let
@@ -114,7 +128,7 @@ export function useModuleData<T extends { id: string }>(
     }
 
     // Structured error: sanitizer failures return error rather than rejecting
-    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(tableName, createPayload);
+    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(databaseTableName, createPayload);
     if (sanitizeErrors.length > 0) {
       const message = sanitizeErrors.map(e => e.message).join('; ');
       setError(message);
@@ -124,7 +138,7 @@ export function useModuleData<T extends { id: string }>(
 
     try {
       const { data: created, error: createError } = await supabase
-        .from(tableName)
+        .from(databaseTableName)
         .insert(sanitized as Record<string, unknown>)
         .select()
         .single();
@@ -135,16 +149,19 @@ export function useModuleData<T extends { id: string }>(
         return { data: null, error: createError.message };
       }
 
-      if (created) setData(prev => [created as T, ...prev]);
+      const uiRecord = created
+        ? fromDatabaseRecord(tableName, created as Record<string, unknown>) as T
+        : null;
+      if (uiRecord) setData(prev => [uiRecord, ...prev]);
       setError(null);
-      return { data: created as T | null, error: null };
+      return { data: uiRecord, error: null };
     } catch (e: any) {
       const message = e?.message || `Failed to save ${tableName}`;
       setError(message);
       showToast('error', message);
       return { data: null, error: message };
     }
-  }, [organizationId, tableName]);
+  }, [organizationId, tableName, databaseTableName]);
 
   const update = useCallback(async (id: string, updates: Partial<T>): Promise<{ error: string | null }> => {
     if (!organizationId) return { error: 'No organization' };
@@ -157,7 +174,8 @@ export function useModuleData<T extends { id: string }>(
     delete safeUpdates.organization_id;
 
     // Structured error: sanitizer failures return error rather than rejecting
-    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(tableName, safeUpdates);
+    const databaseUpdates = toDatabaseRecord(tableName, safeUpdates);
+    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(databaseTableName, databaseUpdates);
     if (sanitizeErrors.length > 0) {
       const message = sanitizeErrors.map(e => e.message).join('; ');
       setError(message);
@@ -167,14 +185,15 @@ export function useModuleData<T extends { id: string }>(
 
     const patch = sanitized as Record<string, unknown>;
     const { error: updateError } = await supabase
-      .from(tableName)
+      .from(databaseTableName)
       .update(patch)
       .eq('id', id)
       .eq('organization_id', organizationId);
 
     if (!updateError) {
       // Use the SANITIZED patch for local state so DB and UI agree
-      setData(prev => prev.map(item => item.id === id ? { ...item, ...patch } : item));
+      const uiPatch = fromDatabaseRecord(tableName, patch) as Partial<T>;
+      setData(prev => prev.map(item => item.id === id ? { ...item, ...uiPatch } : item));
       setError(null);
     } else {
       setError(updateError.message);
@@ -182,13 +201,39 @@ export function useModuleData<T extends { id: string }>(
     }
 
     return { error: updateError?.message || null };
-  }, [organizationId, tableName]);
+  }, [organizationId, tableName, databaseTableName]);
 
   const remove = useCallback(async (id: string): Promise<{ error: string | null }> => {
     if (!organizationId) return { error: 'No organization' };
 
+    const immutableMessage = immutableDeleteMessage(tableName);
+    if (immutableMessage) {
+      setError(immutableMessage);
+      showToast('warning', immutableMessage);
+      return { error: immutableMessage };
+    }
+
+    const archiveStatus = archiveStatusForTable(tableName);
+    if (archiveStatus) {
+      const { error: archiveError } = await supabase
+        .from(databaseTableName)
+        .update({ status: archiveStatus })
+        .eq('id', id)
+        .eq('organization_id', organizationId);
+
+      if (archiveError) {
+        setError(archiveError.message);
+        showToast('error', `Could not archive ${tableName}: ${archiveError.message}`);
+        return { error: archiveError.message };
+      }
+
+      setData(prev => prev.filter(item => item.id !== id));
+      setError(null);
+      return { error: null };
+    }
+
     const { error: deleteError } = await supabase
-      .from(tableName)
+      .from(databaseTableName)
       .delete()
       .eq('id', id)
       .eq('organization_id', organizationId);
@@ -202,7 +247,7 @@ export function useModuleData<T extends { id: string }>(
     }
 
     return { error: deleteError?.message || null };
-  }, [organizationId, tableName]);
+  }, [organizationId, tableName, databaseTableName]);
 
   return {
     data,
