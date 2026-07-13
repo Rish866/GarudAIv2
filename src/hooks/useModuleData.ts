@@ -11,7 +11,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useOrganization } from '../contexts/OrganizationContext';
-import { sanitizeForTable, sanitizeForTableSafe } from '../lib/sanitize';
+import { sanitizeForTableSafe, UUID_REGEX } from '../lib/sanitize';
+import { showToast } from '../components/ui/Toast';
 
 export interface ModuleDataResult<T> {
   data: T[];
@@ -95,32 +96,71 @@ export function useModuleData<T extends { id: string }>(
   const create = useCallback(async (record: Partial<T>): Promise<{ data: T | null; error: string | null }> => {
     if (!organizationId) return { data: null, error: 'No organization' };
 
+    const createPayload: Record<string, unknown> = {
+      ...(record as Record<string, unknown>),
+      organization_id: organizationId,
+    };
+
+    // Legacy modules generated browser-only text IDs (for example `vnd_...`).
+    // Every business-table primary key is UUID, so omit invalid IDs and let
+    // PostgreSQL's gen_random_uuid() default create the canonical identifier.
+    if (
+      'id' in createPayload &&
+      (typeof createPayload.id !== 'string' || !UUID_REGEX.test(createPayload.id))
+    ) {
+      delete createPayload.id;
+    }
+
     // Structured error: sanitizer failures return error rather than rejecting
-    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(tableName, { ...record, organization_id: organizationId });
+    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(tableName, createPayload);
     if (sanitizeErrors.length > 0) {
-      return { data: null, error: sanitizeErrors.map(e => e.message).join('; ') };
+      const message = sanitizeErrors.map(e => e.message).join('; ');
+      setError(message);
+      showToast('error', `Could not save ${tableName}: ${message}`);
+      return { data: null, error: message };
     }
 
-    const { data: created, error: createError } = await supabase
-      .from(tableName)
-      .insert(sanitized as Record<string, unknown>)
-      .select()
-      .single();
+    try {
+      const { data: created, error: createError } = await supabase
+        .from(tableName)
+        .insert(sanitized as Record<string, unknown>)
+        .select()
+        .single();
 
-    if (!createError && created) {
-      setData(prev => [created as T, ...prev]);
+      if (createError) {
+        setError(createError.message);
+        showToast('error', `Could not save ${tableName}: ${createError.message}`);
+        return { data: null, error: createError.message };
+      }
+
+      if (created) setData(prev => [created as T, ...prev]);
+      setError(null);
+      return { data: created as T | null, error: null };
+    } catch (e: any) {
+      const message = e?.message || `Failed to save ${tableName}`;
+      setError(message);
+      showToast('error', message);
+      return { data: null, error: message };
     }
-
-    return { data: created as T | null, error: createError?.message || null };
   }, [organizationId, tableName]);
 
   const update = useCallback(async (id: string, updates: Partial<T>): Promise<{ error: string | null }> => {
     if (!organizationId) return { error: 'No organization' };
 
+    // Primary keys and tenant ownership are immutable from client updates.
+    const safeUpdates: Record<string, unknown> = {
+      ...(updates as Record<string, unknown>),
+    };
+    delete safeUpdates.id;
+    delete safeUpdates.organization_id;
+
     // Structured error: sanitizer failures return error rather than rejecting
-    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(tableName, { ...updates });
+    const { data: sanitized, errors: sanitizeErrors } = sanitizeForTableSafe(tableName, safeUpdates);
     if (sanitizeErrors.length > 0) {
-      return { error: sanitizeErrors.map(e => e.message).join('; ') };
+      const message = sanitizeErrors.map(e => e.message).join('; ');
+      setError(message);
+      showToast('error', `Could not update ${tableName}: ${message}`);
+      return { error: message };
     }
 
     const patch = sanitized as Record<string, unknown>;
@@ -133,6 +173,10 @@ export function useModuleData<T extends { id: string }>(
     if (!updateError) {
       // Use the SANITIZED patch for local state so DB and UI agree
       setData(prev => prev.map(item => item.id === id ? { ...item, ...patch } : item));
+      setError(null);
+    } else {
+      setError(updateError.message);
+      showToast('error', `Could not update ${tableName}: ${updateError.message}`);
     }
 
     return { error: updateError?.message || null };
@@ -149,6 +193,10 @@ export function useModuleData<T extends { id: string }>(
 
     if (!deleteError) {
       setData(prev => prev.filter(item => item.id !== id));
+      setError(null);
+    } else {
+      setError(deleteError.message);
+      showToast('error', `Could not delete ${tableName}: ${deleteError.message}`);
     }
 
     return { error: deleteError?.message || null };

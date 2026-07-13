@@ -29,6 +29,7 @@ const mockFrom = vi.fn(() => ({
   update: mockUpdate,
   delete: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => ({ error: null })) })) })),
 }));
+const mockShowToast = vi.fn();
 
 vi.mock('../../src/lib/supabase', () => ({
   supabase: {
@@ -38,6 +39,10 @@ vi.mock('../../src/lib/supabase', () => ({
       onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
     },
   },
+}));
+
+vi.mock('../../src/components/ui/Toast', () => ({
+  showToast: (...args: any[]) => mockShowToast(...args),
 }));
 
 // --- OrganizationContext mock ---
@@ -273,5 +278,48 @@ describe('useModuleData.update() — real hook', () => {
 
     expect(updateResult.error).toContain('expected string or null');
     expect(mockUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe('useModuleData.create() legacy compatibility and visible errors', () => {
+  it('drops legacy non-UUID primary keys so PostgreSQL generates the UUID', async () => {
+    const { result } = renderHook(() => useModuleData<any>('vendors'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.create({
+        id: 'vnd_legacy-browser-id',
+        name: 'Test Vendor',
+      });
+    });
+
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Test Vendor',
+        organization_id: ORG_ID,
+      })
+    );
+    expect((mockInsert.mock.calls.at(-1) as any)?.[0]).not.toHaveProperty('id');
+  });
+
+  it('returns and visibly reports database write failures', async () => {
+    mockSingle.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'permission denied for table vendors' },
+    });
+
+    const { result } = renderHook(() => useModuleData<any>('vendors'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let createResult: any;
+    await act(async () => {
+      createResult = await result.current.create({ name: 'Test Vendor' });
+    });
+
+    expect(createResult.error).toContain('permission denied');
+    expect(mockShowToast).toHaveBeenCalledWith(
+      'error',
+      expect.stringContaining('permission denied')
+    );
   });
 });
