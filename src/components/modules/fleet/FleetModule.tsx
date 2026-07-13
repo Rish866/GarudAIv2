@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import { useStore, generateId } from '../../../store/useStore';
 import type { Vehicle, VehicleType, VehicleStatus, OwnershipType } from '../../../types';
-import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
+import { formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
 import { exportVehicles } from '../../../lib/excel';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import BulkUpload from '../../ui/BulkUpload';
 import { useModuleData } from '../../../hooks/useModuleData';
-import type { VehicleRecord } from '../../../data/vehicles/vehicleRepository';
 
 // Fix default leaflet icon
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -72,6 +70,8 @@ export default function FleetModule() {
   const [form, setForm] = useState<VehicleForm>(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const filteredVehicles = vehicles.filter((v) => {
     const matchesSearch =
@@ -87,11 +87,13 @@ export default function FleetModule() {
   const openAddModal = () => {
     setEditingVehicle(null);
     setForm(emptyForm);
+    setSaveError(null);
     setShowModal(true);
   };
 
   const openEditModal = (vehicle: Vehicle) => {
     setEditingVehicle(vehicle);
+    setSaveError(null);
     setForm({
       reg_number: vehicle.reg_number,
       vehicle_type: vehicle.vehicle_type,
@@ -111,10 +113,13 @@ export default function FleetModule() {
   };
 
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaveError(null);
+    setSaving(true);
+
     if (editingVehicle) {
-      updateVehicle(editingVehicle.id, {
+      const result = await updateVehicle(editingVehicle.id, {
         reg_number: form.reg_number,
         vehicle_type: form.vehicle_type,
         make: form.make,
@@ -129,10 +134,15 @@ export default function FleetModule() {
         puc_expiry: form.puc_expiry,
         permit_expiry: form.permit_expiry,
       });
+      if (result.error) {
+        setSaveError(result.error);
+        setSaving(false);
+        return;
+      }
     } else {
-      const newVehicle: Vehicle = {
-        id: generateId(),
-        
+      // Let PostgreSQL generate the UUID primary key. The legacy browser ID
+      // generator produces non-UUID strings and must not be used for DB rows.
+      const newVehicle = {
         reg_number: form.reg_number,
         vehicle_type: form.vehicle_type,
         make: form.make,
@@ -150,8 +160,15 @@ export default function FleetModule() {
         odometer: 0,
         created_at: new Date().toISOString(),
       };
-      addVehicle(newVehicle);
+      const result = await addVehicle(newVehicle);
+      if (result.error) {
+        setSaveError(result.error);
+        setSaving(false);
+        return;
+      }
     }
+
+    setSaving(false);
     setShowModal(false);
   };
 
@@ -443,8 +460,6 @@ export default function FleetModule() {
           onUpload={(data) => {
             data.forEach(row => {
               addVehicle({
-                id: generateId(),
-                
                 reg_number: row.reg_number || '',
                 vehicle_type: (row.vehicle_type as any) || 'truck',
                 make: row.make || '',
@@ -629,12 +644,18 @@ export default function FleetModule() {
               </div>
 
 
+              {saveError && (
+                <p className="text-sm text-red-600" role="alert">
+                  {saveError}
+                </p>
+              )}
               <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="submit"
+                  disabled={saving}
                   className="flex-1 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all"
                 >
-                  {editingVehicle ? 'Update Vehicle' : 'Add Vehicle'}
+                  {saving ? 'Saving...' : editingVehicle ? 'Update Vehicle' : 'Add Vehicle'}
                 </button>
                 <button
                   type="button"
