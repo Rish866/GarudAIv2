@@ -299,8 +299,33 @@ export default function DriversModule() {
           {/* Driver Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {filteredDrivers.map((driver) => (
-              <div key={driver.id} onClick={() => openDriverDetail(driver)} className="cursor-pointer">
-                <DriverCard driver={driver} onTimePercent={driver.onTimePercent} overallScore={driver.overallScore} rating={driver.rating} />
+              <div key={driver.id} className="relative">
+                <div onClick={() => openDriverDetail(driver)} className="cursor-pointer">
+                  <DriverCard driver={driver} onTimePercent={driver.onTimePercent} overallScore={driver.overallScore} rating={driver.rating} />
+                </div>
+                <div className="absolute top-3 right-3 flex gap-1 z-10">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditingDriver(driver); setShowModal(true); }}
+                    className="p-1.5 bg-white border border-slate-200 rounded-lg text-blue-600 hover:bg-blue-50 shadow-sm"
+                    title="Edit"
+                  >
+                    <Edit size={14} />
+                  </button>
+                  {deleteConfirmId === driver.id ? (
+                    <div className="flex gap-1">
+                      <button onClick={(e) => { e.stopPropagation(); removeDriver(driver.id); setDeleteConfirmId(null); showToast('success', 'Driver removed'); }} className="px-2 py-1 text-xs bg-red-600 text-white rounded font-medium">Yes</button>
+                      <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }} className="px-2 py-1 text-xs bg-slate-200 text-slate-700 rounded font-medium">No</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(driver.id); }}
+                      className="p-1.5 bg-white border border-slate-200 rounded-lg text-red-600 hover:bg-red-50 shadow-sm"
+                      title="Delete"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -341,8 +366,8 @@ export default function DriversModule() {
         />
       )}
 
-      {/* Add Driver Modal */}
-      {showModal && <AddDriverModal onClose={() => setShowModal(false)} />}
+      {/* Add/Edit Driver Modal */}
+      {showModal && <AddDriverModal driver={editingDriver} onClose={() => { setShowModal(false); setEditingDriver(null); }} />}
     </div>
   );
 }
@@ -438,30 +463,30 @@ function DriverCard({ driver, onTimePercent, overallScore, rating }: { key?: str
   );
 }
 
-function AddDriverModal({ onClose }: { onClose: () => void }) {
-  const { create: addDriver } = useModuleData<any>('drivers');
+function AddDriverModal({ driver: editDriver, onClose }: { driver?: any | null; onClose: () => void }) {
+  const { create: addDriver, update: updateDriver } = useModuleData<any>('drivers');
 
   const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    license_number: '',
-    license_expiry: '',
-    address: '',
-    emergency_contact: '',
-    emergency_phone: '',
-    salary_type: 'monthly' as 'monthly' | 'per_trip' | 'per_km',
-    base_salary: '',
-    date_of_joining: new Date().toISOString().split('T')[0],
+    name: editDriver?.name || '',
+    phone: editDriver?.phone || '',
+    license_number: editDriver?.license_number || '',
+    license_expiry: editDriver?.license_expiry || '',
+    address: editDriver?.address || '',
+    emergency_contact: editDriver?.emergency_contact || '',
+    emergency_phone: editDriver?.emergency_phone || '',
+    salary_type: (editDriver?.salary_type || 'monthly') as 'monthly' | 'per_trip' | 'per_km',
+    base_salary: editDriver?.base_salary ? String(editDriver.base_salary) : '',
+    date_of_joining: editDriver?.date_of_joining || new Date().toISOString().split('T')[0],
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    addDriver({
+    const data = {
       name: form.name,
       phone: form.phone,
       license_number: form.license_number,
@@ -472,12 +497,21 @@ function AddDriverModal({ onClose }: { onClose: () => void }) {
       salary_type: form.salary_type,
       base_salary: Number(form.base_salary) || 0,
       date_of_joining: form.date_of_joining,
-      status: 'available',
-      safety_score: 85,
-      total_trips: 0,
-      total_km: 0,
-    });
-    showToast('success', 'Driver added successfully');
+    };
+
+    if (editDriver) {
+      await updateDriver(editDriver.id, data);
+      showToast('success', 'Driver updated');
+    } else {
+      await addDriver({
+        ...data,
+        status: 'available',
+        safety_score: 85,
+        total_trips: 0,
+        total_km: 0,
+      });
+      showToast('success', 'Driver added');
+    }
     onClose();
   };
 
@@ -485,7 +519,7 @@ function AddDriverModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
-          <h2 className="text-lg font-bold text-slate-900">Add Driver</h2>
+          <h2 className="text-lg font-bold text-slate-900">{editDriver ? 'Edit Driver' : 'Add Driver'}</h2>
           <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
             <X size={18} className="text-slate-500" />
           </button>

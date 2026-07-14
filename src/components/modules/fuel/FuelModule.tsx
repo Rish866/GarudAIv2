@@ -106,6 +106,7 @@ export default function FuelModule() {
               <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Odometer</th>
               <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Mileage</th>
               <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Station</th>
+              <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -118,8 +119,11 @@ export default function FuelModule() {
                 <td className="px-4 py-3 text-sm text-slate-600 text-right">{formatCurrency(entry.rate)}</td>
                 <td className="px-4 py-3 text-sm text-slate-700 text-right font-medium">{formatCurrency(entry.amount)}</td>
                 <td className="px-4 py-3 text-sm text-slate-600 text-right">{entry.odometer.toLocaleString()} km</td>
-                <td className="px-4 py-3 text-sm text-right font-bold text-green-600">{entry.mileage ? `${entry.mileage} km/l` : '—'}</td>
+                <td className="px-4 py-3 text-sm text-right font-bold text-green-600">{entry.mileage ? `${entry.mileage} km/l` : '\u2014'}</td>
                 <td className="px-4 py-3 text-sm text-slate-600">{entry.station}</td>
+                <td className="px-4 py-3 text-right">
+                  <button onClick={() => removeFuelEntry(entry.id).then(() => showToast('success', 'Entry deleted'))} className="text-xs text-red-600 hover:bg-red-50 px-2 py-1 rounded font-medium">Delete</button>
+                </td>
               </tr>
             ))}
           </tbody>

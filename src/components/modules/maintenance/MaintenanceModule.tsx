@@ -121,6 +121,16 @@ export default function MaintenanceModule() {
                 </div>
               )}
             </div>
+            {/* Actions */}
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+              {record.status === 'scheduled' && (
+                <button onClick={() => { updateMaintenance(record.id, { status: 'in_progress' }); showToast('success', 'Started'); }} className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Start</button>
+              )}
+              {record.status === 'in_progress' && (
+                <button onClick={() => { updateMaintenance(record.id, { status: 'completed' }); showToast('success', 'Completed'); }} className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">Complete</button>
+              )}
+              <button onClick={() => { removeMaintenance(record.id); showToast('success', 'Deleted'); }} className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg font-medium ml-auto">Delete</button>
+            </div>
           </div>
         ))}
       </div>
