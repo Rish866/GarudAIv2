@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
 import type { MaintenanceRecord } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames } from '../../../lib/utils';
+import { showToast } from '../../ui/Toast';
 
 export default function MaintenanceModule() {
-  const { company } = useStore();
-  const { data: maintenance, create: addMaintenance } = useModuleData<any>('maintenance');
+  const { data: maintenance, create: addMaintenance, update: updateMaintenance, remove: removeMaintenance } = useModuleData<any>('maintenance');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const [showModal, setShowModal] = useState(false);
 
@@ -29,8 +28,7 @@ export default function MaintenanceModule() {
   const handleSubmit = () => {
     if (!form.vehicle_id) return;
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
-    const record: MaintenanceRecord = {
-      id: generateId(),
+    const record = {
       vehicle_id: form.vehicle_id,
       vehicle_reg: vehicle?.reg_number || '',
       type: form.type,
@@ -40,9 +38,9 @@ export default function MaintenanceModule() {
       cost: form.cost,
       vendor: form.vendor,
       status: 'scheduled',
-      created_at: new Date().toISOString(),
     };
     addMaintenance(record);
+    showToast('success', 'Maintenance scheduled');
     setShowModal(false);
     setForm({ vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' });
   };

@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import type { Invoice, Payment, Expense, ExpenseCategory } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateInvoiceNumber } from '../../../lib/utils';
 import { generateInvoicePDF } from '../../../lib/pdf';
 import { exportInvoices, exportExpenses } from '../../../lib/excel';
+import { showToast } from '../../ui/Toast';
 
 type BillingTab = 'invoices' | 'payments' | 'expenses';
 
 export default function BillingModule() {
   const { company } = useStore();
-  const { data: invoices, create: addInvoice } = useModuleData<any>('invoices');
-  const { data: payments, create: addPayment } = useModuleData<any>('payments');
-  const { data: expenses, create: addExpense } = useModuleData<any>('expenses');
+  const { data: invoices, create: addInvoice, update: updateInvoice, remove: removeInvoice } = useModuleData<any>('invoices');
+  const { data: payments, create: addPayment, update: updatePayment } = useModuleData<any>('payments');
+  const { data: expenses, create: addExpense, update: updateExpense, remove: removeExpense } = useModuleData<any>('expenses');
   const { data: customers } = useModuleData<any>('customers');
   const { data: trips } = useModuleData<any>('trips');
   const { data: vehicles } = useModuleData<any>('vehicles');
@@ -72,13 +73,12 @@ export default function BillingModule() {
     const gst_amount = Math.round(subtotal * invForm.gst_percent / 100);
     const tds_amount = Math.round(subtotal * 0.02);
     const total_amount = subtotal + gst_amount - tds_amount;
-    const invoice: Invoice = {
-      id: generateId(),
+    addInvoice({
       invoice_number: generateInvoiceNumber(),
       customer_id: customer.id,
       customer_name: customer.name,
       invoice_date: new Date().toISOString().split('T')[0],
-      due_date: new Date(Date.now() + customer.credit_days * 86400000).toISOString().split('T')[0],
+      due_date: new Date(Date.now() + (customer.credit_days || 30) * 86400000).toISOString().split('T')[0],
       trip_ids: invForm.trip_id ? [invForm.trip_id] : [],
       freight_total: invForm.freight_total,
       detention_total: invForm.detention_total,
@@ -91,9 +91,8 @@ export default function BillingModule() {
       paid_amount: 0,
       balance_amount: total_amount,
       status: 'draft',
-      created_at: new Date().toISOString(),
-    };
-    addInvoice(invoice);
+    });
+    showToast('success', 'Invoice created');
     setShowInvoiceModal(false);
     setInvForm({ customer_id: '', trip_id: '', freight_total: 0, detention_total: 0, other_charges: 0, gst_percent: 5 });
   };
@@ -102,9 +101,8 @@ export default function BillingModule() {
   const handleRecordPayment = () => {
     const customer = customers.find((c) => c.id === payForm.customer_id);
     if (!customer) return;
-    const payment: Payment = {
-      id: generateId(),
-      invoice_id: payForm.invoice_id || undefined,
+    addPayment({
+      invoice_id: payForm.invoice_id || null,
       customer_id: customer.id,
       customer_name: customer.name,
       amount: payForm.amount,
@@ -113,30 +111,27 @@ export default function BillingModule() {
       payment_date: new Date().toISOString().split('T')[0],
       tds_amount: payForm.tds_amount,
       status: 'received',
-      created_at: new Date().toISOString(),
-    };
-    addPayment(payment);
+    });
+    showToast('success', 'Payment recorded');
     setShowPaymentModal(false);
     setPayForm({ customer_id: '', invoice_id: '', amount: 0, payment_mode: 'bank_transfer', reference_number: '', tds_amount: 0 });
   };
 
   const handleAddExpense = () => {
     const vehicle = vehicles.find((v) => v.id === expForm.vehicle_id);
-    const expense: Expense = {
-      id: generateId(),
-      trip_id: expForm.trip_id || undefined,
-      vehicle_id: vehicle?.id,
-      vehicle_reg: vehicle?.reg_number,
+    addExpense({
+      trip_id: expForm.trip_id || null,
+      vehicle_id: vehicle?.id || null,
+      vehicle_reg: vehicle?.reg_number || '',
       category: expForm.category,
       amount: expForm.amount,
       date: expForm.date,
       description: expForm.description,
       paid_to: expForm.paid_to,
       payment_mode: expForm.payment_mode,
-      approved: true,
-      created_at: new Date().toISOString(),
-    };
-    addExpense(expense);
+      approved: false,
+    });
+    showToast('success', 'Expense added');
     setShowExpenseModal(false);
     setExpForm({ category: 'diesel', amount: 0, description: '', paid_to: '', vehicle_id: '', trip_id: '', payment_mode: 'cash', date: new Date().toISOString().split('T')[0] });
   };

@@ -11,8 +11,27 @@ import ToastContainer from './components/ui/Toast';
 import { OrganizationProvider, useOrganization } from './contexts/OrganizationContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
-import { signIn, isPlatformAdmin, getAllTenants, switchTenant } from './lib/auth';
+import { signIn } from './lib/auth';
 import { supabase, supabaseConfigurationError } from './lib/supabase';
+import type { UserRole } from './types';
+
+// Map organization_members role to legacy store UserRole
+function mapOrgRoleToLegacy(orgRole: string): UserRole {
+  const mapping: Record<string, UserRole> = {
+    organization_owner: 'super_admin',
+    admin: 'admin',
+    operations_manager: 'operations',
+    dispatcher: 'operations',
+    fleet_manager: 'fleet_manager',
+    accountant: 'accounts',
+    maintenance_manager: 'fleet_manager',
+    hr_manager: 'admin',
+    driver: 'driver',
+    customer: 'driver',
+    viewer: 'driver',
+  };
+  return mapping[orgRole] || 'operations';
+}
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -198,7 +217,7 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
           id: result.user.id,
           name: result.user.name,
           email: result.user.email,
-          role: result.user.role,
+          role: mapOrgRoleToLegacy(result.user.role),
           phone: result.user.phone,
           status: 'active',
         });

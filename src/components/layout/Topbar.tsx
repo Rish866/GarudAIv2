@@ -20,7 +20,7 @@ import { useStore } from '../../store/useStore';
 import type { ModuleName } from '../../types';
 import HelpButton from '../ui/HelpButton';
 import { MODULE_HELP } from '../../lib/helpContent';
-import { isPlatformAdmin, getAllTenants, switchTenant } from '../../lib/auth';
+import { isPlatformAdmin, getAllOrganizations } from '../../lib/auth';
 
 const moduleLabels: Record<ModuleName, string> = {
   dashboard: 'Dashboard',
@@ -125,10 +125,10 @@ export default function Topbar() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
   const recentNotifications = notifications.slice(0, 5);
 
-  // Load tenants for platform admin switcher
+  // Load organizations for platform admin switcher
   useEffect(() => {
     if (isPlatformAdmin(user.email)) {
-      getAllTenants().then(setTenants);
+      getAllOrganizations().then(setTenants);
     }
   }, [user.email]);
 
@@ -445,7 +445,6 @@ export default function Topbar() {
                             <button
                               key={tenant.id}
                               onClick={() => {
-                                switchTenant(tenant.id);
                                 setUserOpen(false);
                                 window.location.reload();
                               }}
@@ -453,10 +452,10 @@ export default function Topbar() {
                               style={{ color: 'var(--text-secondary)' }}
                             >
                               <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shrink-0">
-                                <span className="text-white text-[9px] font-bold">{tenant.company_name.charAt(0)}</span>
+                                <span className="text-white text-[9px] font-bold">{(tenant.name || 'O').charAt(0)}</span>
                               </div>
                               <div className="min-w-0">
-                                <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{tenant.company_name}</p>
+                                <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{tenant.name}</p>
                                 <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{tenant.owner_email} • {tenant.status}</p>
                               </div>
                             </button>

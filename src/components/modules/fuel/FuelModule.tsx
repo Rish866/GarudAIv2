@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
 import type { FuelEntry } from '../../../types';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
+import { showToast } from '../../ui/Toast';
 
 export default function FuelModule() {
-  const { company } = useStore();
-  const { data: fuelEntries, create: addFuelEntry } = useModuleData<any>('fuel_entries');
+  const { data: fuelEntries, create: addFuelEntry, update: updateFuelEntry, remove: removeFuelEntry } = useModuleData<any>('fuel_entries');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
   const [showModal, setShowModal] = useState(false);
@@ -48,11 +47,10 @@ export default function FuelModule() {
   const handleSubmit = () => {
     if (!form.vehicle_id) return;
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
-    const entry: FuelEntry = {
-      id: generateId(),
+    const entry = {
       vehicle_id: form.vehicle_id,
       vehicle_reg: vehicle?.reg_number || '',
-      driver_id: form.driver_id,
+      driver_id: form.driver_id || null,
       driver_name: form.driver_name,
       date: form.date,
       litres: form.litres,
@@ -60,10 +58,9 @@ export default function FuelModule() {
       amount: Math.round(form.litres * form.rate),
       odometer: form.odometer,
       station: form.station,
-      mileage: undefined,
-      created_at: new Date().toISOString(),
     };
     addFuelEntry(entry);
+    showToast('success', 'Fuel entry added');
     setShowModal(false);
     setForm({ vehicle_id: '', driver_id: '', driver_name: '', date: new Date().toISOString().split('T')[0], litres: 0, rate: 0, odometer: 0, station: '' });
   };

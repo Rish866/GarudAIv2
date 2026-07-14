@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
 import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
@@ -82,8 +82,7 @@ export default function TripsModule() {
         const tds_amount = Math.round(subtotal * 0.02);
         const total_amount = subtotal + gst_amount - tds_amount;
 
-        const invoice: Invoice = {
-          id: generateId(),
+        addInvoice({
           invoice_number: generateInvoiceNumber(),
           customer_id: trip.customer_id,
           customer_name: trip.customer_name,
@@ -101,21 +100,17 @@ export default function TripsModule() {
           paid_amount: 0,
           balance_amount: total_amount,
           status: 'sent',
-          created_at: new Date().toISOString(),
-        };
-        addInvoice(invoice);
+        });
 
         // Also update trip to billed
         updateTrip(tripId, { status: 'billed' });
 
         // Send notification
         addNotification({
-          id: generateId(),
           type: 'invoice_generated',
           title: 'Invoice Auto-Generated',
-          message: `Invoice ${invoice.invoice_number} created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,
+          message: `Invoice auto-created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,
           link_module: 'billing',
-          link_id: invoice.id,
           is_read: false,
           created_at: new Date().toISOString(),
         });
@@ -125,25 +120,23 @@ export default function TripsModule() {
 
 
   const handleDuplicateTrip = (trip: Trip) => {
-    const newTrip: Trip = {
-      ...trip,
-      id: generateId(),
+    const { id, created_at, ...tripData } = trip as any;
+    addTrip({
+      ...tripData,
       trip_number: generateTripNumber(),
       lr_number: generateLRNumber(),
-      eway_bill: 'EWB-' + Date.now().toString().slice(-9),
+      eway_bill: '',
       status: 'booked',
       booking_date: new Date().toISOString().split('T')[0],
-      loading_date: undefined,
-      departure_date: undefined,
-      expected_delivery: undefined,
-      actual_delivery: undefined,
-      pod_url: undefined,
-      pod_date: undefined,
-      pod_details: undefined,
+      loading_date: null,
+      departure_date: null,
+      expected_delivery: null,
+      actual_delivery: null,
+      pod_url: null,
+      pod_date: null,
+      pod_remarks: null,
       remarks: `Duplicated from ${trip.trip_number}`,
-      created_at: new Date().toISOString(),
-    };
-    addTrip(newTrip);
+    });
   };
 
   return (
@@ -826,12 +819,10 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
     const freight = Number(form.freight_amount) || 0;
     const advance = Number(form.advance_amount) || 0;
 
-    const trip: Trip = {
-      id: generateId(),
-      
+    addTrip({
       trip_number: generateTripNumber(),
       lr_number: generateLRNumber(),
-      eway_bill: form.eway_bill || ('EWB-' + Date.now().toString().slice(-9)),
+      eway_bill: form.eway_bill || '',
       customer_id: customer.id,
       customer_name: customer.name,
       vehicle_id: vehicle.id,
@@ -845,7 +836,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
       material: form.material,
       weight_tons: Number(form.weight_tons) || 0,
       booking_date: form.booking_date,
-      expected_delivery: form.expected_delivery || undefined,
+      expected_delivery: form.expected_delivery || null,
       freight_amount: freight,
       advance_amount: advance,
       balance_amount: freight - advance,
@@ -853,10 +844,8 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
       other_charges: 0,
       total_amount: freight,
       status: 'booked',
-      created_at: new Date().toISOString(),
-    };
+    });
 
-    addTrip(trip);
     onClose();
   };
 

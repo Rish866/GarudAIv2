@@ -1,18 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import { useStore, generateId } from '../../../store/useStore';
 import type { Driver } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
 import { exportDrivers } from '../../../lib/excel';
-import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle, TrendingUp, Clock, Award, Fuel, ChevronRight, BarChart3, Star } from 'lucide-react';
+import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle, TrendingUp, Clock, Award, Fuel, ChevronRight, BarChart3, Star, Edit, Trash2 } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { showToast } from '../../ui/Toast';
 
 type DriverView = 'list' | 'performance' | 'detail';
 
 export default function DriversModule() {
   const { data: trips } = useModuleData<any>('trips');
-  const { data: drivers, create: addDriver, loading: driversLoading } = useModuleData<any>('drivers');
+  const { data: drivers, create: addDriver, update: updateDriver, remove: removeDriver, loading: driversLoading } = useModuleData<any>('drivers');
   const [showModal, setShowModal] = useState(false);
+  const [editingDriver, setEditingDriver] = useState<any | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [view, setView] = useState<DriverView>('list');
@@ -317,8 +319,6 @@ export default function DriversModule() {
           onUpload={(data) => {
             data.forEach(row => {
               addDriver({
-                id: generateId(),
-                
                 name: row.name || '',
                 phone: row.phone || '',
                 license_number: row.license_number || '',
@@ -461,9 +461,7 @@ function AddDriverModal({ onClose }: { onClose: () => void }) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const driver: Driver = {
-      id: generateId(),
-      
+    addDriver({
       name: form.name,
       phone: form.phone,
       license_number: form.license_number,
@@ -478,10 +476,8 @@ function AddDriverModal({ onClose }: { onClose: () => void }) {
       safety_score: 85,
       total_trips: 0,
       total_km: 0,
-      created_at: new Date().toISOString(),
-    };
-
-    addDriver(driver);
+    });
+    showToast('success', 'Driver added successfully');
     onClose();
   };
 
