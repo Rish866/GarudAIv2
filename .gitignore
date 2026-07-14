@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Backups and database dumps (never commit)
+backups/
+*.backup
+*.dump
+*.sql.gz

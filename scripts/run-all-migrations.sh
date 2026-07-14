@@ -1,6 +1,12 @@
 #!/bin/bash
-# Run inside su -s /bin/bash postgres
+# Local PostgreSQL migration test runner.
+# Run as: su -s /bin/bash postgres -c "bash scripts/run-all-migrations.sh"
+# Requires: PostgreSQL 15 installed, run from the repository root directory.
+# No credentials, tokens, or connection strings stored in this file.
 set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
 PGHOST=/var/run/postgresql
 export PGHOST
 
@@ -14,10 +20,10 @@ psql -c "DROP DATABASE IF EXISTS garud_test;"
 psql -c "CREATE DATABASE garud_test;"
 
 echo "=== Setting up auth schema ==="
-psql -d garud_test -v ON_ERROR_STOP=1 -f /projects/sandbox/GarudAIv2/scripts/setup-auth.sql
+psql -d garud_test -v ON_ERROR_STOP=1 -f "$REPO_DIR/scripts/setup-auth.sql"
 
 echo "=== Applying migrations ==="
-MIGRATIONS_DIR=/projects/sandbox/GarudAIv2/supabase/migrations
+MIGRATIONS_DIR="$REPO_DIR/supabase/migrations"
 for f in $(ls $MIGRATIONS_DIR/*.sql | sort); do
   BASENAME=$(basename "$f")
   if [ "$BASENAME" = "004_storage_policies.sql" ]; then
@@ -53,7 +59,7 @@ psql -d garud_test -t -c "SELECT column_name FROM information_schema.columns WHE
 
 echo ""
 echo "=== Running SQL test suite ==="
-psql -d garud_test -v ON_ERROR_STOP=1 -f /projects/sandbox/GarudAIv2/supabase/tests/008_trip_operations_test.sql 2>&1
+psql -d garud_test -v ON_ERROR_STOP=1 -f "$REPO_DIR/supabase/tests/008_trip_operations_test.sql" 2>&1
 
 echo ""
 echo "=== Shutting down ==="
