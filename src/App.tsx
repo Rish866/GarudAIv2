@@ -12,7 +12,7 @@ import { OrganizationProvider, useOrganization } from './contexts/OrganizationCo
 import { BranchProvider } from './contexts/BranchContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
-import { signIn } from './lib/auth';
+import { signIn, requestPasswordReset } from './lib/auth';
 import { supabase, supabaseConfigurationError } from './lib/supabase';
 import InviteAcceptPage from './components/InviteAcceptPage';
 
@@ -184,6 +184,9 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
   const [regForm, setRegForm] = useState({ name: '', email: '', password: '', company_name: '', phone: '' });
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
@@ -435,6 +438,7 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
               </label>
               <button
                 type="button"
+                onClick={() => { setShowForgotPassword(true); setResetEmail(email); }}
                 className="text-sm font-medium hover:opacity-80 transition-opacity"
                 style={{ color: 'var(--accent)' }}
               >
@@ -518,6 +522,55 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
                     <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Register</button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Forgot Password Modal */}
+          {showForgotPassword && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="rounded-2xl shadow-xl w-full max-w-md p-6 m-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
+                <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Reset Password</h2>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>Enter your email address and we will send a reset link</p>
+                {resetSuccess && <p className="text-xs text-green-600 mb-3 p-2 bg-green-50 rounded">{resetSuccess}</p>}
+                {error && <p className="text-xs text-red-600 mb-3 p-2 bg-red-50 rounded">{error}</p>}
+                <div className="space-y-3">
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                    style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => { setShowForgotPassword(false); setError(''); setResetSuccess(''); }}
+                      className="flex-1 py-2.5 border rounded-lg text-sm font-medium"
+                      style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!resetEmail) return;
+                        setError('');
+                        setResetSuccess('');
+                        const result = await requestPasswordReset(resetEmail);
+                        if (result.success) {
+                          setResetSuccess('Password reset email sent! Check your inbox.');
+                        } else {
+                          setError(result.error || 'Failed to send reset email');
+                        }
+                      }}
+                      className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                    >
+                      Send Reset Link
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -657,10 +710,66 @@ function MainLayout() {
   );
 }
 
+function PasswordResetScreen({ onComplete }: { onComplete: () => void }) {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (newPassword.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
+    setSaving(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setSaving(false);
+    if (updateError) { setError(updateError.message); return; }
+    setSuccess(true);
+    setTimeout(onComplete, 2000);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-4">
+            <Shield size={24} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Set New Password</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Choose a strong password for your account</p>
+        </div>
+        {success ? (
+          <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-center">
+            <p className="text-green-700 font-medium">Password updated successfully! Redirecting...</p>
+          </div>
+        ) : (
+          <form onSubmit={handleReset} className="space-y-4">
+            {error && <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>New Password</label>
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} placeholder="Minimum 6 characters" className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Confirm Password</label>
+              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} placeholder="Re-enter password" className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+            </div>
+            <button type="submit" disabled={saving} className="w-full py-3 rounded-xl text-white text-sm font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
+              {saving ? 'Updating...' : 'Update Password'}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const { isLoggedIn, theme, user, login, logout } = useStore();
   const [showLanding, setShowLanding] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
 
   // Route detection: /invite/accept path takes priority over normal app
   const isInviteAcceptRoute = window.location.pathname === '/invite/accept'
@@ -691,6 +800,9 @@ export default function App() {
       if (event === 'SIGNED_OUT' && isLoggedIn) {
         logout();
       }
+      if (event === 'PASSWORD_RECOVERY') {
+        setShowPasswordReset(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -707,6 +819,14 @@ export default function App() {
         <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
           <Loader2 size={32} className="animate-spin text-blue-600" />
         </div>
+      </div>
+    );
+  }
+
+  if (showPasswordReset) {
+    return (
+      <div className={theme === 'dark' ? 'dark' : ''}>
+        <PasswordResetScreen onComplete={() => setShowPasswordReset(false)} />
       </div>
     );
   }

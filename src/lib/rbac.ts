@@ -75,6 +75,20 @@ export function canManageSettings(role: UserRole): boolean {
 }
 
 /**
+ * Check if user can delete records (more restrictive than write)
+ */
+export function canDelete(role: UserRole): boolean {
+  return ['super_admin', 'admin'].includes(role);
+}
+
+/**
+ * Check if user can approve actions (expenses, leaves, trips)
+ */
+export function canApprove(role: UserRole): boolean {
+  return ['super_admin', 'admin', 'operations', 'accounts'].includes(role);
+}
+
+/**
  * Get role display label
  */
 export function getRoleLabel(role: UserRole): string {

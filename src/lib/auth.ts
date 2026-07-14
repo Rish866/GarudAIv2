@@ -86,3 +86,35 @@ export function isPlatformAdmin(email: string): boolean {
   const adminEmail = import.meta.env.VITE_PLATFORM_ADMIN_EMAIL || '';
   return adminEmail !== '' && email.toLowerCase() === adminEmail.toLowerCase();
 }
+
+
+/**
+ * Request password reset email via Supabase Auth.
+ * Sends a recovery email with a link back to the app.
+ */
+export async function requestPasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/#reset-password`,
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Network error';
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Update password (called after Supabase validates the recovery token).
+ */
+export async function updatePassword(newPassword: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Network error';
+    return { success: false, error: message };
+  }
+}
