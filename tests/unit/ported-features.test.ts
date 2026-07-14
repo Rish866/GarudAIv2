@@ -333,9 +333,9 @@ describe('Password recovery', () => {
   });
 
   it('password confirmation must match', () => {
-    const pass = 'newpassword123';
-    const confirm = 'newpassword123';
-    const mismatch = 'differentpass';
+    const pass: string = 'newpassword123';
+    const confirm: string = 'newpassword123';
+    const mismatch: string = 'differentpass';
     expect(pass === confirm).toBe(true);
     expect(pass === mismatch).toBe(false);
   });
