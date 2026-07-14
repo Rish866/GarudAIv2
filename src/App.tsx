@@ -9,6 +9,7 @@ import LandingPage from './components/LandingPage';
 import OnboardingWizard from './components/ui/OnboardingWizard';
 import ToastContainer from './components/ui/Toast';
 import { OrganizationProvider, useOrganization } from './contexts/OrganizationContext';
+import { BranchProvider } from './contexts/BranchContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
 import { signIn, isPlatformAdmin, getAllTenants, switchTenant } from './lib/auth';
@@ -719,7 +720,9 @@ export default function App() {
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
       <OrganizationProvider>
-        <MainLayout />
+        <BranchProvider>
+          <MainLayout />
+        </BranchProvider>
       </OrganizationProvider>
       <ToastContainer />
     </div>

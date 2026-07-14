@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useOrganization } from '../contexts/OrganizationContext';
+import { useBranch } from '../contexts/BranchContext';
 import { resolveTableName, fromDatabaseRecord } from '../lib/legacyTableAdapter';
 
 // ─── Debounce utility ────────────────────────────────────────────────────────
@@ -27,6 +28,16 @@ const ALLOWED_SORT_COLUMNS = new Set([
   'payment_date', 'name', 'trip_number', 'invoice_number', 'total_amount',
   'balance_amount', 'amount', 'freight_amount', 'distance_km', 'weight_tons',
   'status', 'reg_number', 'odometer', 'litres', 'cost', 'timestamp',
+]);
+
+// ─── Branch-scoped tables ────────────────────────────────────────────────────
+// Tables that have a branch_id column and should be filtered by selected branch.
+const BRANCH_SCOPED_TABLES = new Set([
+  'vehicles', 'drivers', 'customers', 'trips', 'enquiries', 'quotations',
+  'invoices', 'payments', 'expenses', 'fuel_entries', 'maintenance_records', 'tyres',
+  'indents', 'attendance', 'claims', 'challans', 'work_orders',
+  'market_hires', 'cash_entries', 'bank_entries', 'purchases', 'sales',
+  'inventory', 'eway_bills',
 ]);
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -107,6 +118,7 @@ export function usePaginatedData<T extends { id: string }>(
   options?: UsePaginatedDataOptions
 ): PaginatedDataResult<T> {
   const { organizationId, loading: orgLoading } = useOrganization();
+  const { selectedBranchId, onBranchChange } = useBranch();
   const [data, setData] = useState<T[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -162,6 +174,11 @@ export function usePaginatedData<T extends { id: string }>(
         .from(databaseTableName)
         .select(selectColumns, { count: 'exact' })
         .eq('organization_id', organizationId);
+
+      // Apply branch filter (only for branch-scoped tables)
+      if (BRANCH_SCOPED_TABLES.has(databaseTableName) && selectedBranchId) {
+        query = query.eq('branch_id', selectedBranchId);
+      }
 
       // Apply exact-match filters
       if (debouncedFilters.eq) {
@@ -256,13 +273,21 @@ export function usePaginatedData<T extends { id: string }>(
         setLoading(false);
       }
     }
-  }, [organizationId, databaseTableName, tableName, selectColumns, enabled, page, pageSize, safeSortBy, sortDirection, debouncedFilters]);
+  }, [organizationId, databaseTableName, tableName, selectColumns, enabled, page, pageSize, safeSortBy, sortDirection, debouncedFilters, selectedBranchId]);
 
   // ─── Effects ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!orgLoading) fetchData();
   }, [orgLoading, fetchData]);
+
+  // Reset page to 1 when branch changes
+  useEffect(() => {
+    const unsubscribe = onBranchChange(() => {
+      setPageRaw(1);
+    });
+    return unsubscribe;
+  }, [onBranchChange]);
 
   // ─── Actions ─────────────────────────────────────────────────────────────
 
