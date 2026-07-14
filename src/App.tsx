@@ -727,10 +727,66 @@ function MainLayout() {
   );
 }
 
+function PasswordResetScreen({ onComplete }: { onComplete: () => void }) {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (newPassword.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
+    setSaving(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setSaving(false);
+    if (updateError) { setError(updateError.message); return; }
+    setSuccess(true);
+    setTimeout(onComplete, 2000);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-4">
+            <Shield size={24} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Set New Password</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Choose a strong password for your account</p>
+        </div>
+        {success ? (
+          <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-center">
+            <p className="text-green-700 font-medium">Password updated successfully! Redirecting...</p>
+          </div>
+        ) : (
+          <form onSubmit={handleReset} className="space-y-4">
+            {error && <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>New Password</label>
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} placeholder="Minimum 6 characters" className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Confirm Password</label>
+              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} placeholder="Re-enter password" className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+            </div>
+            <button type="submit" disabled={saving} className="w-full py-3 rounded-xl text-white text-sm font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
+              {saving ? 'Updating...' : 'Update Password'}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const { isLoggedIn, theme, user, login, logout } = useStore();
   const [showLanding, setShowLanding] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
 
   // Auth bootstrap: verify Supabase session on mount.
   // If Zustand says logged in but Supabase session is gone, log out.
@@ -753,6 +809,9 @@ export default function App() {
       if (event === 'SIGNED_OUT' && isLoggedIn) {
         logout();
       }
+      if (event === 'PASSWORD_RECOVERY') {
+        setShowPasswordReset(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -769,6 +828,14 @@ export default function App() {
         <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
           <Loader2 size={32} className="animate-spin text-blue-600" />
         </div>
+      </div>
+    );
+  }
+
+  if (showPasswordReset) {
+    return (
+      <div className={theme === 'dark' ? 'dark' : ''}>
+        <PasswordResetScreen onComplete={() => setShowPasswordReset(false)} />
       </div>
     );
   }
