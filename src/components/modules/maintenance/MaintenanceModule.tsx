@@ -8,6 +8,7 @@ export default function MaintenanceModule() {
   const { data: maintenance, create: addMaintenance, update: updateMaintenance, remove: removeMaintenance } = useModuleData<any>('maintenance');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const [showModal, setShowModal] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<any | null>(null);
 
   // Summary calculations
   const activeJobs = maintenance.filter((m) => m.status === 'scheduled' || m.status === 'in_progress').length;
@@ -16,32 +17,39 @@ export default function MaintenanceModule() {
 
   // Form state
   const [form, setForm] = useState({
-    vehicle_id: '',
-    type: 'preventive' as MaintenanceRecord['type'],
-    description: '',
-    date: new Date().toISOString().split('T')[0],
-    odometer: 0,
-    cost: 0,
-    vendor: '',
+    vehicle_id: editingRecord?.vehicle_id || '',
+    type: (editingRecord?.type || 'preventive') as MaintenanceRecord['type'],
+    description: editingRecord?.description || '',
+    date: editingRecord?.date || new Date().toISOString().split('T')[0],
+    odometer: editingRecord?.odometer || 0,
+    cost: editingRecord?.cost || 0,
+    vendor: editingRecord?.vendor || '',
   });
 
-  const handleSubmit = () => {
-    if (!form.vehicle_id) return;
+  const handleSubmit = async () => {
+    if (!form.vehicle_id) { showToast('error', 'Select a vehicle'); return; }
+    if (!form.description.trim()) { showToast('error', 'Description is required'); return; }
+    if (form.cost < 0) { showToast('error', 'Cost cannot be negative'); return; }
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
-    const record = {
+    const data = {
       vehicle_id: form.vehicle_id,
       vehicle_reg: vehicle?.reg_number || '',
       type: form.type,
-      description: form.description,
+      description: form.description.trim(),
       date: form.date,
       odometer: form.odometer,
       cost: form.cost,
       vendor: form.vendor,
-      status: 'scheduled',
     };
-    addMaintenance(record);
-    showToast('success', 'Maintenance scheduled');
+    if (editingRecord) {
+      await updateMaintenance(editingRecord.id, data);
+      showToast('success', 'Maintenance record updated');
+    } else {
+      await addMaintenance({ ...data, status: 'scheduled' });
+      showToast('success', 'Maintenance scheduled');
+    }
     setShowModal(false);
+    setEditingRecord(null);
     setForm({ vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' });
   };
 
@@ -59,7 +67,7 @@ export default function MaintenanceModule() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-slate-900">Maintenance</h2>
-        <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">
+        <button onClick={() => { setEditingRecord(null); setForm({ vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' }); setShowModal(true); }} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">
           Schedule Maintenance
         </button>
       </div>
@@ -123,6 +131,7 @@ export default function MaintenanceModule() {
             </div>
             {/* Actions */}
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+              <button onClick={() => { setEditingRecord(record); setForm({ vehicle_id: record.vehicle_id, type: record.type, description: record.description, date: record.date, odometer: record.odometer, cost: record.cost, vendor: record.vendor }); setShowModal(true); }} className="px-3 py-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg font-medium hover:bg-blue-50">Edit</button>
               {record.status === 'scheduled' && (
                 <button onClick={() => { updateMaintenance(record.id, { status: 'in_progress' }); showToast('success', 'Started'); }} className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Start</button>
               )}
@@ -141,7 +150,7 @@ export default function MaintenanceModule() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
           <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Schedule Maintenance</h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">{editingRecord ? 'Edit Maintenance' : 'Schedule Maintenance'}</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
