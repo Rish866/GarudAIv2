@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { useOrganization } from '../../../contexts/OrganizationContext';
+import { usePermissions } from '../../../hooks/usePermissions';
+import { tripRepository } from '../../../data/trips/tripRepository';
 import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
 import { exportTrips } from '../../../lib/excel';
 import { estimateDistance } from '../../../lib/distance';
-import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download, Eye, Upload, Calendar, Phone, CreditCard, CheckCircle, Circle, Clock } from 'lucide-react';
+import { showToast } from '../../ui/Toast';
+import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download, Eye, Upload, Calendar, Phone, CreditCard, CheckCircle, Circle, Clock, Ban, RotateCcw, Edit3 } from 'lucide-react';
 import DriverAdvanceTracker from './DriverAdvanceTracker';
 import SendNotificationModal from '../../ui/SendNotificationModal';
 
@@ -21,6 +25,7 @@ const FILTER_TABS = [
   { key: 'pod_pending', label: 'POD Pending' },
   { key: 'completed', label: 'Completed' },
   { key: 'billed', label: 'Billed' },
+  { key: 'cancelled', label: 'Cancelled' },
 ] as const;
 
 function getNextStatuses(current: TripStatus): TripStatus[] {
@@ -32,7 +37,9 @@ function getNextStatuses(current: TripStatus): TripStatus[] {
 
 export default function TripsModule() {
   const { company } = useStore();
-  const { data: trips, create: addTrip, update: updateTrip, loading: tripsLoading } = useModuleData<any>('trips');
+  const { organizationId } = useOrganization();
+  const { can } = usePermissions();
+  const { data: trips, create: addTrip, update: updateTrip, refresh: refreshTrips, loading: tripsLoading } = useModuleData<any>('trips');
   const { data: customers } = useModuleData<any>('customers');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
@@ -45,6 +52,13 @@ export default function TripsModule() {
   const [podModalTrip, setPodModalTrip] = useState<Trip | null>(null);
   const [detailTrip, setDetailTrip] = useState<Trip | null>(null);
   const [notifyTrip, setNotifyTrip] = useState<{ trip: Trip; status: string } | null>(null);
+  const [cancelModalTrip, setCancelModalTrip] = useState<Trip | null>(null);
+  const [editModalTrip, setEditModalTrip] = useState<Trip | null>(null);
+  const [reopenModalTrip, setReopenModalTrip] = useState<Trip | null>(null);
+
+  const canEditTrips = can('trips.update');
+  const canDeleteTrips = can('trips.delete');
+  const canCreateTrips = can('trips.create');
 
   const filteredTrips = trips.filter((trip) => {
     const matchesFilter = activeFilter === 'all' || trip.status === activeFilter;
@@ -63,9 +77,21 @@ export default function TripsModule() {
   };
 
 
-  const handleStatusUpdate = (tripId: string, newStatus: TripStatus) => {
-    updateTrip(tripId, { status: newStatus });
+  const handleStatusUpdate = async (tripId: string, newStatus: TripStatus) => {
+    if (!organizationId) {
+      showToast('error', 'No organization found');
+      return;
+    }
     setStatusDropdown(null);
+
+    const { error } = await tripRepository.transitionStatus(organizationId, tripId, newStatus);
+    if (error) {
+      showToast('error', `Status update failed: ${error}`);
+      return;
+    }
+
+    showToast('success', `Status updated to ${newStatus.replace(/_/g, ' ')}`);
+    await refreshTrips();
 
     // Trigger notification modal
     const foundTrip = trips.find(t => t.id === tripId);
@@ -105,8 +131,9 @@ export default function TripsModule() {
         };
         addInvoice(invoice);
 
-        // Also update trip to billed
-        updateTrip(tripId, { status: 'billed' });
+        // Transition to billed via RPC
+        await tripRepository.transitionStatus(organizationId, tripId, 'billed');
+        await refreshTrips();
 
         // Send notification
         addNotification({
@@ -146,6 +173,36 @@ export default function TripsModule() {
     addTrip(newTrip);
   };
 
+  const handleCancelTrip = async (tripId: string, reason: string) => {
+    if (!organizationId) {
+      showToast('error', 'No organization found');
+      return;
+    }
+    const { error } = await tripRepository.cancel(organizationId, tripId, reason);
+    if (error) {
+      showToast('error', `Cancel failed: ${error}`);
+    } else {
+      showToast('success', 'Trip cancelled successfully');
+      await refreshTrips();
+    }
+    setCancelModalTrip(null);
+  };
+
+  const handleReopenTrip = async (tripId: string, reason: string) => {
+    if (!organizationId) {
+      showToast('error', 'No organization found');
+      return;
+    }
+    const { error } = await tripRepository.reopen(organizationId, tripId, reason);
+    if (error) {
+      showToast('error', `Reopen failed: ${error}`);
+    } else {
+      showToast('success', 'Trip reopened successfully');
+      await refreshTrips();
+    }
+    setReopenModalTrip(null);
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -171,6 +228,8 @@ export default function TripsModule() {
           <button
             onClick={() => setShowModal(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700 transition-colors font-medium"
+            disabled={!canCreateTrips}
+            title={!canCreateTrips ? 'You do not have permission to create trips' : undefined}
           >
             <Plus size={18} />
             New Trip
@@ -243,6 +302,39 @@ export default function TripsModule() {
                 >
                   Duplicate
                 </button>
+                {/* Edit — only for non-settled, non-cancelled trips AND user has permission */}
+                {trip.status !== 'settled' && trip.status !== 'cancelled' && canEditTrips && (
+                  <button
+                    onClick={() => setEditModalTrip(trip)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                    title="Edit Trip"
+                  >
+                    <Edit3 size={14} />
+                    Edit
+                  </button>
+                )}
+                {/* Cancel — only for non-settled, non-cancelled trips AND user has permission */}
+                {trip.status !== 'settled' && trip.status !== 'cancelled' && canDeleteTrips && (
+                  <button
+                    onClick={() => setCancelModalTrip(trip)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                    title="Cancel Trip"
+                  >
+                    <Ban size={14} />
+                    Cancel
+                  </button>
+                )}
+                {/* Reopen — only for cancelled trips AND user has permission (owner/admin/ops_manager) */}
+                {trip.status === 'cancelled' && canDeleteTrips && (
+                  <button
+                    onClick={() => setReopenModalTrip(trip)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors"
+                    title="Reopen Trip"
+                  >
+                    <RotateCcw size={14} />
+                    Reopen
+                  </button>
+                )}
                 {trip.status === 'pod_pending' && (
                   <button
                     onClick={() => setPodModalTrip(trip)}
@@ -261,6 +353,7 @@ export default function TripsModule() {
                   <FileText size={14} />
                   LR
                 </button>
+                {canEditTrips && trip.status !== 'cancelled' && (
                 <button
                   onClick={() => setStatusDropdown(statusDropdown === trip.id ? null : trip.id)}
                   className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
@@ -268,6 +361,7 @@ export default function TripsModule() {
                   Update Status
                   <ChevronDown size={14} />
                 </button>
+                )}
                 {statusDropdown === trip.id && (
                   <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 py-1 min-w-[150px]">
                     {getNextStatuses(trip.status).map((status) => (
@@ -351,6 +445,9 @@ export default function TripsModule() {
       {podModalTrip && <PODUploadModal trip={podModalTrip} onClose={() => setPodModalTrip(null)} />}
       {detailTrip && <TripDetailModal trip={detailTrip} onClose={() => setDetailTrip(null)} />}
       {notifyTrip && <SendNotificationModal trip={notifyTrip.trip} statusChange={notifyTrip.status} onClose={() => setNotifyTrip(null)} />}
+      {cancelModalTrip && <CancelTripModal trip={cancelModalTrip} onConfirm={handleCancelTrip} onClose={() => setCancelModalTrip(null)} />}
+      {reopenModalTrip && <ReopenTripModal trip={reopenModalTrip} onConfirm={handleReopenTrip} onClose={() => setReopenModalTrip(null)} />}
+      {editModalTrip && <EditTripModal trip={editModalTrip} onClose={() => { setEditModalTrip(null); refreshTrips(); }} />}
     </div>
   );
 }
@@ -985,6 +1082,401 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
             </button>
             <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700">
               Create Trip
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+
+/** Modal for cancelling a trip — requires a reason */
+function CancelTripModal({
+  trip,
+  onConfirm,
+  onClose,
+}: {
+  trip: Trip;
+  onConfirm: (tripId: string, reason: string) => void;
+  onClose: () => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reason.trim()) return;
+    setSubmitting(true);
+    await onConfirm(trip.id, reason.trim());
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200">
+          <div>
+            <h2 className="text-lg font-bold text-red-700">Cancel Trip</h2>
+            <p className="text-sm text-slate-500 mt-0.5">{trip.trip_number} — {trip.origin} → {trip.destination}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
+            <X size={18} className="text-slate-500" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+            <strong>Warning:</strong> Cancelling this trip will mark it as cancelled. The vehicle and driver will become available again. This action can be reversed by reopening the trip.
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Cancellation Reason <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              required
+              rows={3}
+              placeholder="e.g., Customer cancelled order, Vehicle breakdown, Route unavailable..."
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
+            >
+              Keep Trip
+            </button>
+            <button
+              type="submit"
+              disabled={!reason.trim() || submitting}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg shadow-lg shadow-red-500/25 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Cancelling...
+                </>
+              ) : (
+                <>
+                  <Ban size={14} />
+                  Confirm Cancellation
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+/** Modal for editing trip details (route, financial, vehicle, driver) */
+function EditTripModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
+  const { organizationId } = useOrganization();
+  const { data: customers } = useModuleData<any>('customers');
+  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: drivers } = useModuleData<any>('drivers');
+
+  // Filter: show available + currently assigned vehicle/driver; exclude inactive
+  const availableVehicles = vehicles.filter((v: any) =>
+    v.status === 'available' || v.status === 'on_trip' || v.id === trip.vehicle_id
+  );
+  const availableDrivers = drivers.filter((d: any) =>
+    d.status === 'available' || d.status === 'on_trip' || d.id === trip.driver_id
+  );
+
+  const [form, setForm] = useState({
+    customer_id: trip.customer_id || '',
+    vehicle_id: trip.vehicle_id || '',
+    driver_id: trip.driver_id || '',
+    origin: trip.origin || '',
+    destination: trip.destination || '',
+    distance_km: String(trip.distance_km || 0),
+    material: trip.material || '',
+    weight_tons: String(trip.weight_tons || 0),
+    eway_bill: trip.eway_bill || '',
+    freight_amount: String(trip.freight_amount || 0),
+    advance_amount: String(trip.advance_amount || 0),
+    detention_charges: String(trip.detention_charges || 0),
+    other_charges: String(trip.other_charges || 0),
+    expected_delivery: trip.expected_delivery || '',
+    remarks: trip.remarks || '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organizationId) {
+      showToast('error', 'No organization found');
+      return;
+    }
+    setSaving(true);
+
+    const customer = customers.find((c: any) => c.id === form.customer_id);
+    const vehicle = vehicles.find((v: any) => v.id === form.vehicle_id);
+    const driver = drivers.find((d: any) => d.id === form.driver_id);
+
+    // Build updates object for the RPC (only changed fields)
+    const updates: Record<string, any> = {
+      customer_id: form.customer_id || null,
+      customer_name: customer?.name || trip.customer_name,
+      vehicle_id: form.vehicle_id || null,
+      vehicle_reg: vehicle?.reg_number || trip.vehicle_reg,
+      driver_id: form.driver_id || null,
+      driver_name: driver?.name || trip.driver_name,
+      driver_phone: driver?.phone || trip.driver_phone,
+      origin: form.origin,
+      destination: form.destination,
+      distance_km: Number(form.distance_km) || 0,
+      material: form.material,
+      weight_tons: Number(form.weight_tons) || 0,
+      eway_bill: form.eway_bill || null,
+      freight_amount: Number(form.freight_amount) || 0,
+      advance_amount: Number(form.advance_amount) || 0,
+      detention_charges: Number(form.detention_charges) || 0,
+      other_charges: Number(form.other_charges) || 0,
+      expected_delivery: form.expected_delivery || null,
+      remarks: form.remarks || null,
+    };
+
+    const { error } = await tripRepository.editDetails(organizationId, trip.id, updates);
+    setSaving(false);
+    if (error) {
+      showToast('error', `Update failed: ${error}`);
+    } else {
+      showToast('success', `Trip ${trip.trip_number} updated`);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Edit Trip</h2>
+            <p className="text-sm text-slate-500">{trip.trip_number} — Status: {trip.status.replace(/_/g, ' ')}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
+            <X size={18} className="text-slate-500" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {/* Customer */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Customer</label>
+            <select name="customer_id" value={form.customer_id} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="">Select customer</option>
+              {customers.map((c: any) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            </select>
+          </div>
+
+          {/* Vehicle & Driver */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Vehicle</label>
+              <select name="vehicle_id" value={form.vehicle_id} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="">Select vehicle</option>
+                {availableVehicles.map((v: any) => (<option key={v.id} value={v.id}>{v.reg_number} ({v.vehicle_type}) {v.id === trip.vehicle_id ? '(current)' : v.status !== 'available' ? `— ${v.status}` : ''}</option>))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Driver</label>
+              <select name="driver_id" value={form.driver_id} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="">Select driver</option>
+                {availableDrivers.map((d: any) => (<option key={d.id} value={d.id}>{d.name} {d.id === trip.driver_id ? '(current)' : d.status !== 'available' ? `— ${d.status}` : ''}</option>))}
+              </select>
+            </div>
+          </div>
+
+          {/* Route */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Origin</label>
+              <input type="text" name="origin" value={form.origin} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Destination</label>
+              <input type="text" name="destination" value={form.destination} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+          </div>
+
+          {/* Distance, Material, Weight */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Distance (km)</label>
+              <input type="number" name="distance_km" value={form.distance_km} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Material</label>
+              <input type="text" name="material" value={form.material} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Weight (tons)</label>
+              <input type="number" name="weight_tons" value={form.weight_tons} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+          </div>
+
+          {/* E-Way Bill */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">E-Way Bill</label>
+            <input type="text" name="eway_bill" value={form.eway_bill} onChange={handleChange} placeholder="EWB-XXXXXXXXX" className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+          </div>
+
+          {/* Financial */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Freight Amount</label>
+              <input type="number" name="freight_amount" value={form.freight_amount} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Advance Amount</label>
+              <input type="number" name="advance_amount" value={form.advance_amount} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Detention Charges</label>
+              <input type="number" name="detention_charges" value={form.detention_charges} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Other Charges</label>
+              <input type="number" name="other_charges" value={form.other_charges} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+          </div>
+
+          {/* Expected Delivery */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Expected Delivery</label>
+            <input type="date" name="expected_delivery" value={form.expected_delivery} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+          </div>
+
+          {/* Remarks */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Remarks</label>
+            <textarea name="remarks" value={form.remarks} onChange={handleChange} rows={2} placeholder="Any notes..." className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none resize-none" />
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <button type="button" onClick={onClose} disabled={saving} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">
+              Discard
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/25 hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Edit3 size={14} />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+/** Modal for reopening a cancelled trip — requires a reason */
+function ReopenTripModal({
+  trip,
+  onConfirm,
+  onClose,
+}: {
+  trip: Trip;
+  onConfirm: (tripId: string, reason: string) => void;
+  onClose: () => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reason.trim()) return;
+    setSubmitting(true);
+    await onConfirm(trip.id, reason.trim());
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200">
+          <div>
+            <h2 className="text-lg font-bold text-amber-700">Reopen Trip</h2>
+            <p className="text-sm text-slate-500 mt-0.5">{trip.trip_number} — {trip.origin} → {trip.destination}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
+            <X size={18} className="text-slate-500" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+            <strong>Note:</strong> Reopening will reset this trip to <strong>booked</strong> status. Vehicle and driver assignments will be preserved but may need re-validation if they are no longer available.
+          </div>
+          {trip.cancellation_reason && (
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-600">
+              <strong>Original cancellation reason:</strong> {trip.cancellation_reason}
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Reopen Reason <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              required
+              rows={3}
+              placeholder="e.g., Customer confirmed order again, Vehicle repaired, Issue resolved..."
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 outline-none resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
+            >
+              Keep Cancelled
+            </button>
+            <button
+              type="submit"
+              disabled={!reason.trim() || submitting}
+              className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg shadow-lg shadow-amber-500/25 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Reopening...
+                </>
+              ) : (
+                <>
+                  <RotateCcw size={14} />
+                  Confirm Reopen
+                </>
+              )}
             </button>
           </div>
         </form>
