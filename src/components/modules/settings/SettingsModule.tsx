@@ -82,12 +82,13 @@ export default function SettingsModule() {
       setMembers(enriched);
     }
 
-    // Load pending invitations
+    // Load pending invitations (exclude expired)
     const { data: invData } = await supabase
       .from('organization_invitations')
       .select('*')
       .eq('organization_id', organizationId)
-      .in('status', ['pending'])
+      .eq('status', 'pending')
+      .gte('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
 
     if (invData) setInvitations(invData);
@@ -105,16 +106,35 @@ export default function SettingsModule() {
   // Invite a new user
   const handleInviteUser = async () => {
     if (!inviteForm.email || !organizationId) return;
+    
+    // Check for duplicate pending invitation
+    const existingPending = invitations.find(
+      inv => inv.email.toLowerCase() === inviteForm.email.toLowerCase() && inv.status === 'pending'
+    );
+    if (existingPending) {
+      showToast('error', `Pending invitation already exists for ${inviteForm.email}`);
+      return;
+    }
+
+    // Check if already a member
+    const existingMember = members.find(
+      m => m.email?.toLowerCase() === inviteForm.email.toLowerCase()
+    );
+    if (existingMember) {
+      showToast('error', 'This user is already a member of your organization');
+      return;
+    }
+
     setInviting(true);
     const result = await inviteUser(organizationId, inviteForm.email, inviteForm.role);
     setInviting(false);
     if (result.success) {
-      showToast('success', `Invitation sent to ${inviteForm.email}`);
+      showToast('success', `Invitation created for ${inviteForm.email}. Share the invite link with them to join.`);
       setShowInviteModal(false);
       setInviteForm({ email: '', role: 'dispatcher' });
       loadMembers();
     } else {
-      showToast('error', result.error || 'Failed to send invitation');
+      showToast('error', result.error || 'Failed to create invitation');
     }
   };
 
@@ -132,15 +152,32 @@ export default function SettingsModule() {
       showToast('error', 'Only owners and admins can change roles');
       return;
     }
+    // Prevent non-owners from assigning owner role
+    if (newRole === 'organization_owner' && currentUserRole !== 'organization_owner') {
+      showToast('error', 'Only existing owners can promote to owner');
+      return;
+    }
     // Prevent changing own role
     const member = members.find(m => m.id === memberId);
     if (member?.user_id === user.id) {
       showToast('error', 'Cannot change your own role');
       return;
     }
-    await supabase.from('organization_members').update({ role: newRole }).eq('id', memberId);
-    showToast('success', 'Role updated');
-    loadMembers();
+    // Prevent downgrading last owner
+    if (member?.role === 'organization_owner') {
+      const ownerCount = members.filter(m => m.role === 'organization_owner' && m.status === 'active').length;
+      if (ownerCount <= 1) {
+        showToast('error', 'Cannot change role of the last organization owner');
+        return;
+      }
+    }
+    const { error } = await supabase.from('organization_members').update({ role: newRole }).eq('id', memberId);
+    if (error) {
+      showToast('error', error.message);
+    } else {
+      showToast('success', 'Role updated');
+      loadMembers();
+    }
   };
 
   // Deactivate/reactivate member
