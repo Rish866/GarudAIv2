@@ -79,7 +79,7 @@ export default function FleetModule() {
     hasPrevPage,
   } = usePaginatedData<any>('vehicles', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
   // CRUD operations
-  const { create: addVehicle, update: updateVehicle, remove: deleteVehicle } = useModuleData<any>('vehicles');
+  const { create: addVehicle, update: updateVehicle, remove: deleteVehicle } = useModuleData<any>('vehicles', { fetchOnMount: false });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
   const [view, setView] = useState<'grid' | 'list'>('grid');

@@ -56,7 +56,7 @@ export default function ChallanModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<Challan>('challans', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: createChallan, remove: removeChallan } = useModuleData<Challan>('challans');
+  const { create: createChallan, remove: removeChallan } = useModuleData<Challan>('challans', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | PaymentStatus>('all');
 

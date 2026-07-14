@@ -28,7 +28,7 @@ export default function DriversModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<any>('drivers', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: addDriver } = useModuleData<any>('drivers');
+  const { create: addDriver } = useModuleData<any>('drivers', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -473,7 +473,7 @@ function DriverCard({ driver, onTimePercent, overallScore, rating }: { key?: str
 }
 
 function AddDriverModal({ onClose }: { onClose: () => void }) {
-  const { create: addDriver } = useModuleData<any>('drivers');
+  const { create: addDriver } = useModuleData<any>('drivers', { fetchOnMount: false });
 
   const [form, setForm] = useState({
     name: '',

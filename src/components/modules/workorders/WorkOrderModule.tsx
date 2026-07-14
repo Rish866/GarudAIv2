@@ -84,7 +84,7 @@ export default function WorkOrderModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<WorkOrder>('work_orders', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: createWorkOrder, remove: removeWorkOrder } = useModuleData<WorkOrder>('work_orders');
+  const { create: createWorkOrder, remove: removeWorkOrder } = useModuleData<WorkOrder>('work_orders', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | WOStatus>('all');
 

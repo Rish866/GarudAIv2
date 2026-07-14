@@ -24,7 +24,7 @@ export default function FuelModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<any>('fuel_entries', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: addFuelEntry } = useModuleData<any>('fuel_entries');
+  const { create: addFuelEntry } = useModuleData<any>('fuel_entries', { fetchOnMount: false });
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
   const [showModal, setShowModal] = useState(false);

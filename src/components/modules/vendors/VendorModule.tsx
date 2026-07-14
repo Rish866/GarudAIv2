@@ -50,7 +50,7 @@ export default function VendorModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<Vendor>('vendors', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: createVendor, update: updateVendor, remove: removeVendor } = useModuleData<Vendor>('vendors');
+  const { create: createVendor, update: updateVendor, remove: removeVendor } = useModuleData<Vendor>('vendors', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');

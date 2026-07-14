@@ -39,7 +39,7 @@ export default function TyreModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<TyreRecord>('tyres', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: createTyre, remove: removeTyre } = useModuleData<TyreRecord>('tyres');
+  const { create: createTyre, remove: removeTyre } = useModuleData<TyreRecord>('tyres', { fetchOnMount: false });
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearch = (query: string) => {

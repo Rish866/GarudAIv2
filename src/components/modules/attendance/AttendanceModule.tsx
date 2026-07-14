@@ -61,7 +61,7 @@ export default function AttendanceModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<AttendanceRecord>('attendance', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: createAttendance, update: updateAttendance } = useModuleData<AttendanceRecord>('attendance');
+  const { create: createAttendance, update: updateAttendance } = useModuleData<AttendanceRecord>('attendance', { fetchOnMount: false });
   const { data: leaves, create: createLeave, update: updateLeave } = useModuleData<LeaveRequest>('leave_requests');
   const [tab, setTab] = useState<TabView>('attendance');
   const [selectedDate, setSelectedDate] = useState(today);
@@ -74,7 +74,7 @@ export default function AttendanceModule() {
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     const filters: PaginationFilter = {};
-    if (query.trim()) filters.search = { columns: ['driver_name'], query: query.trim() };
+    if (query.trim()) filters.search = { columns: ['employee_name'], query: query.trim() };
     setFilters(filters);
   };
 

@@ -65,9 +65,9 @@ export default function BillingModule() {
   } = usePaginatedData<any>('expenses', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
 
   // CRUD operations via useModuleData (non-paginated, for create only)
-  const { create: addInvoice } = useModuleData<any>('invoices');
-  const { create: addPayment } = useModuleData<any>('payments');
-  const { create: addExpense } = useModuleData<any>('expenses');
+  const { create: addInvoice } = useModuleData<any>('invoices', { fetchOnMount: false });
+  const { create: addPayment } = useModuleData<any>('payments', { fetchOnMount: false });
+  const { create: addExpense } = useModuleData<any>('expenses', { fetchOnMount: false });
   const { data: customers } = useModuleData<any>('customers');
   const { data: trips } = useModuleData<any>('trips');
   const { data: vehicles } = useModuleData<any>('vehicles');

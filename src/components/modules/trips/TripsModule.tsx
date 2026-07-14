@@ -72,9 +72,9 @@ export default function TripsModule() {
   const { data: customers } = useModuleData<any>('customers');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
-  const { create: addInvoice } = useModuleData<any>('invoices');
-  const { create: addNotification } = useModuleData<any>('notifications');
-  const { create: addTrip } = useModuleData<any>('trips');
+  const { create: addInvoice } = useModuleData<any>('invoices', { fetchOnMount: false });
+  const { create: addNotification } = useModuleData<any>('notifications', { fetchOnMount: false });
+  const { create: addTrip } = useModuleData<any>('trips', { fetchOnMount: false });
 
   // UI state
   const [showModal, setShowModal] = useState(false);
@@ -994,7 +994,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
   const { data: quotations } = useModuleData<any>('quotations');
-  const { create: addTrip } = useModuleData<any>('trips');
+  const { create: addTrip } = useModuleData<any>('trips', { fetchOnMount: false });
   const availableVehicles = vehicles;
   const availableDrivers = drivers;
 

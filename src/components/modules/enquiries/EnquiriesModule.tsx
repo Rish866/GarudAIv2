@@ -31,7 +31,7 @@ export default function EnquiriesModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<any>('enquiries', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: addEnquiry } = useModuleData<any>('enquiries');
+  const { create: addEnquiry } = useModuleData<any>('enquiries', { fetchOnMount: false });
   const { data: quotations, create: addQuotation, update: updateQuotation } = useModuleData<any>('quotations');
   const { data: customers } = useModuleData<any>('customers');
   const [searchQuery, setSearchQuery] = useState('');
@@ -313,7 +313,7 @@ export default function EnquiriesModule() {
 
 function AddEnquiryModal({ onClose }: { onClose: () => void }) {
   const { data: customers } = useModuleData<any>('customers');
-  const { create: addEnquiry } = useModuleData<any>('enquiries');
+  const { create: addEnquiry } = useModuleData<any>('enquiries', { fetchOnMount: false });
 
   const [form, setForm] = useState({
     customer_id: '',

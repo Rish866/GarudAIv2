@@ -26,7 +26,7 @@ export default function CustomersModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<any>('customers', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: addCustomer, update: updateCustomer } = useModuleData<any>('customers');
+  const { create: addCustomer, update: updateCustomer } = useModuleData<any>('customers', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');

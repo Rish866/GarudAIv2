@@ -50,7 +50,7 @@ export default function ClaimsModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<Claim>('claims', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: createClaim, update: updateClaim } = useModuleData<Claim>('claims');
+  const { create: createClaim, update: updateClaim } = useModuleData<Claim>('claims', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | ClaimStatus>('all');
   const [search, setSearch] = useState('');

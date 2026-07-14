@@ -11,6 +11,24 @@ import { supabase } from '../lib/supabase';
 import { useOrganization } from '../contexts/OrganizationContext';
 import { resolveTableName, fromDatabaseRecord } from '../lib/legacyTableAdapter';
 
+// ─── Debounce utility ────────────────────────────────────────────────────────
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
+// ─── Sort allow-list ─────────────────────────────────────────────────────────
+const ALLOWED_SORT_COLUMNS = new Set([
+  'created_at', 'updated_at', 'booking_date', 'date', 'invoice_date', 'due_date',
+  'payment_date', 'name', 'trip_number', 'invoice_number', 'total_amount',
+  'balance_amount', 'amount', 'freight_amount', 'distance_km', 'weight_tons',
+  'status', 'reg_number', 'odometer', 'litres', 'cost', 'timestamp',
+]);
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type SortDirection = 'asc' | 'desc';
@@ -105,6 +123,12 @@ export function usePaginatedData<T extends { id: string }>(
   const databaseTableName = resolveTableName(tableName);
   const selectColumns = options?.select || '*';
 
+  // Debounce filters by 350ms to avoid excessive queries on rapid filter changes
+  const debouncedFilters = useDebounce(filters, 350);
+
+  // Validate sort column against allow-list (prevent SQL injection via arbitrary column names)
+  const safeSortBy = ALLOWED_SORT_COLUMNS.has(sortBy) ? sortBy : 'created_at';
+
   // Ref to track the latest fetch request (prevents stale responses)
   const fetchIdRef = useRef(0);
 
@@ -140,8 +164,8 @@ export function usePaginatedData<T extends { id: string }>(
         .eq('organization_id', organizationId);
 
       // Apply exact-match filters
-      if (filters.eq) {
-        for (const [col, val] of Object.entries(filters.eq)) {
+      if (debouncedFilters.eq) {
+        for (const [col, val] of Object.entries(debouncedFilters.eq)) {
           if (val !== '' && val !== undefined && val !== null) {
             query = query.eq(col, val);
           }
@@ -149,8 +173,8 @@ export function usePaginatedData<T extends { id: string }>(
       }
 
       // Apply not-equal filters
-      if (filters.neq) {
-        for (const [col, val] of Object.entries(filters.neq)) {
+      if (debouncedFilters.neq) {
+        for (const [col, val] of Object.entries(debouncedFilters.neq)) {
           if (val !== '' && val !== undefined && val !== null) {
             query = query.neq(col, val);
           }
@@ -158,17 +182,17 @@ export function usePaginatedData<T extends { id: string }>(
       }
 
       // Apply search (ILIKE across multiple columns, OR'd)
-      if (filters.search && filters.search.query.trim()) {
-        const searchTerm = `%${filters.search.query.trim()}%`;
-        const orConditions = filters.search.columns
+      if (debouncedFilters.search && debouncedFilters.search.query.trim()) {
+        const searchTerm = `%${debouncedFilters.search.query.trim()}%`;
+        const orConditions = debouncedFilters.search.columns
           .map(col => `${col}.ilike.${searchTerm}`)
           .join(',');
         query = query.or(orConditions);
       }
 
       // Apply date range
-      if (filters.dateRange) {
-        const { column, from: dateFrom, to: dateTo } = filters.dateRange;
+      if (debouncedFilters.dateRange) {
+        const { column, from: dateFrom, to: dateTo } = debouncedFilters.dateRange;
         if (dateFrom) {
           query = query.gte(column, dateFrom);
         }
@@ -178,8 +202,8 @@ export function usePaginatedData<T extends { id: string }>(
       }
 
       // Apply gte filters
-      if (filters.gte) {
-        for (const [col, val] of Object.entries(filters.gte)) {
+      if (debouncedFilters.gte) {
+        for (const [col, val] of Object.entries(debouncedFilters.gte)) {
           if (val !== '' && val !== undefined && val !== null) {
             query = query.gte(col, val);
           }
@@ -187,16 +211,20 @@ export function usePaginatedData<T extends { id: string }>(
       }
 
       // Apply lte filters
-      if (filters.lte) {
-        for (const [col, val] of Object.entries(filters.lte)) {
+      if (debouncedFilters.lte) {
+        for (const [col, val] of Object.entries(debouncedFilters.lte)) {
           if (val !== '' && val !== undefined && val !== null) {
             query = query.lte(col, val);
           }
         }
       }
 
-      // Apply sorting
-      query = query.order(sortBy, { ascending: sortDirection === 'asc' });
+      // Apply sorting (validated against allow-list)
+      query = query.order(safeSortBy, { ascending: sortDirection === 'asc' });
+      // Secondary sort by id for stable pagination (prevents duplicate/missing rows)
+      if (safeSortBy !== 'id') {
+        query = query.order('id', { ascending: true });
+      }
 
       // Apply pagination range
       query = query.range(from, to);
@@ -228,7 +256,7 @@ export function usePaginatedData<T extends { id: string }>(
         setLoading(false);
       }
     }
-  }, [organizationId, databaseTableName, tableName, selectColumns, enabled, page, pageSize, sortBy, sortDirection, filters]);
+  }, [organizationId, databaseTableName, tableName, selectColumns, enabled, page, pageSize, safeSortBy, sortDirection, debouncedFilters]);
 
   // ─── Effects ─────────────────────────────────────────────────────────────
 

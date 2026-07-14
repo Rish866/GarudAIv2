@@ -24,7 +24,7 @@ export default function MaintenanceModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<any>('maintenance', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: addMaintenance } = useModuleData<any>('maintenance');
+  const { create: addMaintenance } = useModuleData<any>('maintenance', { fetchOnMount: false });
   const { data: vehicles } = useModuleData<any>('vehicles');
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
