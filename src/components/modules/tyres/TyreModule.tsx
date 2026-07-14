@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
-import { Circle, Plus, X, RotateCcw, Trash2, Truck } from 'lucide-react';
+import { Circle, Plus, X, RotateCcw, Trash2, Truck, Search } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
 
 interface TyreRecord {
@@ -22,7 +25,47 @@ interface TyreRecord {
 export default function TyreModule() {
   const { data: vehicles } = useModuleData<any>('vehicles');
 
-    const { data: tyres, create: createTyre, remove: removeTyre, loading: tyresLoading } = useModuleData<TyreRecord>('tyres');
+  const {
+    data: tyres,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
+    loading: tyresLoading,
+    refresh: refreshTyres,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<TyreRecord>('tyres', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createTyre, remove: removeTyre } = useModuleData<TyreRecord>('tyres', { fetchOnMount: false });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [tyreSort, setTyreSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (searchQuery.trim()) f.search = { columns: ['vehicle_reg', 'brand', 'serial_number'], query: searchQuery.trim() };
+    if (statusFilter !== 'all') f.eq = { status: statusFilter };
+    if (dateFrom || dateTo) f.dateRange = { column: 'created_at', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [searchQuery, statusFilter, dateFrom, dateTo, setFilters]);
+
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setTyreSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -149,6 +192,52 @@ export default function TyreModule() {
         </div>
       </div>
 
+      {/* Search + Sort + Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search vehicle, brand, serial..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="all">All Status</option>
+          <option value="active">Fitted</option>
+          <option value="retreaded">Spare / Retreading</option>
+          <option value="scrapped">Scrapped</option>
+        </select>
+        <select
+          value={tyreSort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+        </select>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="From Date"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="To Date"
+        />
+      </div>
+
       {/* Tyre Inventory Table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
@@ -189,6 +278,19 @@ export default function TyreModule() {
             </tbody>
           </table>
         </div>
+        {totalCount > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            hasNextPage={hasNextPage}
+            hasPrevPage={hasPrevPage}
+            loading={tyresLoading}
+          />
+        )}
       </div>
 
       {showBulkUpload && (

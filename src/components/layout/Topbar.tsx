@@ -20,6 +20,7 @@ import { useStore } from '../../store/useStore';
 import type { ModuleName } from '../../types';
 import HelpButton from '../ui/HelpButton';
 import { MODULE_HELP } from '../../lib/helpContent';
+import BranchSelector from '../ui/BranchSelector';
 import { isPlatformAdmin, getAllTenants, switchTenant } from '../../lib/auth';
 
 const moduleLabels: Record<ModuleName, string> = {
@@ -184,6 +185,7 @@ export default function Topbar() {
           content={MODULE_HELP[activeModule]?.content || 'No help available for this module yet.'}
           steps={MODULE_HELP[activeModule]?.steps}
         />
+        <BranchSelector />
       </div>
 
       {/* Center - Search */}

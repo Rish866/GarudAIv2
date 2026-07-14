@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import type { Customer } from '../../../types';
 import { formatCurrency, getStatusColor, classNames } from '../../../lib/utils';
@@ -7,13 +10,55 @@ import { exportCustomers } from '../../../lib/excel';
 import { Plus, Search, Users, IndianRupee, TrendingUp, X, ExternalLink, Upload } from 'lucide-react';
 import CustomerTrackingPortal from '../tracking/CustomerTrackingPortal';
 import BulkUpload from '../../ui/BulkUpload';
+import BranchField from '../../ui/BranchField';
 
 export default function CustomersModule() {
-  const { data: customers, create: addCustomer, update: updateCustomer, loading: customersLoading } = useModuleData<any>('customers');
+  const {
+    data: customers,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
+    loading: customersLoading,
+    refresh: refreshCustomers,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('customers', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: addCustomer, update: updateCustomer } = useModuleData<any>('customers', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [customerSort, setCustomerSort] = useState('created_at:desc');
   const [showTracking, setShowTracking] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['name', 'phone', 'email', 'gstin'], query: query.trim() };
+    if (statusFilter) filters.eq = { status: statusFilter };
+    setFilters(filters);
+  };
+
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status);
+    const filters: PaginationFilter = {};
+    if (searchQuery.trim()) filters.search = { columns: ['name', 'phone', 'email', 'gstin'], query: searchQuery.trim() };
+    if (status) filters.eq = { status };
+    setFilters(filters);
+  };
+
+  const handleSortChange = useCallback((value: string) => {
+    setCustomerSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   if (showTracking) {
     return (
@@ -31,19 +76,8 @@ export default function CustomersModule() {
     );
   }
 
-  const filteredCustomers = customers.filter((customer) => {
-    const query = searchQuery.toLowerCase();
-    if (!query) return true;
-    return (
-      customer.name.toLowerCase().includes(query) ||
-      customer.contact_person.toLowerCase().includes(query) ||
-      customer.gstin.toLowerCase().includes(query)
-    );
-  });
-
-  const totalOutstanding = customers.reduce((sum, c) => sum + c.outstanding, 0);
-  const totalBusiness = customers.reduce((sum, c) => sum + c.total_business, 0);
-  const activeCount = customers.filter((c) => c.status === 'active').length;
+  const totalOutstanding = customers.reduce((sum, c) => sum + (c.outstanding || 0), 0);
+  const totalBusiness = customers.reduce((sum, c) => sum + (c.total_business || 0), 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -51,7 +85,7 @@ export default function CustomersModule() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
-          <p className="text-sm text-slate-500 mt-1">{customers.length} total customers</p>
+          <p className="text-sm text-slate-500 mt-1">{totalCount.toLocaleString()} total customers</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -115,22 +149,46 @@ export default function CustomersModule() {
             </div>
             <div>
               <p className="text-sm text-slate-500">Active Customers</p>
-              <p className="text-xl font-bold text-slate-900">{activeCount}</p>
+              <p className="text-xl font-bold text-slate-900">{totalCount}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Search by company name, contact person, or GSTIN..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-        />
+      {/* Search + Sort */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by company name, contact person, or GSTIN..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => handleStatusFilter(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="blocked">Blocked</option>
+        </select>
+        <select
+          value={customerSort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="name:asc">Name A-Z</option>
+          <option value="name:desc">Name Z-A</option>
+          <option value="balance_amount:desc">Outstanding High-Low</option>
+          <option value="balance_amount:asc">Outstanding Low-High</option>
+        </select>
       </div>
 
       {/* Customer Table */}
@@ -149,7 +207,7 @@ export default function CustomersModule() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredCustomers.map((customer) => (
+              {customers.map((customer) => (
                 <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-4">
                     <div>
@@ -195,12 +253,27 @@ export default function CustomersModule() {
           </table>
         </div>
 
-        {filteredCustomers.length === 0 && (
+        {customers.length === 0 && !customersLoading && (
           <div className="text-center py-12 text-slate-400">
             No customers found matching your search.
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={customersLoading}
+        />
+      )}
 
       {/* Add Customer Modal */}
       {showModal && <AddCustomerModal onClose={() => setShowModal(false)} />}
@@ -242,6 +315,7 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
   const { create: addCustomer } = useModuleData<any>("customers");
 
   const [form, setForm] = useState({
+    branch_id: '',
     name: '',
     contact_person: '',
     phone: '',
@@ -261,7 +335,7 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
 
     const customer: Customer = {
       id: generateId(),
-      
+      branch_id: form.branch_id || undefined,
       name: form.name,
       contact_person: form.contact_person,
       phone: form.phone,
@@ -290,6 +364,7 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Company Name</label>
             <input type="text" name="name" value={form.name} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />

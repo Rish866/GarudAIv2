@@ -1,5 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Shield, Search, Filter, Download, User, Truck, Route, Receipt, FileText, Settings, Clock } from 'lucide-react';
@@ -33,29 +36,57 @@ const ACTION_COLORS: Record<string, string> = {
 
 
 export default function AuditTrailModule() {
-  const { data: activityLog } = useModuleData<any>('activity_log');
+  const {
+    data: activityLog,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
+    loading: activityLoading,
+    refresh: refreshActivity,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('activity_log', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
-  const [entityFilter, setEntityFilter] = useState<string>('all');
-  const [userFilter, setUserFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('');
+  const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all');
+  const [actionFilter, setActionFilter] = useState<string>('all');
+  const [auditSort, setAuditSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
-  // Get unique entity types and users
-  const entityTypes = useMemo(() => ['all', ...new Set(activityLog.map(l => l.entity_type))], [activityLog]);
-  const users = useMemo(() => ['all', ...new Set(activityLog.map(l => l.user_name))], [activityLog]);
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (searchTerm.trim()) f.search = { columns: ['user_name', 'entity_type', 'action', 'details', 'entity_id'], query: searchTerm.trim() };
+    const eq: Record<string, string> = {};
+    if (entityTypeFilter !== 'all') eq.entity_type = entityTypeFilter;
+    if (actionFilter !== 'all') eq.action = actionFilter;
+    if (Object.keys(eq).length > 0) f.eq = eq;
+    if (dateFrom || dateTo) f.dateRange = { column: 'created_at', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [searchTerm, entityTypeFilter, actionFilter, dateFrom, dateTo, setFilters]);
 
-  // Filter logs
-  const filteredLogs = useMemo(() => {
-    return activityLog.filter(log => {
-      if (entityFilter !== 'all' && log.entity_type !== entityFilter) return false;
-      if (userFilter !== 'all' && log.user_name !== userFilter) return false;
-      if (dateFilter && !log.timestamp.startsWith(dateFilter)) return false;
-      if (searchTerm && !log.details.toLowerCase().includes(searchTerm.toLowerCase()) && !log.user_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-      return true;
-    });
-  }, [activityLog, entityFilter, userFilter, dateFilter, searchTerm]);
+  useEffect(() => { buildFilters(); }, [buildFilters]);
 
-  const todayLogs = activityLog.filter(l => l.timestamp.startsWith(new Date().toISOString().split('T')[0])).length;
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setAuditSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
+
+  // No client-side filtering — all done server-side via usePaginatedData
+  const filteredLogs = activityLog;
+
+  const todayLogs = activityLog.filter(l => l.timestamp?.startsWith(new Date().toISOString().split('T')[0])).length;
   const uniqueUsers = new Set(activityLog.map(l => l.user_name)).size;
+  const entityTypesSet = new Set(activityLog.map(l => l.entity_type));
 
   const exportCSV = () => {
     const headers = ['Timestamp', 'User', 'Action', 'Entity', 'Details'];
@@ -93,7 +124,7 @@ export default function AuditTrailModule() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="rounded-2xl border p-5" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
           <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Total Entries</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>{activityLog.length}</p>
+          <p className="text-2xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>{totalCount}</p>
         </div>
         <div className="rounded-2xl border p-5" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
           <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Today's Activity</p>
@@ -105,7 +136,7 @@ export default function AuditTrailModule() {
         </div>
         <div className="rounded-2xl border p-5" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
           <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Entity Types</p>
-          <p className="text-2xl font-bold mt-1 text-purple-600">{entityTypes.length - 1}</p>
+          <p className="text-2xl font-bold mt-1 text-purple-600">{entityTypesSet.size}</p>
         </div>
       </div>
 
@@ -115,13 +146,32 @@ export default function AuditTrailModule() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
           <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search activity..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
         </div>
-        <select value={entityFilter} onChange={(e) => setEntityFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-          {entityTypes.map(e => <option key={e} value={e}>{e === 'all' ? 'All Entities' : e.charAt(0).toUpperCase() + e.slice(1)}</option>)}
+        <select value={entityTypeFilter} onChange={(e) => setEntityTypeFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          <option value="all">All Entities</option>
+          <option value="trip">Trip</option>
+          <option value="vehicle">Vehicle</option>
+          <option value="driver">Driver</option>
+          <option value="customer">Customer</option>
+          <option value="invoice">Invoice</option>
+          <option value="payment">Payment</option>
         </select>
-        <select value={userFilter} onChange={(e) => setUserFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-          {users.map(u => <option key={u} value={u}>{u === 'all' ? 'All Users' : u}</option>)}
+        <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          <option value="all">All Actions</option>
+          <option value="created">Created</option>
+          <option value="updated">Updated</option>
+          <option value="deleted">Deleted</option>
+          <option value="generated">Generated</option>
+          <option value="added">Added</option>
+          <option value="recorded">Recorded</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="exported">Exported</option>
         </select>
-        <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+        <select value={auditSort} onChange={(e) => handleSortChange(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+        </select>
+        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="From Date" />
+        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="To Date" />
       </div>
 
 
@@ -158,6 +208,19 @@ export default function AuditTrailModule() {
             })
           )}
         </div>
+        {totalCount > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            hasNextPage={hasNextPage}
+            hasPrevPage={hasPrevPage}
+            loading={activityLoading}
+          />
+        )}
       </div>
     </div>
   );

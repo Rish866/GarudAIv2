@@ -255,6 +255,13 @@ export interface Trip {
   pod_date?: string;
   pod_details?: PODDetails;
   eway_bill_details?: EWayBill;
+  cancellation_reason?: string;
+  cancelled_at?: string;
+  cancelled_by?: string;
+  previous_status?: string;
+  reopened_by?: string;
+  reopened_at?: string;
+  reopen_reason?: string;
   remarks?: string;
   created_at: string;
 }

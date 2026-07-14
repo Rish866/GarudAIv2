@@ -1,5 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Package, Plus, X, Search, Download, Truck, CheckCircle, Clock, ArrowRight } from 'lucide-react';
@@ -38,11 +41,49 @@ export default function IndentModule() {
   const { data: trips } = useModuleData<any>('trips');
   const { data: quotations } = useModuleData<any>('quotations');
   const { create: addTrip } = useModuleData<any>('trips');
-  const { data: indents, create: createIndent, update: updateIndent, remove: removeIndent, loading: indentsLoading } = useModuleData<Indent>('indents');
+  const {
+    data: indents,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
+    loading: indentsLoading,
+    refresh: refreshIndents,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<Indent>('indents', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createIndent, update: updateIndent, remove: removeIndent } = useModuleData<Indent>('indents');
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [indentSort, setIndentSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (search.trim()) f.search = { columns: ['customer_name', 'origin', 'destination', 'material'], query: search.trim() };
+    if (statusFilter !== 'all') f.eq = { status: statusFilter };
+    if (dateFrom || dateTo) f.dateRange = { column: 'created_at', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [search, statusFilter, dateFrom, dateTo, setFilters]);
+
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setIndentSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
 
   const [form, setForm] = useState({
@@ -70,11 +111,7 @@ export default function IndentModule() {
     }
   };
 
-  const filteredIndents = indents.filter(ind => {
-    if (statusFilter !== 'all' && ind.status !== statusFilter) return false;
-    if (search && !ind.customer_name.toLowerCase().includes(search.toLowerCase()) && !ind.indent_number.toLowerCase().includes(search.toLowerCase()) && !ind.origin.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const filteredIndents = indents;
 
   const pendingCount = indents.filter(i => i.status === 'pending').length;
   const allocatedCount = indents.filter(i => i.status === 'allocated' || i.status === 'confirmed').length;
@@ -231,6 +268,14 @@ export default function IndentModule() {
           <option value="in_progress">In Progress</option>
           <option value="completed">Completed</option>
         </select>
+        <select value={indentSort} onChange={(e) => handleSortChange(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="amount:desc">Amount High-Low</option>
+          <option value="amount:asc">Amount Low-High</option>
+        </select>
+        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="From Date" />
+        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="To Date" />
       </div>
 
 
@@ -308,6 +353,20 @@ export default function IndentModule() {
           </div>
         ))}
       </div>
+
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={indentsLoading}
+        />
+      )}
 
       {/* Add Modal */}
       {showModal && (

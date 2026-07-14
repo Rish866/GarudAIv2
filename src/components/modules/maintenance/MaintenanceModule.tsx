@@ -1,14 +1,63 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import type { MaintenanceRecord } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames } from '../../../lib/utils';
+import { Search } from 'lucide-react';
+import BranchField from '../../ui/BranchField';
 
 export default function MaintenanceModule() {
   const { company } = useStore();
-  const { data: maintenance, create: addMaintenance } = useModuleData<any>('maintenance');
+  const {
+    data: maintenance,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
+    loading: maintenanceLoading,
+    refresh: refreshMaintenance,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('maintenance', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: addMaintenance } = useModuleData<any>('maintenance', { fetchOnMount: false });
   const { data: vehicles } = useModuleData<any>('vehicles');
   const [showModal, setShowModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [maintenanceSort, setMaintenanceSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (searchQuery.trim()) f.search = { columns: ['vehicle_reg', 'description', 'vendor'], query: searchQuery.trim() };
+    const eqFilters: Record<string, string> = {};
+    if (statusFilter) eqFilters.status = statusFilter;
+    if (typeFilter) eqFilters.type = typeFilter;
+    if (Object.keys(eqFilters).length > 0) f.eq = eqFilters;
+    if (dateFrom || dateTo) f.dateRange = { column: 'date', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [searchQuery, statusFilter, typeFilter, dateFrom, dateTo, setFilters]);
+
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setMaintenanceSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   // Summary calculations
   const activeJobs = maintenance.filter((m) => m.status === 'scheduled' || m.status === 'in_progress').length;
@@ -17,6 +66,7 @@ export default function MaintenanceModule() {
 
   // Form state
   const [form, setForm] = useState({
+    branch_id: '',
     vehicle_id: '',
     type: 'preventive' as MaintenanceRecord['type'],
     description: '',
@@ -31,6 +81,7 @@ export default function MaintenanceModule() {
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
     const record: MaintenanceRecord = {
       id: generateId(),
+      branch_id: form.branch_id || undefined,
       vehicle_id: form.vehicle_id,
       vehicle_reg: vehicle?.reg_number || '',
       type: form.type,
@@ -44,7 +95,7 @@ export default function MaintenanceModule() {
     };
     addMaintenance(record);
     setShowModal(false);
-    setForm({ vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' });
+    setForm({ branch_id: '', vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' });
   };
 
 
@@ -82,6 +133,67 @@ export default function MaintenanceModule() {
         </div>
       </div>
 
+      {/* Search + Filter + Sort + Date Range */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search vehicle, description, vendor..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="">All Statuses</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+        </select>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="">All Types</option>
+          <option value="preventive">Preventive</option>
+          <option value="repair">Repair</option>
+          <option value="breakdown">Breakdown</option>
+          <option value="tyre">Tyre</option>
+          <option value="inspection">Inspection</option>
+        </select>
+        <select
+          value={maintenanceSort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="cost:desc">Cost High-Low</option>
+          <option value="cost:asc">Cost Low-High</option>
+          <option value="date:desc">Date (Latest)</option>
+          <option value="date:asc">Date (Oldest)</option>
+        </select>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="From Date"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="To Date"
+        />
+      </div>
 
       {/* Maintenance List (cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -125,8 +237,24 @@ export default function MaintenanceModule() {
             </div>
           </div>
         ))}
+        {!maintenanceLoading && maintenance.length === 0 && (
+          <div className="col-span-2 bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-sm">No maintenance records found</div>
+        )}
       </div>
 
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={maintenanceLoading}
+        />
+      )}
 
       {/* Schedule Maintenance Modal */}
       {showModal && (
@@ -135,6 +263,7 @@ export default function MaintenanceModule() {
           <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Schedule Maintenance</h3>
             <div className="space-y-4">
+              <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Vehicle</label>
