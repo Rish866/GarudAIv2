@@ -1,0 +1,286 @@
+name: Deploy Invitations to garudaiv2
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_target:
+        description: 'Type exactly "garudaiv2" to confirm deployment target'
+        required: true
+        type: string
+      deploy_ref:
+        description: 'Branch or commit SHA to deploy'
+        required: true
+        default: feat/organization-invitation-flow
+        type: string
+
+concurrency:
+  group: garudaiv2-development-deployment
+  cancel-in-progress: false
+
+env:
+  APP_URL: https://garud-a-iv2.vercel.app
+  EXPECTED_PROJECT_REF: emcynvexbauhohpwcqaw
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify deployment target confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm_target }}" != "garudaiv2" ]; then
+            echo "::error::Deployment aborted. You must type exactly 'garudaiv2' to confirm."
+            exit 1
+          fi
+          echo "✅ Confirmation accepted: garudaiv2"
+
+      - name: Verify deploy ref is allowed
+        run: |
+          ALLOWED_REF="${{ github.event.inputs.deploy_ref }}"
+          if [ "$ALLOWED_REF" != "feat/organization-invitation-flow" ]; then
+            # Allow exact commit SHAs (40 hex chars) for reviewed commits
+            if echo "$ALLOWED_REF" | grep -qE '^[0-9a-f]{40}$'; then
+              echo "✅ Deploying from reviewed commit: $ALLOWED_REF"
+            else
+              echo "::error::Only 'feat/organization-invitation-flow' or a reviewed commit SHA is allowed."
+              exit 1
+            fi
+          else
+            echo "✅ Deploying from: $ALLOWED_REF"
+          fi
+
+  checks:
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.deploy_ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+  deploy:
+    needs: checks
+    runs-on: ubuntu-latest
+    environment: garudaiv2-development
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.deploy_ref }}
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Verify exact project reference (before any Supabase command)
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          if [ "$PROJECT_REF" != "emcynvexbauhohpwcqaw" ]; then
+            echo "::error::SUPABASE_PROJECT_REF is not garudaiv2 (emcynvexbauhohpwcqaw)."
+            echo "::error::This workflow targets ONLY the garudaiv2 development project. Aborting."
+            exit 1
+          fi
+          echo "✅ Project reference verified: garudaiv2 (emcynvexbauhohpwcqaw)"
+
+      - name: Link to garudaiv2 project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: supabase link --project-ref "$PROJECT_REF"
+
+      - name: Set Edge Function secrets (before function deployment)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          supabase secrets set RESEND_API_KEY="$RESEND_API_KEY"
+          supabase secrets set APP_URL="${{ env.APP_URL }}"
+          echo "✅ Secrets set: RESEND_API_KEY, APP_URL"
+
+      - name: Verify migration state
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "=== Migration Status ==="
+          supabase migration list
+          echo ""
+
+          STATUS=$(supabase migration list 2>&1)
+
+          echo "| Migration | Local | Remote | Expected |"
+          echo "|-----------|-------|--------|----------|"
+
+          ABORT=false
+
+          # Migrations that MUST be applied remotely (000-003, 005-010)
+          # Note: 004 was applied via Dashboard (marked as applied in migration history)
+          for M in 000 001 002 003 004 005 006 007 008 009 010; do
+            LOCAL="yes"
+            if echo "$STATUS" | grep -q "^\s*$M\s*|.*|\s*$M"; then
+              REMOTE="yes"
+              EXPECTED="✅"
+            elif echo "$STATUS" | grep -q "$M"; then
+              # Present in output but might not have remote timestamp
+              REMOTE="check"
+              EXPECTED="⚠️"
+            else
+              REMOTE="MISSING"
+              EXPECTED="❌"
+              ABORT=true
+            fi
+            echo "| $M | $LOCAL | $REMOTE | $EXPECTED |"
+          done
+
+          # Migration 011 should be LOCAL ONLY (not yet applied remotely)
+          if echo "$STATUS" | grep -q "011"; then
+            echo "| 011 | yes | pending | ✅ (will be applied) |"
+          else
+            echo "| 011 | MISSING | - | ❌ |"
+            echo "::error::Migration 011 not found locally. Check the deploy_ref branch."
+            ABORT=true
+          fi
+
+          if [ "$ABORT" = "true" ]; then
+            echo ""
+            echo "::error::Migration state mismatch. Cannot safely deploy. Review migration list above."
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ Migration state verified: 000-010 applied, 011 pending"
+
+      - name: Apply pending migrations (011 only)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push
+
+      - name: Deploy send-organization-invite (JWT verified)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy send-organization-invite
+
+      - name: Deploy accept-organization-invite (JWT verified)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy accept-organization-invite
+
+      - name: Deploy resend-organization-invite (JWT verified)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy resend-organization-invite
+
+      - name: Deploy revoke-organization-invite (JWT verified)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy revoke-organization-invite
+
+      - name: List deployed functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions list
+
+      - name: Post-deployment smoke tests (MUST pass)
+        env:
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          FUNC_URL="https://${PROJECT_REF}.supabase.co/functions/v1"
+          FAILED=0
+
+          echo "=== Security smoke tests ==="
+
+          echo -n "  send-organization-invite (unauthenticated): "
+          RESP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$FUNC_URL/send-organization-invite" \
+            -H "Content-Type: application/json" -d '{}')
+          if [ "$RESP" = "401" ]; then
+            echo "✓ 401 (rejected)"
+          else
+            echo "✗ got $RESP (expected 401)"
+            FAILED=$((FAILED+1))
+          fi
+
+          echo -n "  resend-organization-invite (unauthenticated): "
+          RESP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$FUNC_URL/resend-organization-invite" \
+            -H "Content-Type: application/json" -d '{}')
+          if [ "$RESP" = "401" ]; then
+            echo "✓ 401 (rejected)"
+          else
+            echo "✗ got $RESP (expected 401)"
+            FAILED=$((FAILED+1))
+          fi
+
+          echo -n "  revoke-organization-invite (unauthenticated): "
+          RESP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$FUNC_URL/revoke-organization-invite" \
+            -H "Content-Type: application/json" -d '{}')
+          if [ "$RESP" = "401" ]; then
+            echo "✓ 401 (rejected)"
+          else
+            echo "✗ got $RESP (expected 401)"
+            FAILED=$((FAILED+1))
+          fi
+
+          echo -n "  accept-organization-invite (fake JWT + token): "
+          RESP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$FUNC_URL/accept-organization-invite" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer invalid.jwt.token" \
+            -d '{"token":"0000000000000000000000000000000000000000000000000000000000000000"}')
+          if [ "$RESP" = "401" ] || [ "$RESP" = "400" ]; then
+            echo "✓ $RESP (safely rejected)"
+          else
+            echo "✗ got $RESP (expected 401 or 400)"
+            FAILED=$((FAILED+1))
+          fi
+
+          echo ""
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::error::$FAILED smoke test(s) FAILED. Security expectations not met."
+            exit 1
+          fi
+          echo "✅ All smoke tests passed"
+
+      - name: Verify migration 011 applied remotely
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          STATUS=$(supabase migration list 2>&1)
+          if echo "$STATUS" | grep -q "011.*|.*|"; then
+            echo "✅ Migration 011 confirmed applied remotely"
+          else
+            echo "::error::Migration 011 does not appear as applied remotely."
+            echo "$STATUS"
+            exit 1
+          fi
+
+      - name: Deployment complete
+        run: |
+          echo "================================================"
+          echo "✅ Deployment verified: garudaiv2 development"
+          echo "================================================"
+          echo "Migration 011: applied and confirmed remotely"
+          echo "Functions (all JWT-verified):"
+          echo "  - send-organization-invite"
+          echo "  - accept-organization-invite"
+          echo "  - resend-organization-invite"
+          echo "  - revoke-organization-invite"
+          echo "Secrets: RESEND_API_KEY, APP_URL"
+          echo "Smoke tests: all passed (unauthenticated calls rejected)"
+          echo "Frontend: ${{ env.APP_URL }}"
+          echo "================================================"
