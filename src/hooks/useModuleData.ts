@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useOrganization } from '../contexts/OrganizationContext';
+import { useStore } from '../store/useStore';
 import { sanitizeForTableSafe, UUID_REGEX } from '../lib/sanitize';
 import { showToast } from '../components/ui/Toast';
 import {
@@ -54,9 +55,11 @@ export function useModuleData<T extends { id: string }>(
     search?: { column: string; value: string };
     enabled?: boolean;
     pageSize?: number;
+    branchFilter?: boolean;
   }
 ): ModuleDataResult<T> {
   const { organizationId, loading: orgLoading } = useOrganization();
+  const activeBranch = useStore((s) => s.activeBranch);
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +95,11 @@ export function useModuleData<T extends { id: string }>(
         });
       }
 
+      // Apply branch filter (when branchFilter enabled and branch selected)
+      if (options?.branchFilter !== false && activeBranch && activeBranch !== 'all') {
+        query = query.eq('branch_id', activeBranch);
+      }
+
       // Apply search
       if (options?.search && options.search.value) {
         query = query.ilike(options.search.column, `%${options.search.value}%`);
@@ -124,7 +132,7 @@ export function useModuleData<T extends { id: string }>(
     } finally {
       setLoading(false);
     }
-  }, [organizationId, tableName, databaseTableName, enabled, options?.orderBy, options?.orderDirection, page, pageSize]);
+  }, [organizationId, tableName, databaseTableName, enabled, options?.orderBy, options?.orderDirection, page, pageSize, activeBranch]);
 
   useEffect(() => {
     if (!orgLoading) refresh();
