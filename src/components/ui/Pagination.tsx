@@ -1,95 +1,98 @@
+// Pagination — Reusable pagination controls for server-side paginated modules
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import type { PageSize } from '../../hooks/usePaginatedData';
 
 interface PaginationProps {
-  currentPage: number;
+  page: number;
   totalPages: number;
+  totalCount: number;
+  pageSize: PageSize;
   onPageChange: (page: number) => void;
-  totalItems: number;
-  itemsPerPage: number;
+  onPageSizeChange: (size: PageSize) => void;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  loading?: boolean;
 }
 
-export default function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }: PaginationProps) {
-  if (totalPages <= 1) return null;
+const PAGE_SIZES: PageSize[] = [25, 50, 100];
 
-  const startItem = (currentPage - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+export default function Pagination({
+  page,
+  totalPages,
+  totalCount,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  hasNextPage,
+  hasPrevPage,
+  loading,
+}: PaginationProps) {
+  const from = (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, totalCount);
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
-      <p className="text-sm text-slate-500">
-        Showing <span className="font-medium text-slate-700">{startItem}</span> to{' '}
-        <span className="font-medium text-slate-700">{endItem}</span> of{' '}
-        <span className="font-medium text-slate-700">{totalItems}</span> results
-      </p>
+    <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200 rounded-b-2xl">
+      {/* Left: Row info */}
+      <div className="flex items-center gap-4">
+        <span className="text-sm text-slate-600">
+          {totalCount === 0 ? 'No records' : `${from}–${to} of ${totalCount.toLocaleString()}`}
+        </span>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-slate-500">Rows:</label>
+          <select
+            value={pageSize}
+            onChange={(e) => onPageSizeChange(Number(e.target.value) as PageSize)}
+            className="text-sm border border-slate-200 rounded-md px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none"
+            disabled={loading}
+          >
+            {PAGE_SIZES.map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Right: Page navigation */}
       <div className="flex items-center gap-1">
         <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          onClick={() => onPageChange(1)}
+          disabled={!hasPrevPage || loading}
+          className="p-1.5 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="First page"
         >
-          <ChevronLeft size={16} />
+          <ChevronsLeft size={16} className="text-slate-600" />
         </button>
-        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-          let page: number;
-          if (totalPages <= 5) {
-            page = i + 1;
-          } else if (currentPage <= 3) {
-            page = i + 1;
-          } else if (currentPage >= totalPages - 2) {
-            page = totalPages - 4 + i;
-          } else {
-            page = currentPage - 2 + i;
-          }
-          return (
-            <button
-              key={page}
-              onClick={() => onPageChange(page)}
-              className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                currentPage === page
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {page}
-            </button>
-          );
-        })}
         <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          onClick={() => onPageChange(page - 1)}
+          disabled={!hasPrevPage || loading}
+          className="p-1.5 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="Previous page"
         >
-          <ChevronRight size={16} />
+          <ChevronLeft size={16} className="text-slate-600" />
+        </button>
+
+        <span className="px-3 py-1 text-sm font-medium text-slate-700">
+          {page} / {totalPages}
+        </span>
+
+        <button
+          onClick={() => onPageChange(page + 1)}
+          disabled={!hasNextPage || loading}
+          className="p-1.5 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="Next page"
+        >
+          <ChevronRight size={16} className="text-slate-600" />
+        </button>
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={!hasNextPage || loading}
+          className="p-1.5 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="Last page"
+        >
+          <ChevronsRight size={16} className="text-slate-600" />
         </button>
       </div>
     </div>
   );
-}
-
-/**
- * Hook for pagination logic
- */
-export function usePagination<T>(items: T[], itemsPerPage: number = 10) {
-  const [currentPage, setCurrentPage] = React.useState(1);
-  
-  const totalPages = Math.ceil(items.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedItems = items.slice(startIndex, startIndex + itemsPerPage);
-  
-  // Reset to page 1 if items change and current page is out of bounds
-  React.useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
-    }
-  }, [items.length, totalPages, currentPage]);
-
-  return {
-    currentPage,
-    totalPages,
-    paginatedItems,
-    totalItems: items.length,
-    itemsPerPage,
-    setCurrentPage,
-  };
 }

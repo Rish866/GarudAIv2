@@ -1,18 +1,73 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import type { Invoice, Payment, Expense, ExpenseCategory } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateInvoiceNumber } from '../../../lib/utils';
 import { generateInvoicePDF } from '../../../lib/pdf';
 import { exportInvoices, exportExpenses } from '../../../lib/excel';
+import { Search } from 'lucide-react';
 
 type BillingTab = 'invoices' | 'payments' | 'expenses';
 
 export default function BillingModule() {
   const { company } = useStore();
-  const { data: invoices, create: addInvoice } = useModuleData<any>('invoices');
-  const { data: payments, create: addPayment } = useModuleData<any>('payments');
-  const { data: expenses, create: addExpense } = useModuleData<any>('expenses');
+
+  // Server-side paginated invoices
+  const {
+    data: invoices,
+    totalCount: invoiceTotalCount,
+    totalPages: invoiceTotalPages,
+    page: invoicePage,
+    pageSize: invoicePageSize,
+    setPage: setInvoicePage,
+    setPageSize: setInvoicePageSize,
+    filters: invoiceFilters,
+    setFilters: setInvoiceFilters,
+    loading: invoicesLoading,
+    refresh: refreshInvoices,
+    hasNextPage: invoiceHasNext,
+    hasPrevPage: invoiceHasPrev,
+  } = usePaginatedData<any>('invoices', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+
+  // Server-side paginated payments
+  const {
+    data: payments,
+    totalCount: paymentTotalCount,
+    totalPages: paymentTotalPages,
+    page: paymentPage,
+    pageSize: paymentPageSize,
+    setPage: setPaymentPage,
+    setPageSize: setPaymentPageSize,
+    filters: paymentFilters,
+    setFilters: setPaymentFilters,
+    loading: paymentsLoading,
+    refresh: refreshPayments,
+    hasNextPage: paymentHasNext,
+    hasPrevPage: paymentHasPrev,
+  } = usePaginatedData<any>('payments', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+
+  // Expenses (paginated)
+  const {
+    data: expenses,
+    totalCount: expenseTotalCount,
+    totalPages: expenseTotalPages,
+    page: expensePage,
+    pageSize: expensePageSize,
+    setPage: setExpensePage,
+    setPageSize: setExpensePageSize,
+    loading: expensesLoading,
+    refresh: refreshExpenses,
+    hasNextPage: expenseHasNext,
+    hasPrevPage: expenseHasPrev,
+  } = usePaginatedData<any>('expenses', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+
+  // CRUD operations via useModuleData (non-paginated, for create only)
+  const { create: addInvoice } = useModuleData<any>('invoices');
+  const { create: addPayment } = useModuleData<any>('payments');
+  const { create: addExpense } = useModuleData<any>('expenses');
   const { data: customers } = useModuleData<any>('customers');
   const { data: trips } = useModuleData<any>('trips');
   const { data: vehicles } = useModuleData<any>('vehicles');
@@ -20,6 +75,62 @@ export default function BillingModule() {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+
+  // Invoice search/filter state
+  const [invoiceSearch, setInvoiceSearch] = useState('');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('');
+
+  // Payment search/filter state
+  const [paymentSearch, setPaymentSearch] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
+
+  // Invoice filter handlers
+  const handleInvoiceSearch = useCallback((query: string) => {
+    setInvoiceSearch(query);
+    const newFilters: PaginationFilter = { ...invoiceFilters };
+    if (query.trim()) {
+      newFilters.search = { columns: ['invoice_number', 'customer_name'], query: query.trim() };
+    } else {
+      delete newFilters.search;
+    }
+    if (invoiceStatusFilter) newFilters.eq = { status: invoiceStatusFilter };
+    setInvoiceFilters(newFilters);
+  }, [invoiceFilters, invoiceStatusFilter, setInvoiceFilters]);
+
+  const handleInvoiceStatusFilter = useCallback((status: string) => {
+    setInvoiceStatusFilter(status);
+    const newFilters: PaginationFilter = { ...invoiceFilters };
+    if (status) {
+      newFilters.eq = { ...(newFilters.eq || {}), status };
+    } else {
+      if (newFilters.eq) delete newFilters.eq.status;
+    }
+    if (invoiceSearch.trim()) {
+      newFilters.search = { columns: ['invoice_number', 'customer_name'], query: invoiceSearch.trim() };
+    }
+    setInvoiceFilters(newFilters);
+  }, [invoiceFilters, invoiceSearch, setInvoiceFilters]);
+
+  // Payment filter handlers
+  const handlePaymentSearch = useCallback((query: string) => {
+    setPaymentSearch(query);
+    const newFilters: PaginationFilter = {};
+    if (query.trim()) {
+      newFilters.search = { columns: ['reference_number', 'customer_name'], query: query.trim() };
+    }
+    if (paymentStatusFilter) newFilters.eq = { status: paymentStatusFilter };
+    setPaymentFilters(newFilters);
+  }, [paymentStatusFilter, setPaymentFilters]);
+
+  const handlePaymentStatusFilter = useCallback((status: string) => {
+    setPaymentStatusFilter(status);
+    const newFilters: PaginationFilter = {};
+    if (status) newFilters.eq = { status };
+    if (paymentSearch.trim()) {
+      newFilters.search = { columns: ['reference_number', 'customer_name'], query: paymentSearch.trim() };
+    }
+    setPaymentFilters(newFilters);
+  }, [paymentSearch, setPaymentFilters]);
 
   // Summary calculations
   const totalOutstanding = invoices.reduce((sum, inv) => sum + inv.balance_amount, 0);
@@ -221,72 +332,161 @@ export default function BillingModule() {
 
       {/* Invoices Tab */}
       {activeTab === 'invoices' && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Invoice #</th>
-                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Customer</th>
-                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Date</th>
-                <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Total</th>
-                <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Balance</th>
-                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Status</th>
-                <th className="px-4 py-3 text-center text-[11px] uppercase font-semibold text-slate-500">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {invoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm font-medium text-blue-600">{inv.invoice_number}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{inv.customer_name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(inv.invoice_date)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right font-medium">{formatCurrency(inv.total_amount)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right font-medium">{formatCurrency(inv.balance_amount)}</td>
-                  <td className="px-4 py-3">
-                    <span className={classNames('px-2 py-0.5 rounded-full text-xs font-medium', getStatusColor(inv.status))}>{inv.status}</span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => generateInvoicePDF(inv, company, trips)}
-                      className="px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                      title="Print Invoice PDF"
-                    >
-                      Print
-                    </button>
-                  </td>
+        <div>
+          {/* Invoice Search + Filter */}
+          <div className="flex gap-3 mb-4">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search invoice number, customer..."
+                value={invoiceSearch}
+                onChange={(e) => handleInvoiceSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <select
+              value={invoiceStatusFilter}
+              onChange={(e) => handleInvoiceStatusFilter(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="">All Statuses</option>
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="partial">Partial</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Invoice #</th>
+                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Customer</th>
+                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Date</th>
+                  <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Total</th>
+                  <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Balance</th>
+                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Status</th>
+                  <th className="px-4 py-3 text-center text-[11px] uppercase font-semibold text-slate-500">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-sm font-medium text-blue-600">{inv.invoice_number}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{inv.customer_name}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{formatDate(inv.invoice_date)}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700 text-right font-medium">{formatCurrency(inv.total_amount)}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700 text-right font-medium">{formatCurrency(inv.balance_amount)}</td>
+                    <td className="px-4 py-3">
+                      <span className={classNames('px-2 py-0.5 rounded-full text-xs font-medium', getStatusColor(inv.status))}>{inv.status}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => generateInvoicePDF(inv, company, trips)}
+                        className="px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                        title="Print Invoice PDF"
+                      >
+                        Print
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!invoicesLoading && invoices.length === 0 && (
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">No invoices found</td></tr>
+                )}
+              </tbody>
+            </table>
+            {invoiceTotalCount > 0 && (
+              <Pagination
+                page={invoicePage}
+                totalPages={invoiceTotalPages}
+                totalCount={invoiceTotalCount}
+                pageSize={invoicePageSize}
+                onPageChange={setInvoicePage}
+                onPageSizeChange={setInvoicePageSize}
+                hasNextPage={invoiceHasNext}
+                hasPrevPage={invoiceHasPrev}
+                loading={invoicesLoading}
+              />
+            )}
+          </div>
         </div>
       )}
 
 
       {/* Payments Tab */}
       {activeTab === 'payments' && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Reference</th>
-                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Customer</th>
-                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Date</th>
-                <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Amount</th>
-                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Mode</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {payments.map((pay) => (
-                <tr key={pay.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm font-medium text-slate-700">{pay.reference_number}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{pay.customer_name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(pay.payment_date)}</td>
-                  <td className="px-4 py-3 text-sm text-green-600 text-right font-semibold">{formatCurrency(pay.amount)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{pay.payment_mode.replace('_', ' ')}</td>
+        <div>
+          {/* Payment Search + Filter */}
+          <div className="flex gap-3 mb-4">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search reference number, customer..."
+                value={paymentSearch}
+                onChange={(e) => handlePaymentSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <select
+              value={paymentStatusFilter}
+              onChange={(e) => handlePaymentStatusFilter(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="">All Statuses</option>
+              <option value="received">Received</option>
+              <option value="cleared">Cleared</option>
+              <option value="bounced">Bounced</option>
+            </select>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Reference</th>
+                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Customer</th>
+                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Date</th>
+                  <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Amount</th>
+                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Mode</th>
+                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {payments.map((pay) => (
+                  <tr key={pay.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-sm font-medium text-slate-700">{pay.reference_number}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{pay.customer_name}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{formatDate(pay.payment_date)}</td>
+                    <td className="px-4 py-3 text-sm text-green-600 text-right font-semibold">{formatCurrency(pay.amount)}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{pay.payment_mode.replace('_', ' ')}</td>
+                    <td className="px-4 py-3">
+                      <span className={classNames('px-2 py-0.5 rounded-full text-xs font-medium', getStatusColor(pay.status))}>{pay.status}</span>
+                    </td>
+                  </tr>
+                ))}
+                {!paymentsLoading && payments.length === 0 && (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400 text-sm">No payments found</td></tr>
+                )}
+              </tbody>
+            </table>
+            {paymentTotalCount > 0 && (
+              <Pagination
+                page={paymentPage}
+                totalPages={paymentTotalPages}
+                totalCount={paymentTotalCount}
+                pageSize={paymentPageSize}
+                onPageChange={setPaymentPage}
+                onPageSizeChange={setPaymentPageSize}
+                hasNextPage={paymentHasNext}
+                hasPrevPage={paymentHasPrev}
+                loading={paymentsLoading}
+              />
+            )}
+          </div>
         </div>
       )}
 
@@ -315,8 +515,24 @@ export default function BillingModule() {
                   <td className="px-4 py-3 text-sm text-red-600 text-right font-semibold">{formatCurrency(exp.amount)}</td>
                 </tr>
               ))}
+              {!expensesLoading && expenses.length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400 text-sm">No expenses found</td></tr>
+              )}
             </tbody>
           </table>
+          {expenseTotalCount > 0 && (
+            <Pagination
+              page={expensePage}
+              totalPages={expenseTotalPages}
+              totalCount={expenseTotalCount}
+              pageSize={expensePageSize}
+              onPageChange={setExpensePage}
+              onPageSizeChange={setExpensePageSize}
+              hasNextPage={expenseHasNext}
+              hasPrevPage={expenseHasPrev}
+              loading={expensesLoading}
+            />
+          )}
         </div>
       )}
 
