@@ -67,7 +67,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ============================================================
 -- PHASE 15: RELATIONAL TENANT INTEGRITY
--- 
+--
 -- Prevent cross-organization foreign-key references.
 -- Example: Org A's trip cannot reference Org B's vehicle.
 -- ============================================================
@@ -124,26 +124,38 @@ BEGIN
   IF TG_TABLE_NAME = 'trips' THEN
     -- Check vehicle belongs to same org (if vehicle_id is set)
     IF NEW.vehicle_id IS NOT NULL AND NEW.vehicle_id != '' THEN
-      SELECT organization_id INTO vehicle_org 
-      FROM public.vehicles WHERE id = NEW.vehicle_id::text;
+      BEGIN
+        SELECT organization_id INTO vehicle_org
+        FROM public.vehicles WHERE id = NEW.vehicle_id::uuid;
+      EXCEPTION WHEN invalid_text_representation THEN
+        vehicle_org := NULL; -- non-UUID value, skip validation
+      END;
       IF vehicle_org IS NOT NULL AND vehicle_org != NEW.organization_id THEN
         RAISE EXCEPTION 'Vehicle does not belong to this organization';
       END IF;
     END IF;
-    
+
     -- Check driver belongs to same org (if driver_id is set)
     IF NEW.driver_id IS NOT NULL AND NEW.driver_id != '' THEN
-      SELECT organization_id INTO driver_org 
-      FROM public.drivers WHERE id = NEW.driver_id::text;
+      BEGIN
+        SELECT organization_id INTO driver_org
+        FROM public.drivers WHERE id = NEW.driver_id::uuid;
+      EXCEPTION WHEN invalid_text_representation THEN
+        driver_org := NULL; -- non-UUID value, skip validation
+      END;
       IF driver_org IS NOT NULL AND driver_org != NEW.organization_id THEN
         RAISE EXCEPTION 'Driver does not belong to this organization';
       END IF;
     END IF;
-    
+
     -- Check customer belongs to same org (if customer_id is set)
     IF NEW.customer_id IS NOT NULL AND NEW.customer_id != '' THEN
-      SELECT organization_id INTO customer_org 
-      FROM public.customers WHERE id = NEW.customer_id::text;
+      BEGIN
+        SELECT organization_id INTO customer_org
+        FROM public.customers WHERE id = NEW.customer_id::uuid;
+      EXCEPTION WHEN invalid_text_representation THEN
+        customer_org := NULL; -- non-UUID value, skip validation
+      END;
       IF customer_org IS NOT NULL AND customer_org != NEW.organization_id THEN
         RAISE EXCEPTION 'Customer does not belong to this organization';
       END IF;
@@ -153,8 +165,12 @@ BEGIN
   -- For INVOICES: validate customer belongs to same org
   IF TG_TABLE_NAME = 'invoices' THEN
     IF NEW.customer_id IS NOT NULL AND NEW.customer_id != '' THEN
-      SELECT organization_id INTO customer_org 
-      FROM public.customers WHERE id = NEW.customer_id::text;
+      BEGIN
+        SELECT organization_id INTO customer_org
+        FROM public.customers WHERE id = NEW.customer_id::uuid;
+      EXCEPTION WHEN invalid_text_representation THEN
+        customer_org := NULL;
+      END;
       IF customer_org IS NOT NULL AND customer_org != NEW.organization_id THEN
         RAISE EXCEPTION 'Customer does not belong to this organization';
       END IF;
@@ -164,8 +180,12 @@ BEGIN
   -- For MAINTENANCE_RECORDS: validate vehicle belongs to same org
   IF TG_TABLE_NAME = 'maintenance_records' THEN
     IF NEW.vehicle_id IS NOT NULL AND NEW.vehicle_id != '' THEN
-      SELECT organization_id INTO vehicle_org 
-      FROM public.vehicles WHERE id = NEW.vehicle_id::text;
+      BEGIN
+        SELECT organization_id INTO vehicle_org
+        FROM public.vehicles WHERE id = NEW.vehicle_id::uuid;
+      EXCEPTION WHEN invalid_text_representation THEN
+        vehicle_org := NULL;
+      END;
       IF vehicle_org IS NOT NULL AND vehicle_org != NEW.organization_id THEN
         RAISE EXCEPTION 'Vehicle does not belong to this organization';
       END IF;
@@ -175,8 +195,12 @@ BEGIN
   -- For FUEL_ENTRIES: validate vehicle belongs to same org
   IF TG_TABLE_NAME = 'fuel_entries' THEN
     IF NEW.vehicle_id IS NOT NULL AND NEW.vehicle_id != '' THEN
-      SELECT organization_id INTO vehicle_org 
-      FROM public.vehicles WHERE id = NEW.vehicle_id::text;
+      BEGIN
+        SELECT organization_id INTO vehicle_org
+        FROM public.vehicles WHERE id = NEW.vehicle_id::uuid;
+      EXCEPTION WHEN invalid_text_representation THEN
+        vehicle_org := NULL;
+      END;
       IF vehicle_org IS NOT NULL AND vehicle_org != NEW.organization_id THEN
         RAISE EXCEPTION 'Vehicle does not belong to this organization';
       END IF;
@@ -186,8 +210,12 @@ BEGIN
   -- For EXPENSES: validate trip belongs to same org (if trip-linked)
   IF TG_TABLE_NAME = 'expenses' THEN
     IF NEW.trip_id IS NOT NULL AND NEW.trip_id != '' THEN
-      SELECT organization_id INTO trip_org 
-      FROM public.trips WHERE id = NEW.trip_id::text;
+      BEGIN
+        SELECT organization_id INTO trip_org
+        FROM public.trips WHERE id = NEW.trip_id::uuid;
+      EXCEPTION WHEN invalid_text_representation THEN
+        trip_org := NULL;
+      END;
       IF trip_org IS NOT NULL AND trip_org != NEW.organization_id THEN
         RAISE EXCEPTION 'Trip does not belong to this organization';
       END IF;
@@ -197,7 +225,7 @@ BEGIN
   -- For PAYMENTS: validate invoice's customer belongs to same org
   IF TG_TABLE_NAME = 'payments' THEN
     IF NEW.customer_id IS NOT NULL AND NEW.customer_id != '' THEN
-      SELECT organization_id INTO customer_org 
+      SELECT organization_id INTO customer_org
       FROM public.customers WHERE id = NEW.customer_id::text;
       IF customer_org IS NOT NULL AND customer_org != NEW.organization_id THEN
         RAISE EXCEPTION 'Customer does not belong to this organization';
