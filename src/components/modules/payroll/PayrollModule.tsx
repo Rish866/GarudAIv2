@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, classNames } from '../../../lib/utils';
-import { DollarSign, Users, CheckCircle, Clock, CreditCard } from 'lucide-react';
+import { DollarSign, Users, CheckCircle, Clock, CreditCard, Lock, Save } from 'lucide-react';
+import { showToast } from '../../ui/Toast';
 
 interface SalaryRecord {
   driver_id: string;
@@ -21,6 +21,7 @@ interface SalaryRecord {
 export default function PayrollModule() {
   const { data: drivers } = useModuleData<any>('drivers');
   const { data: trips } = useModuleData<any>('trips');
+  const { data: payrollRecords, create: createPayrollRecord, update: updatePayrollRecord } = useModuleData<any>('payroll_records');
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
@@ -97,8 +98,38 @@ export default function PayrollModule() {
     );
   };
 
-  const handleProcessAll = () => {
+  const handleProcessAll = async () => {
+    // Persist all salary records to payroll_records table
+    for (const salary of salaries) {
+      const existing = payrollRecords.find(
+        (r: any) => r.employee_id === salary.driver_id && r.month === selectedMonth + 1 && r.year === selectedYear
+      );
+      if (existing) {
+        await updatePayrollRecord(existing.id, { status: 'processed', net_payable: salary.net_payable });
+      } else {
+        await createPayrollRecord({
+          employee_id: salary.driver_id || null,
+          employee_name: salary.driver_name,
+          employee_type: 'driver',
+          month: selectedMonth + 1,
+          year: selectedYear,
+          salary_type: salary.salary_type,
+          base_salary: salary.base_salary,
+          trip_count: salary.trip_count,
+          total_km: salary.total_km,
+          trip_allowance: salary.trip_allowance,
+          gross_salary: salary.base_salary + salary.trip_allowance,
+          advance_deduction: salary.advance_given,
+          other_deductions: salary.deductions,
+          total_deductions: salary.advance_given + salary.deductions,
+          net_payable: salary.net_payable,
+          status: 'processed',
+          locked: false,
+        });
+      }
+    }
     setSalaries((prev) => prev.map((s) => ({ ...s, status: 'paid' as const })));
+    showToast('success', `Payroll processed for ${salaries.length} drivers`);
   };
 
   const getSalaryTypeLabel = (type: string) => {

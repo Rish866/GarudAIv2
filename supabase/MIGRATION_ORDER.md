@@ -21,6 +21,7 @@ Each migration depends on the one before it.
 | 5 | `005_api_security_and_relational_integrity.sql` | Cross-org validation triggers + composite unique constraints |
 | 6 | `006-audit-log-and-constraints.sql` | Audit log enhancements + single-active-membership constraint |
 | 7 | `007_map_existing_data_to_organizations.sql` | Maps legacy rows to an organization; adds NOT NULL constraints |
+| 8 | `008_payroll_records.sql` | Creates payroll_records table with lock mechanism |
 
 ## Before Running
 

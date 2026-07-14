@@ -14,7 +14,7 @@ export default function BillingModule() {
   const { data: invoices, create: addInvoice, update: updateInvoice, remove: removeInvoice } = useModuleData<any>('invoices');
   const { data: payments, create: addPayment, update: updatePayment } = useModuleData<any>('payments');
   const { data: expenses, create: addExpense, update: updateExpense, remove: removeExpense } = useModuleData<any>('expenses');
-  const { data: customers } = useModuleData<any>('customers');
+  const { data: customers, update: updateCustomer } = useModuleData<any>('customers');
   const { data: trips } = useModuleData<any>('trips');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const [activeTab, setActiveTab] = useState<BillingTab>('invoices');
@@ -66,14 +66,15 @@ export default function BillingModule() {
     date: new Date().toISOString().split('T')[0],
   });
 
-  const handleCreateInvoice = () => {
+  const handleCreateInvoice = async () => {
     const customer = customers.find((c) => c.id === invForm.customer_id);
     if (!customer) return;
     const subtotal = invForm.freight_total + invForm.detention_total + invForm.other_charges;
     const gst_amount = Math.round(subtotal * invForm.gst_percent / 100);
     const tds_amount = Math.round(subtotal * 0.02);
     const total_amount = subtotal + gst_amount - tds_amount;
-    addInvoice({
+    
+    await addInvoice({
       invoice_number: generateInvoiceNumber(),
       customer_id: customer.id,
       customer_name: customer.name,
@@ -92,16 +93,27 @@ export default function BillingModule() {
       balance_amount: total_amount,
       status: 'draft',
     });
+
+    // Auto-update customer outstanding and total_business
+    await updateCustomer(customer.id, {
+      outstanding: (customer.outstanding || 0) + total_amount,
+      total_business: (customer.total_business || 0) + total_amount,
+    });
+
     showToast('success', 'Invoice created');
     setShowInvoiceModal(false);
     setInvForm({ customer_id: '', trip_id: '', freight_total: 0, detention_total: 0, other_charges: 0, gst_percent: 5 });
   };
 
 
-  const handleRecordPayment = () => {
+  const handleRecordPayment = async () => {
     const customer = customers.find((c) => c.id === payForm.customer_id);
     if (!customer) return;
-    addPayment({
+    
+    const paymentAmount = payForm.amount + payForm.tds_amount;
+    
+    // 1. Record the payment
+    await addPayment({
       invoice_id: payForm.invoice_id || null,
       customer_id: customer.id,
       customer_name: customer.name,
@@ -112,7 +124,27 @@ export default function BillingModule() {
       tds_amount: payForm.tds_amount,
       status: 'received',
     });
-    showToast('success', 'Payment recorded');
+
+    // 2. Auto-update invoice if linked (reduce balance, update status)
+    if (payForm.invoice_id) {
+      const invoice = invoices.find((inv) => inv.id === payForm.invoice_id);
+      if (invoice) {
+        const newPaid = (invoice.paid_amount || 0) + paymentAmount;
+        const newBalance = Math.max(0, (invoice.total_amount || 0) - newPaid);
+        const newStatus = newBalance <= 0 ? 'paid' : 'partial';
+        await updateInvoice(invoice.id, {
+          paid_amount: newPaid,
+          balance_amount: newBalance,
+          status: newStatus,
+        });
+      }
+    }
+
+    // 3. Auto-update customer outstanding
+    const newOutstanding = Math.max(0, (customer.outstanding || 0) - paymentAmount);
+    await updateCustomer(customer.id, { outstanding: newOutstanding });
+
+    showToast('success', 'Payment recorded & accounts updated');
     setShowPaymentModal(false);
     setPayForm({ customer_id: '', invoice_id: '', amount: 0, payment_mode: 'bank_transfer', reference_number: '', tds_amount: 0 });
   };
