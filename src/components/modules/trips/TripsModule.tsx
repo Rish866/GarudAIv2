@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useStore } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { useOrganization } from '../../../contexts/OrganizationContext';
+import { usePermission } from '../../../hooks/usePermission';
+import { supabase } from '../../../lib/supabase';
 import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
@@ -34,6 +37,8 @@ function getNextStatuses(current: TripStatus): TripStatus[] {
 
 export default function TripsModule() {
   const { company } = useStore();
+  const { organizationId } = useOrganization();
+  const { can } = usePermission();
   const { data: trips, create: addTrip, update: updateTrip, loading: tripsLoading } = useModuleData<any>('trips');
   const { data: customers } = useModuleData<any>('customers');
   const { data: vehicles } = useModuleData<any>('vehicles');
@@ -277,16 +282,47 @@ export default function TripsModule() {
                     {!['billed', 'settled', 'cancelled'].includes(trip.status) && (
                       <button
                         onClick={() => {
-                          updateTrip(trip.id, { status: 'cancelled', cancellation_reason: 'Cancelled by user', cancelled_at: new Date().toISOString() });
-                          setStatusDropdown(null);
-                          showToast('success', `Trip ${trip.trip_number} cancelled`);
+                          const reason = prompt('Enter cancellation reason:');
+                          if (!reason || !reason.trim()) {
+                            showToast('error', 'Cancellation reason is required');
+                            return;
+                          }
+                          supabase.rpc('update_trip_status', {
+                            p_organization_id: organizationId,
+                            p_trip_id: trip.id,
+                            p_new_status: 'cancelled',
+                            p_cancellation_reason: reason.trim(),
+                          }).then(({ data, error }) => {
+                            if (error) { showToast('error', error.message); return; }
+                            if (data && !data.success) { showToast('error', data.error); return; }
+                            showToast('success', `Trip ${trip.trip_number} cancelled`);
+                            setStatusDropdown(null);
+                          });
                         }}
                         className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-slate-100"
                       >
                         Cancel Trip
                       </button>
                     )}
-                    {getNextStatuses(trip.status).length === 0 && trip.status !== 'cancelled' && ['billed', 'settled'].includes(trip.status) && (
+                    {trip.status === 'cancelled' && (
+                      <button
+                        onClick={() => {
+                          supabase.rpc('reopen_trip', {
+                            p_organization_id: organizationId,
+                            p_trip_id: trip.id,
+                          }).then(({ data, error }) => {
+                            if (error) { showToast('error', error.message); return; }
+                            if (data && !data.success) { showToast('error', data.error); return; }
+                            showToast('success', `Trip ${trip.trip_number} reopened`);
+                            setStatusDropdown(null);
+                          });
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-green-600 hover:bg-green-50 border-t border-slate-100"
+                      >
+                        Reopen Trip
+                      </button>
+                    )}
+                    {getNextStatuses(trip.status).length === 0 && !['cancelled'].includes(trip.status) && ['billed', 'settled'].includes(trip.status) && (
                       <span className="px-3 py-2 text-sm text-slate-400 block">Trip is finalized</span>
                     )}
                   </div>
