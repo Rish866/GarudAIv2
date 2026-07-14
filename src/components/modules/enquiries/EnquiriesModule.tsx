@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { generateQuotationPDF } from '../../../lib/pdf';
 import { estimateDistance } from '../../../lib/distance';
@@ -14,9 +17,31 @@ export default function EnquiriesModule() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null);
   const { company } = useStore();
-  const { data: enquiries, create: addEnquiry } = useModuleData<any>('enquiries');
+  const {
+    data: enquiries,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: enquiriesLoading,
+    refresh: refreshEnquiries,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('enquiries', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: addEnquiry } = useModuleData<any>('enquiries');
   const { data: quotations, create: addQuotation, update: updateQuotation } = useModuleData<any>('quotations');
   const { data: customers } = useModuleData<any>('customers');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['customer_name', 'origin', 'destination'], query: query.trim() };
+    setFilters(filters);
+  };
 
   const steps = [
     { label: 'Enquiry', color: 'bg-purple-500', active: activeTab === 'enquiries' },

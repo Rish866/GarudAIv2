@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { AlertTriangle, Plus, X, Search, Download, FileText, Shield, Clock, CheckCircle, Camera } from 'lucide-react';
@@ -33,18 +36,44 @@ interface Claim {
 
 export default function ClaimsModule() {
   const { data: trips } = useModuleData<any>('trips');
-  const { data: claims, create: createClaim, update: updateClaim } = useModuleData<Claim>('claims');
+  const {
+    data: claims,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: claimsLoading,
+    refresh: refreshClaims,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<Claim>('claims', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createClaim, update: updateClaim } = useModuleData<Claim>('claims');
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | ClaimStatus>('all');
   const [search, setSearch] = useState('');
 
   const [form, setForm] = useState({ type: 'damage' as ClaimType, trip_id: '', incident_date: '', location: '', description: '', claim_amount: '', liability: 'company' as Claim['liability'] });
 
-  const filtered = claims.filter(c => {
-    if (filter !== 'all' && c.status !== filter) return false;
-    if (search && !c.claim_number.toLowerCase().includes(search.toLowerCase()) && !c.customer_name.toLowerCase().includes(search.toLowerCase()) && !c.description.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const handleSearch = (query: string) => {
+    setSearch(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['vehicle_reg', 'description', 'claim_number'], query: query.trim() };
+    if (filter !== 'all') filters.eq = { status: filter };
+    setFilters(filters);
+  };
+
+  const handleStatusFilter = (status: 'all' | ClaimStatus) => {
+    setFilter(status);
+    const filters: PaginationFilter = {};
+    if (search.trim()) filters.search = { columns: ['vehicle_reg', 'description', 'claim_number'], query: search.trim() };
+    if (status !== 'all') filters.eq = { status };
+    setFilters(filters);
+  };
+
+  const filtered = claims;
 
   const totalClaimed = claims.reduce((s, c) => s + c.claim_amount, 0);
   const totalSettled = claims.filter(c => c.status === 'settled').reduce((s, c) => s + c.approved_amount, 0);
@@ -106,9 +135,9 @@ export default function ClaimsModule() {
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search claims..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          <input type="text" value={search} onChange={(e) => handleSearch(e.target.value)} placeholder="Search claims..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
         </div>
-        <select value={filter} onChange={(e) => setFilter(e.target.value as any)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+        <select value={filter} onChange={(e) => handleStatusFilter(e.target.value as any)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
           <option value="all">All Status</option>
           <option value="reported">Reported</option>
           <option value="under_investigation">Under Investigation</option>

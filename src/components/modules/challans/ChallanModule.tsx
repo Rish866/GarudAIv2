@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { FileWarning, IndianRupee, Clock, Plus, X, Filter } from 'lucide-react';
@@ -39,9 +42,30 @@ const STATUS_COLORS: Record<PaymentStatus, string> = {
 
 export default function ChallanModule() {
   const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: challans, create: createChallan, remove: removeChallan, loading: challansLoading } = useModuleData<Challan>('challans');
+  const {
+    data: challans,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: challansLoading,
+    refresh: refreshChallans,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<Challan>('challans', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createChallan, remove: removeChallan } = useModuleData<Challan>('challans');
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | PaymentStatus>('all');
+
+  const handleStatusFilter = (status: 'all' | PaymentStatus) => {
+    setFilter(status);
+    const filters: PaginationFilter = {};
+    if (status !== 'all') filters.eq = { payment_status: status };
+    setFilters(filters);
+  };
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -53,8 +77,8 @@ export default function ChallanModule() {
     fine_amount: 0,
   });
 
-  // Filtered challans
-  const filteredChallans = filter === 'all' ? challans : challans.filter((c) => c.payment_status === filter);
+  // Filtered challans — server-side via usePaginatedData
+  const filteredChallans = challans;
 
   // Summary calculations
   const totalChallans = challans.length;
@@ -155,7 +179,7 @@ export default function ChallanModule() {
         {(['all', 'pending', 'paid', 'disputed'] as const).map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f)}
+            onClick={() => handleStatusFilter(f)}
             className={classNames(
               'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
               filter === f ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'

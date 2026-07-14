@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Circle, Plus, X, RotateCcw, Trash2, Truck } from 'lucide-react';
@@ -22,7 +25,29 @@ interface TyreRecord {
 export default function TyreModule() {
   const { data: vehicles } = useModuleData<any>('vehicles');
 
-    const { data: tyres, create: createTyre, remove: removeTyre, loading: tyresLoading } = useModuleData<TyreRecord>('tyres');
+  const {
+    data: tyres,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: tyresLoading,
+    refresh: refreshTyres,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<TyreRecord>('tyres', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createTyre, remove: removeTyre } = useModuleData<TyreRecord>('tyres');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['vehicle_reg', 'brand', 'serial_number'], query: query.trim() };
+    setFilters(filters);
+  };
 
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);

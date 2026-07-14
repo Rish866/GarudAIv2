@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Package, Plus, X, Search, Download, Truck, CheckCircle, Clock, ArrowRight } from 'lucide-react';
@@ -38,11 +41,41 @@ export default function IndentModule() {
   const { data: trips } = useModuleData<any>('trips');
   const { data: quotations } = useModuleData<any>('quotations');
   const { create: addTrip } = useModuleData<any>('trips');
-  const { data: indents, create: createIndent, update: updateIndent, remove: removeIndent, loading: indentsLoading } = useModuleData<Indent>('indents');
+  const {
+    data: indents,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: indentsLoading,
+    refresh: refreshIndents,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<Indent>('indents', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createIndent, update: updateIndent, remove: removeIndent } = useModuleData<Indent>('indents');
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  const handleSearch = (query: string) => {
+    setSearch(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['customer_name', 'origin', 'destination', 'material'], query: query.trim() };
+    if (statusFilter !== 'all') filters.eq = { status: statusFilter };
+    setFilters(filters);
+  };
+
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status);
+    const filters: PaginationFilter = {};
+    if (search.trim()) filters.search = { columns: ['customer_name', 'origin', 'destination', 'material'], query: search.trim() };
+    if (status !== 'all') filters.eq = { status };
+    setFilters(filters);
+  };
 
 
   const [form, setForm] = useState({
@@ -70,11 +103,7 @@ export default function IndentModule() {
     }
   };
 
-  const filteredIndents = indents.filter(ind => {
-    if (statusFilter !== 'all' && ind.status !== statusFilter) return false;
-    if (search && !ind.customer_name.toLowerCase().includes(search.toLowerCase()) && !ind.indent_number.toLowerCase().includes(search.toLowerCase()) && !ind.origin.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const filteredIndents = indents;
 
   const pendingCount = indents.filter(i => i.status === 'pending').length;
   const allocatedCount = indents.filter(i => i.status === 'allocated' || i.status === 'confirmed').length;
@@ -221,9 +250,9 @@ export default function IndentModule() {
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search indents..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          <input type="text" value={search} onChange={(e) => handleSearch(e.target.value)} placeholder="Search indents..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+        <select value={statusFilter} onChange={(e) => handleStatusFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
           <option value="allocated">Allocated</option>

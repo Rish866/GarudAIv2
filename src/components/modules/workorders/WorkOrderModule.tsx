@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Wrench, Clock, CheckCircle2, IndianRupee, Plus, X, Filter } from 'lucide-react';
@@ -67,9 +70,30 @@ const STATUS_COLORS: Record<WOStatus, string> = {
 
 export default function WorkOrderModule() {
   const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: workOrders, create: createWorkOrder, remove: removeWorkOrder, loading: workOrdersLoading } = useModuleData<WorkOrder>('work_orders');
+  const {
+    data: workOrders,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: workOrdersLoading,
+    refresh: refreshWorkOrders,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<WorkOrder>('work_orders', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createWorkOrder, remove: removeWorkOrder } = useModuleData<WorkOrder>('work_orders');
   const [showModal, setShowModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | WOStatus>('all');
+
+  const handleStatusFilter = (status: 'all' | WOStatus) => {
+    setStatusFilter(status);
+    const filters: PaginationFilter = {};
+    if (status !== 'all') filters.eq = { status };
+    setFilters(filters);
+  };
 
   const [form, setForm] = useState({
     vehicle_reg: '',
@@ -82,8 +106,8 @@ export default function WorkOrderModule() {
     expected_completion: '',
   });
 
-  // Filtered work orders
-  const filteredOrders = statusFilter === 'all' ? workOrders : workOrders.filter((wo) => wo.status === statusFilter);
+  // Filtered work orders — server-side via usePaginatedData
+  const filteredOrders = workOrders;
 
   // Summary calculations
   const openOrders = workOrders.filter((wo) => wo.status === 'open').length;
@@ -200,7 +224,7 @@ export default function WorkOrderModule() {
         {(['all', 'open', 'in_progress', 'parts_waiting', 'completed'] as const).map((f) => (
           <button
             key={f}
-            onClick={() => setStatusFilter(f)}
+            onClick={() => handleStatusFilter(f)}
             className={classNames(
               'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
               statusFilter === f ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'

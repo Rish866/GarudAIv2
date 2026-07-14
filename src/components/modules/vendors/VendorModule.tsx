@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
@@ -33,12 +36,42 @@ interface Vendor {
 
 
 export default function VendorModule() {
-  const { data: vendors, create: createVendor, update: updateVendor, remove: removeVendor, loading: vendorsLoading } = useModuleData<Vendor>('vendors');
+  const {
+    data: vendors,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: vendorsLoading,
+    refresh: refreshVendors,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<Vendor>('vendors', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createVendor, update: updateVendor, remove: removeVendor } = useModuleData<Vendor>('vendors');
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const handleSearch = (query: string) => {
+    setSearch(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['name', 'city', 'type'], query: query.trim() };
+    if (typeFilter !== 'all') filters.eq = { type: typeFilter };
+    setFilters(filters);
+  };
+
+  const handleTypeFilter = (type: string) => {
+    setTypeFilter(type);
+    const filters: PaginationFilter = {};
+    if (search.trim()) filters.search = { columns: ['name', 'city', 'type'], query: search.trim() };
+    if (type !== 'all') filters.eq = { type };
+    setFilters(filters);
+  };
 
 
   const [form, setForm] = useState({
@@ -46,11 +79,7 @@ export default function VendorModule() {
     gstin: '', pan: '', address: '', city: '', state: '', bank_name: '', account_number: '', ifsc: '',
   });
 
-  const filteredVendors = vendors.filter(v => {
-    if (typeFilter !== 'all' && v.type !== typeFilter) return false;
-    if (search && !v.name.toLowerCase().includes(search.toLowerCase()) && !v.contact_person.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const filteredVendors = vendors;
 
   const totalOutstanding = vendors.reduce((s, v) => s + v.outstanding, 0);
   const totalPaid = vendors.reduce((s, v) => s + v.total_paid, 0);
@@ -149,9 +178,9 @@ export default function VendorModule() {
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search vendors..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          <input type="text" value={search} onChange={(e) => handleSearch(e.target.value)} placeholder="Search vendors..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
         </div>
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+        <select value={typeFilter} onChange={(e) => handleTypeFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
           <option value="all">All Types</option>
           {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>

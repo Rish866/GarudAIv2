@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Shield, Search, Filter, Download, User, Truck, Route, Receipt, FileText, Settings, Clock } from 'lucide-react';
@@ -33,7 +36,20 @@ const ACTION_COLORS: Record<string, string> = {
 
 
 export default function AuditTrailModule() {
-  const { data: activityLog } = useModuleData<any>('activity_log');
+  const {
+    data: activityLog,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: activityLoading,
+    refresh: refreshActivity,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('activity_log', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
   const [entityFilter, setEntityFilter] = useState<string>('all');
   const [userFilter, setUserFilter] = useState<string>('all');
@@ -43,16 +59,35 @@ export default function AuditTrailModule() {
   const entityTypes = useMemo(() => ['all', ...new Set(activityLog.map(l => l.entity_type))], [activityLog]);
   const users = useMemo(() => ['all', ...new Set(activityLog.map(l => l.user_name))], [activityLog]);
 
-  // Filter logs
-  const filteredLogs = useMemo(() => {
-    return activityLog.filter(log => {
-      if (entityFilter !== 'all' && log.entity_type !== entityFilter) return false;
-      if (userFilter !== 'all' && log.user_name !== userFilter) return false;
-      if (dateFilter && !log.timestamp.startsWith(dateFilter)) return false;
-      if (searchTerm && !log.details.toLowerCase().includes(searchTerm.toLowerCase()) && !log.user_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-      return true;
-    });
-  }, [activityLog, entityFilter, userFilter, dateFilter, searchTerm]);
+  const handleSearch = (query: string) => {
+    setSearchTerm(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['user_name', 'entity_type', 'action', 'details', 'entity_id'], query: query.trim() };
+    if (entityFilter !== 'all') filters.eq = { ...filters.eq, entity_type: entityFilter };
+    if (userFilter !== 'all') filters.eq = { ...filters.eq, user_name: userFilter };
+    setFilters(filters);
+  };
+
+  const handleEntityFilter = (entity: string) => {
+    setEntityFilter(entity);
+    const filters: PaginationFilter = {};
+    if (searchTerm.trim()) filters.search = { columns: ['user_name', 'entity_type', 'action', 'details', 'entity_id'], query: searchTerm.trim() };
+    if (entity !== 'all') filters.eq = { ...filters.eq, entity_type: entity };
+    if (userFilter !== 'all') filters.eq = { ...filters.eq, user_name: userFilter };
+    setFilters(filters);
+  };
+
+  const handleUserFilter = (user: string) => {
+    setUserFilter(user);
+    const filters: PaginationFilter = {};
+    if (searchTerm.trim()) filters.search = { columns: ['user_name', 'entity_type', 'action', 'details', 'entity_id'], query: searchTerm.trim() };
+    if (entityFilter !== 'all') filters.eq = { ...filters.eq, entity_type: entityFilter };
+    if (user !== 'all') filters.eq = { ...filters.eq, user_name: user };
+    setFilters(filters);
+  };
+
+  // No client-side filtering — all done server-side via usePaginatedData
+  const filteredLogs = activityLog;
 
   const todayLogs = activityLog.filter(l => l.timestamp.startsWith(new Date().toISOString().split('T')[0])).length;
   const uniqueUsers = new Set(activityLog.map(l => l.user_name)).size;
@@ -113,12 +148,12 @@ export default function AuditTrailModule() {
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
-          <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search activity..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          <input type="text" value={searchTerm} onChange={(e) => handleSearch(e.target.value)} placeholder="Search activity..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
         </div>
-        <select value={entityFilter} onChange={(e) => setEntityFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+        <select value={entityFilter} onChange={(e) => handleEntityFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
           {entityTypes.map(e => <option key={e} value={e}>{e === 'all' ? 'All Entities' : e.charAt(0).toUpperCase() + e.slice(1)}</option>)}
         </select>
-        <select value={userFilter} onChange={(e) => setUserFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+        <select value={userFilter} onChange={(e) => handleUserFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
           {users.map(u => <option key={u} value={u}>{u === 'all' ? 'All Users' : u}</option>)}
         </select>
         <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />

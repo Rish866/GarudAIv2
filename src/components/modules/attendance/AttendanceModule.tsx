@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Calendar, Clock, UserCheck, UserX, Plus, X, Download, Filter } from 'lucide-react';
@@ -44,14 +47,36 @@ type TabView = 'attendance' | 'leaves' | 'summary';
 
 export default function AttendanceModule() {
   const { data: drivers } = useModuleData<any>('drivers');
-  const { data: attendance, create: createAttendance, update: updateAttendance } = useModuleData<AttendanceRecord>('attendance');
+  const {
+    data: attendance,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: attendanceLoading,
+    refresh: refreshAttendance,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<AttendanceRecord>('attendance', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createAttendance, update: updateAttendance } = useModuleData<AttendanceRecord>('attendance');
   const { data: leaves, create: createLeave, update: updateLeave } = useModuleData<LeaveRequest>('leave_requests');
   const [tab, setTab] = useState<TabView>('attendance');
   const [selectedDate, setSelectedDate] = useState(today);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [leaveForm, setLeaveForm] = useState({
     employee_id: '', leave_type: 'casual' as LeaveType, from_date: '', to_date: '', reason: '',
   });
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['driver_name'], query: query.trim() };
+    setFilters(filters);
+  };
 
   const todayAttendance = attendance.filter(a => a.date === selectedDate);
   const presentCount = todayAttendance.filter(a => a.status === 'present' || a.status === 'on_trip').length;
