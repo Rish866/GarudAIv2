@@ -6,12 +6,17 @@ import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle, Trendi
 import BulkUpload from '../../ui/BulkUpload';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { showToast } from '../../ui/Toast';
+import { usePermission } from '../../../hooks/usePermission';
 
 type DriverView = 'list' | 'performance' | 'detail';
 
 export default function DriversModule() {
   const { data: trips } = useModuleData<any>('trips');
   const { data: drivers, create: addDriver, update: updateDriver, remove: removeDriver, loading: driversLoading } = useModuleData<any>('drivers');
+  const { can } = usePermission();
+  const canCreate = can('drivers.create');
+  const canEdit = can('drivers.update');
+  const canDelete = can('drivers.delete');
   const [showModal, setShowModal] = useState(false);
   const [editingDriver, setEditingDriver] = useState<any | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -132,9 +137,11 @@ export default function DriversModule() {
         <div className="flex gap-2">
           <button onClick={() => setShowBulkUpload(true)} className="px-3 py-2 text-sm border rounded-lg" style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>Bulk Upload</button>
           <button onClick={() => exportDrivers(drivers)} className="px-3 py-2 text-sm border rounded-lg" style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>Export</button>
-          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-            <Plus size={16} /> Add Driver
-          </button>
+          {canCreate && (
+            <button onClick={() => { setEditingDriver(null); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+              <Plus size={16} /> Add Driver
+            </button>
+          )}
         </div>
       </div>
 
@@ -324,26 +331,30 @@ export default function DriversModule() {
                   <DriverCard driver={driver} onTimePercent={driver.onTimePercent} overallScore={driver.overallScore} rating={driver.rating} />
                 </div>
                 <div className="absolute top-3 right-3 flex gap-1 z-10">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setEditingDriver(driver); setShowModal(true); }}
-                    className="p-1.5 bg-white border border-slate-200 rounded-lg text-blue-600 hover:bg-blue-50 shadow-sm"
-                    title="Edit"
-                  >
-                    <Edit size={14} />
-                  </button>
-                  {deleteConfirmId === driver.id ? (
-                    <div className="flex gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteDriver(driver); }} className="px-2 py-1 text-xs bg-red-600 text-white rounded font-medium">Yes</button>
-                      <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }} className="px-2 py-1 text-xs bg-slate-200 text-slate-700 rounded font-medium">No</button>
-                    </div>
-                  ) : (
+                  {canEdit && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(driver.id); }}
-                      className="p-1.5 bg-white border border-slate-200 rounded-lg text-red-600 hover:bg-red-50 shadow-sm"
-                      title="Delete"
+                      onClick={(e) => { e.stopPropagation(); setEditingDriver(driver); setShowModal(true); }}
+                      className="p-1.5 bg-white border border-slate-200 rounded-lg text-blue-600 hover:bg-blue-50 shadow-sm"
+                      title="Edit"
                     >
-                      <Trash2 size={14} />
+                      <Edit size={14} />
                     </button>
+                  )}
+                  {canDelete && (
+                    deleteConfirmId === driver.id ? (
+                      <div className="flex gap-1">
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteDriver(driver); }} className="px-2 py-1 text-xs bg-red-600 text-white rounded font-medium">Yes</button>
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }} className="px-2 py-1 text-xs bg-slate-200 text-slate-700 rounded font-medium">No</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(driver.id); }}
+                        className="p-1.5 bg-white border border-slate-200 rounded-lg text-red-600 hover:bg-red-50 shadow-sm"
+                        title="Deactivate"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )
                   )}
                 </div>
               </div>

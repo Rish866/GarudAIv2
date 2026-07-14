@@ -762,7 +762,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
   const { data: quotations } = useModuleData<any>('quotations');
   const { create: addTrip } = useModuleData<any>('trips');
   const availableVehicles = vehicles;
-  const availableDrivers = drivers;
+  const availableDrivers = drivers.filter((d: any) => d.status !== 'inactive');
 
   // Simulated indents (from store would be better but indents are local to IndentModule currently)
   const pendingQuotations = quotations.filter(q => q.status === 'sent' || q.status === 'draft' || q.status === 'accepted');
