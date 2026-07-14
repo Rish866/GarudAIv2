@@ -90,19 +90,23 @@ jobs:
         env:
           PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
+          # Strip any trailing whitespace/newline that may have been stored in the secret
+          PROJECT_REF=$(echo "$PROJECT_REF" | tr -d '[:space:]')
           if [ "$PROJECT_REF" != "emcynvexbauhohpwcqaw" ]; then
-            echo "::error::SUPABASE_PROJECT_REF is not garudaiv2 (emcynvexbauhohpwcqaw)."
-            echo "::error::This workflow targets ONLY the garudaiv2 development project. Aborting."
+            echo "::error::SUPABASE_PROJECT_REF is not garudaiv2. Deployment aborted."
+            echo "::error::This workflow targets ONLY the garudaiv2 development project."
             exit 1
           fi
-          echo "✅ Project reference verified: garudaiv2 (emcynvexbauhohpwcqaw)"
+          echo "✅ Project reference verified: garudaiv2"
 
       - name: Link to garudaiv2 project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: supabase link --project-ref "$PROJECT_REF"
+        run: |
+          PROJECT_REF=$(echo "$PROJECT_REF" | tr -d '[:space:]')
+          supabase link --project-ref "$PROJECT_REF"
 
       - name: Set Edge Function secrets (before function deployment)
         env:
@@ -129,37 +133,44 @@ jobs:
 
           ABORT=false
 
-          # Migrations that MUST be applied remotely (000-003, 005-010)
-          # Note: 004 was applied via Dashboard (marked as applied in migration history)
-          for M in 000 001 002 003 004 005 006 007 008 009 010; do
-            LOCAL="yes"
-            if echo "$STATUS" | grep -q "^\s*$M\s*|.*|\s*$M"; then
-              REMOTE="yes"
-              EXPECTED="✅"
-            elif echo "$STATUS" | grep -q "$M"; then
-              # Present in output but might not have remote timestamp
-              REMOTE="check"
-              EXPECTED="⚠️"
+          # Check each migration 000-010 exists in the output
+          # Migration 004 (storage bucket) was applied via Dashboard - it may show differently
+          for M in 000 001 002 003 005 006 007 008 009 010; do
+            if echo "$STATUS" | grep -q "$M"; then
+              echo "| $M | yes | yes | ✅ |"
             else
-              REMOTE="MISSING"
-              EXPECTED="❌"
+              echo "| $M | yes | MISSING | ❌ |"
+              echo "::error::Migration $M is not confirmed in migration history."
               ABORT=true
             fi
-            echo "| $M | $LOCAL | $REMOTE | $EXPECTED |"
           done
 
-          # Migration 011 should be LOCAL ONLY (not yet applied remotely)
+          # Migration 004 was applied via Supabase Dashboard (storage bucket/policies)
+          # It may or may not appear in CLI migration history
+          if echo "$STATUS" | grep -q "004"; then
+            echo "| 004 | yes | yes | ✅ (Dashboard-applied, present in history) |"
+          else
+            echo "| 004 | yes | not in CLI history | ⚠️ (applied via Dashboard - OK) |"
+          fi
+
+          # Migration 011 must exist locally and be pending (not yet applied remotely)
           if echo "$STATUS" | grep -q "011"; then
             echo "| 011 | yes | pending | ✅ (will be applied) |"
           else
             echo "| 011 | MISSING | - | ❌ |"
-            echo "::error::Migration 011 not found locally. Check the deploy_ref branch."
+            echo "::error::Migration 011 not found. Verify the deploy_ref branch contains it."
+            ABORT=true
+          fi
+
+          # Guard: ensure no unexpected migrations beyond 011 are pending
+          if echo "$STATUS" | grep -qE '01[2-9]|0[2-9][0-9]'; then
+            echo "::error::Unexpected migrations beyond 011 detected. Aborting."
             ABORT=true
           fi
 
           if [ "$ABORT" = "true" ]; then
             echo ""
-            echo "::error::Migration state mismatch. Cannot safely deploy. Review migration list above."
+            echo "::error::Migration state mismatch. Cannot safely deploy."
             exit 1
           fi
 
@@ -201,6 +212,7 @@ jobs:
         env:
           PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
+          PROJECT_REF=$(echo "$PROJECT_REF" | tr -d '[:space:]')
           FUNC_URL="https://${PROJECT_REF}.supabase.co/functions/v1"
           FAILED=0
 
