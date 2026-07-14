@@ -12,7 +12,7 @@ import { OrganizationProvider, useOrganization } from './contexts/OrganizationCo
 import { BranchProvider } from './contexts/BranchContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
-import { signIn, isPlatformAdmin, getAllTenants, switchTenant } from './lib/auth';
+import { signIn } from './lib/auth';
 import { supabase, supabaseConfigurationError } from './lib/supabase';
 
 // Lazy-loaded modules
@@ -199,8 +199,8 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
           id: result.user.id,
           name: result.user.name,
           email: result.user.email,
-          role: result.user.role,
-          phone: result.user.phone,
+          role: 'admin', // Display role — real permissions come from OrganizationContext
+          phone: '',
           status: 'active',
         });
       } else {
