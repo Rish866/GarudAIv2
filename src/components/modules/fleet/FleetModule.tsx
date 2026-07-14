@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Vehicle, VehicleType, VehicleStatus, OwnershipType } from '../../../types';
 import { formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
 import { exportVehicles } from '../../../lib/excel';
@@ -73,6 +73,9 @@ export default function FleetModule() {
     setPage,
     setPageSize,
     setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
     loading: vehiclesLoading,
     refresh: refreshVehicles,
     hasNextPage,
@@ -82,6 +85,8 @@ export default function FleetModule() {
   const { create: addVehicle, update: updateVehicle, remove: deleteVehicle } = useModuleData<any>('vehicles', { fetchOnMount: false });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [vehicleSort, setVehicleSort] = useState('created_at:desc');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [showModal, setShowModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
@@ -91,21 +96,36 @@ export default function FleetModule() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const buildFilters = useCallback(() => {
+    const filters: PaginationFilter = {};
+    if (search.trim()) filters.search = { columns: ['reg_number', 'make', 'model', 'driver_name'], query: search.trim() };
+    const eqFilters: Record<string, string> = {};
+    if (statusFilter !== 'all') eqFilters.status = statusFilter;
+    if (typeFilter) eqFilters.vehicle_type = typeFilter;
+    if (Object.keys(eqFilters).length > 0) filters.eq = eqFilters;
+    setFilters(filters);
+  }, [search, statusFilter, typeFilter, setFilters]);
+
   const handleSearch = (query: string) => {
     setSearch(query);
-    const filters: PaginationFilter = {};
-    if (query.trim()) filters.search = { columns: ['reg_number', 'make', 'model', 'driver_name'], query: query.trim() };
-    if (statusFilter !== 'all') filters.eq = { status: statusFilter };
-    setFilters(filters);
   };
 
   const handleStatusFilter = (status: VehicleStatus | 'all') => {
     setStatusFilter(status);
-    const filters: PaginationFilter = {};
-    if (search.trim()) filters.search = { columns: ['reg_number', 'make', 'model', 'driver_name'], query: search.trim() };
-    if (status !== 'all') filters.eq = { status };
-    setFilters(filters);
   };
+
+  const handleTypeFilter = (type: string) => {
+    setTypeFilter(type);
+  };
+
+  const handleSortChange = useCallback((value: string) => {
+    setVehicleSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
+
+  // Trigger filter rebuild on state changes
+  React.useEffect(() => { buildFilters(); }, [buildFilters]);
 
   const filteredVehicles = vehicles; // Already filtered server-side
 
@@ -250,7 +270,7 @@ export default function FleetModule() {
 
 
       {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap">
         <input
           type="text"
           placeholder="Search by reg number or driver..."
@@ -274,6 +294,32 @@ export default function FleetModule() {
             </button>
           ))}
         </div>
+        <select
+          value={typeFilter}
+          onChange={(e) => handleTypeFilter(e.target.value)}
+          className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All Types</option>
+          <option value="truck">Truck</option>
+          <option value="trailer">Trailer</option>
+          <option value="container">Container</option>
+          <option value="tanker">Tanker</option>
+          <option value="tipper">Tipper</option>
+          <option value="reefer">Reefer</option>
+          <option value="lcv">LCV</option>
+        </select>
+        <select
+          value={vehicleSort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="reg_number:asc">Reg Number A-Z</option>
+          <option value="reg_number:desc">Reg Number Z-A</option>
+          <option value="odometer:desc">Odometer High-Low</option>
+          <option value="odometer:asc">Odometer Low-High</option>
+        </select>
         <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 ml-auto">
           <button
             onClick={() => setView('grid')}
@@ -450,6 +496,21 @@ export default function FleetModule() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Pagination */}
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={vehiclesLoading}
+        />
       )}
 
 

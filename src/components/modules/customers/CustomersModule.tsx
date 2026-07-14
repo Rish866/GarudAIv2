@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -21,6 +21,9 @@ export default function CustomersModule() {
     setPage,
     setPageSize,
     setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
     loading: customersLoading,
     refresh: refreshCustomers,
     hasNextPage,
@@ -30,6 +33,7 @@ export default function CustomersModule() {
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [customerSort, setCustomerSort] = useState('created_at:desc');
   const [showTracking, setShowTracking] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
 
@@ -48,6 +52,12 @@ export default function CustomersModule() {
     if (status) filters.eq = { status };
     setFilters(filters);
   };
+
+  const handleSortChange = useCallback((value: string) => {
+    setCustomerSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   if (showTracking) {
     return (
@@ -144,16 +154,40 @@ export default function CustomersModule() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Search by company name, contact person, or GSTIN..."
-          value={searchQuery}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-        />
+      {/* Search + Sort */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by company name, contact person, or GSTIN..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => handleStatusFilter(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="blocked">Blocked</option>
+        </select>
+        <select
+          value={customerSort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="name:asc">Name A-Z</option>
+          <option value="name:desc">Name Z-A</option>
+          <option value="balance_amount:desc">Outstanding High-Low</option>
+          <option value="balance_amount:asc">Outstanding Low-High</option>
+        </select>
       </div>
 
       {/* Customer Table */}

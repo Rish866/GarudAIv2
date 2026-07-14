@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -26,6 +26,9 @@ export default function BillingModule() {
     setPageSize: setInvoicePageSize,
     filters: invoiceFilters,
     setFilters: setInvoiceFilters,
+    setSort: setInvoiceSortFn,
+    sortBy: invoiceSortBy,
+    sortDirection: invoiceSortDirection,
     loading: invoicesLoading,
     refresh: refreshInvoices,
     hasNextPage: invoiceHasNext,
@@ -43,6 +46,9 @@ export default function BillingModule() {
     setPageSize: setPaymentPageSize,
     filters: paymentFilters,
     setFilters: setPaymentFilters,
+    setSort: setPaymentSortFn,
+    sortBy: paymentSortBy,
+    sortDirection: paymentSortDirection,
     loading: paymentsLoading,
     refresh: refreshPayments,
     hasNextPage: paymentHasNext,
@@ -58,6 +64,10 @@ export default function BillingModule() {
     pageSize: expensePageSize,
     setPage: setExpensePage,
     setPageSize: setExpensePageSize,
+    setFilters: setExpenseFilters,
+    setSort: setExpenseSortFn,
+    sortBy: expenseSortBy,
+    sortDirection: expenseSortDirection,
     loading: expensesLoading,
     refresh: refreshExpenses,
     hasNextPage: expenseHasNext,
@@ -79,58 +89,78 @@ export default function BillingModule() {
   // Invoice search/filter state
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('');
+  const [invoiceDateFrom, setInvoiceDateFrom] = useState('');
+  const [invoiceDateTo, setInvoiceDateTo] = useState('');
+  const [invoiceSort, setInvoiceSort] = useState('created_at:desc');
 
   // Payment search/filter state
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
+  const [paymentDateFrom, setPaymentDateFrom] = useState('');
+  const [paymentDateTo, setPaymentDateTo] = useState('');
+  const [paymentSort, setPaymentSort] = useState('created_at:desc');
 
-  // Invoice filter handlers
-  const handleInvoiceSearch = useCallback((query: string) => {
-    setInvoiceSearch(query);
-    const newFilters: PaginationFilter = { ...invoiceFilters };
-    if (query.trim()) {
-      newFilters.search = { columns: ['invoice_number', 'customer_name'], query: query.trim() };
-    } else {
-      delete newFilters.search;
-    }
-    if (invoiceStatusFilter) newFilters.eq = { status: invoiceStatusFilter };
-    setInvoiceFilters(newFilters);
-  }, [invoiceFilters, invoiceStatusFilter, setInvoiceFilters]);
+  // Expense search/filter state
+  const [expenseSearch, setExpenseSearch] = useState('');
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('');
+  const [expenseDateFrom, setExpenseDateFrom] = useState('');
+  const [expenseDateTo, setExpenseDateTo] = useState('');
+  const [expenseSort, setExpenseSort] = useState('created_at:desc');
 
-  const handleInvoiceStatusFilter = useCallback((status: string) => {
-    setInvoiceStatusFilter(status);
-    const newFilters: PaginationFilter = { ...invoiceFilters };
-    if (status) {
-      newFilters.eq = { ...(newFilters.eq || {}), status };
-    } else {
-      if (newFilters.eq) delete newFilters.eq.status;
-    }
-    if (invoiceSearch.trim()) {
-      newFilters.search = { columns: ['invoice_number', 'customer_name'], query: invoiceSearch.trim() };
-    }
-    setInvoiceFilters(newFilters);
-  }, [invoiceFilters, invoiceSearch, setInvoiceFilters]);
+  // Invoice combined filter builder
+  const buildInvoiceFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (invoiceSearch.trim()) f.search = { columns: ['invoice_number', 'customer_name'], query: invoiceSearch.trim() };
+    if (invoiceStatusFilter) f.eq = { status: invoiceStatusFilter };
+    if (invoiceDateFrom || invoiceDateTo) f.dateRange = { column: 'invoice_date', from: invoiceDateFrom || undefined, to: invoiceDateTo || undefined };
+    setInvoiceFilters(f);
+  }, [invoiceSearch, invoiceStatusFilter, invoiceDateFrom, invoiceDateTo, setInvoiceFilters]);
 
-  // Payment filter handlers
-  const handlePaymentSearch = useCallback((query: string) => {
-    setPaymentSearch(query);
-    const newFilters: PaginationFilter = {};
-    if (query.trim()) {
-      newFilters.search = { columns: ['reference_number', 'customer_name'], query: query.trim() };
-    }
-    if (paymentStatusFilter) newFilters.eq = { status: paymentStatusFilter };
-    setPaymentFilters(newFilters);
-  }, [paymentStatusFilter, setPaymentFilters]);
+  // Payment combined filter builder
+  const buildPaymentFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (paymentSearch.trim()) f.search = { columns: ['reference_number', 'customer_name'], query: paymentSearch.trim() };
+    const eqFilters: Record<string, string> = {};
+    if (paymentStatusFilter) eqFilters.status = paymentStatusFilter;
+    if (paymentMethodFilter) eqFilters.payment_mode = paymentMethodFilter;
+    if (Object.keys(eqFilters).length > 0) f.eq = eqFilters;
+    if (paymentDateFrom || paymentDateTo) f.dateRange = { column: 'payment_date', from: paymentDateFrom || undefined, to: paymentDateTo || undefined };
+    setPaymentFilters(f);
+  }, [paymentSearch, paymentStatusFilter, paymentMethodFilter, paymentDateFrom, paymentDateTo, setPaymentFilters]);
 
-  const handlePaymentStatusFilter = useCallback((status: string) => {
-    setPaymentStatusFilter(status);
-    const newFilters: PaginationFilter = {};
-    if (status) newFilters.eq = { status };
-    if (paymentSearch.trim()) {
-      newFilters.search = { columns: ['reference_number', 'customer_name'], query: paymentSearch.trim() };
-    }
-    setPaymentFilters(newFilters);
-  }, [paymentSearch, setPaymentFilters]);
+  // Expense combined filter builder
+  const buildExpenseFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (expenseSearch.trim()) f.search = { columns: ['description', 'paid_to', 'vehicle_reg'], query: expenseSearch.trim() };
+    if (expenseCategoryFilter) f.eq = { category: expenseCategoryFilter };
+    if (expenseDateFrom || expenseDateTo) f.dateRange = { column: 'date', from: expenseDateFrom || undefined, to: expenseDateTo || undefined };
+    setExpenseFilters(f);
+  }, [expenseSearch, expenseCategoryFilter, expenseDateFrom, expenseDateTo, setExpenseFilters]);
+
+  // Trigger filter rebuilds on state changes
+  useEffect(() => { buildInvoiceFilters(); }, [buildInvoiceFilters]);
+  useEffect(() => { buildPaymentFilters(); }, [buildPaymentFilters]);
+  useEffect(() => { buildExpenseFilters(); }, [buildExpenseFilters]);
+
+  // Sort handlers
+  const handleInvoiceSortChange = useCallback((value: string) => {
+    setInvoiceSort(value);
+    const [col, dir] = value.split(':');
+    setInvoiceSortFn(col, dir as 'asc' | 'desc');
+  }, [setInvoiceSortFn]);
+
+  const handlePaymentSortChange = useCallback((value: string) => {
+    setPaymentSort(value);
+    const [col, dir] = value.split(':');
+    setPaymentSortFn(col, dir as 'asc' | 'desc');
+  }, [setPaymentSortFn]);
+
+  const handleExpenseSortChange = useCallback((value: string) => {
+    setExpenseSort(value);
+    const [col, dir] = value.split(':');
+    setExpenseSortFn(col, dir as 'asc' | 'desc');
+  }, [setExpenseSortFn]);
 
   // Summary calculations
   const totalOutstanding = invoices.reduce((sum, inv) => sum + inv.balance_amount, 0);
@@ -333,21 +363,21 @@ export default function BillingModule() {
       {/* Invoices Tab */}
       {activeTab === 'invoices' && (
         <div>
-          {/* Invoice Search + Filter */}
-          <div className="flex gap-3 mb-4">
-            <div className="relative flex-1">
+          {/* Invoice Search + Filter + Sort + Date Range */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search invoice number, customer..."
                 value={invoiceSearch}
-                onChange={(e) => handleInvoiceSearch(e.target.value)}
+                onChange={(e) => setInvoiceSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
             <select
               value={invoiceStatusFilter}
-              onChange={(e) => handleInvoiceStatusFilter(e.target.value)}
+              onChange={(e) => setInvoiceStatusFilter(e.target.value)}
               className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="">All Statuses</option>
@@ -358,6 +388,34 @@ export default function BillingModule() {
               <option value="overdue">Overdue</option>
               <option value="cancelled">Cancelled</option>
             </select>
+            <select
+              value={invoiceSort}
+              onChange={(e) => handleInvoiceSortChange(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="created_at:desc">Newest First</option>
+              <option value="created_at:asc">Oldest First</option>
+              <option value="total_amount:desc">Amount High-Low</option>
+              <option value="total_amount:asc">Amount Low-High</option>
+              <option value="due_date:asc">Due Date (Soonest)</option>
+              <option value="invoice_date:desc">Invoice Date (Latest)</option>
+            </select>
+            <input
+              type="date"
+              value={invoiceDateFrom}
+              onChange={(e) => setInvoiceDateFrom(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="From"
+              title="From Date"
+            />
+            <input
+              type="date"
+              value={invoiceDateTo}
+              onChange={(e) => setInvoiceDateTo(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="To"
+              title="To Date"
+            />
           </div>
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <table className="w-full">
@@ -420,21 +478,21 @@ export default function BillingModule() {
       {/* Payments Tab */}
       {activeTab === 'payments' && (
         <div>
-          {/* Payment Search + Filter */}
-          <div className="flex gap-3 mb-4">
-            <div className="relative flex-1">
+          {/* Payment Search + Filter + Sort + Date Range */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search reference number, customer..."
                 value={paymentSearch}
-                onChange={(e) => handlePaymentSearch(e.target.value)}
+                onChange={(e) => setPaymentSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
             <select
               value={paymentStatusFilter}
-              onChange={(e) => handlePaymentStatusFilter(e.target.value)}
+              onChange={(e) => setPaymentStatusFilter(e.target.value)}
               className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="">All Statuses</option>
@@ -442,6 +500,42 @@ export default function BillingModule() {
               <option value="cleared">Cleared</option>
               <option value="bounced">Bounced</option>
             </select>
+            <select
+              value={paymentMethodFilter}
+              onChange={(e) => setPaymentMethodFilter(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="">All Methods</option>
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="cheque">Cheque</option>
+              <option value="cash">Cash</option>
+              <option value="upi">UPI</option>
+            </select>
+            <select
+              value={paymentSort}
+              onChange={(e) => handlePaymentSortChange(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="created_at:desc">Newest First</option>
+              <option value="created_at:asc">Oldest First</option>
+              <option value="amount:desc">Amount High-Low</option>
+              <option value="amount:asc">Amount Low-High</option>
+              <option value="payment_date:desc">Payment Date (Latest)</option>
+            </select>
+            <input
+              type="date"
+              value={paymentDateFrom}
+              onChange={(e) => setPaymentDateFrom(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              title="From Date"
+            />
+            <input
+              type="date"
+              value={paymentDateTo}
+              onChange={(e) => setPaymentDateTo(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              title="To Date"
+            />
           </div>
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <table className="w-full">
@@ -492,7 +586,66 @@ export default function BillingModule() {
 
       {/* Expenses Tab */}
       {activeTab === 'expenses' && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div>
+          {/* Expense Search + Filter + Sort + Date Range */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search description, paid to, vehicle..."
+                value={expenseSearch}
+                onChange={(e) => setExpenseSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <select
+              value={expenseCategoryFilter}
+              onChange={(e) => setExpenseCategoryFilter(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="">All Categories</option>
+              <option value="diesel">Diesel</option>
+              <option value="toll">Toll</option>
+              <option value="driver_bata">Driver Bata</option>
+              <option value="loading">Loading</option>
+              <option value="unloading">Unloading</option>
+              <option value="repair">Repair</option>
+              <option value="tyre">Tyre</option>
+              <option value="insurance">Insurance</option>
+              <option value="emi">EMI</option>
+              <option value="salary">Salary</option>
+              <option value="office">Office</option>
+              <option value="misc">Misc</option>
+            </select>
+            <select
+              value={expenseSort}
+              onChange={(e) => handleExpenseSortChange(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="created_at:desc">Newest First</option>
+              <option value="created_at:asc">Oldest First</option>
+              <option value="amount:desc">Amount High-Low</option>
+              <option value="amount:asc">Amount Low-High</option>
+              <option value="date:desc">Date (Latest)</option>
+              <option value="date:asc">Date (Oldest)</option>
+            </select>
+            <input
+              type="date"
+              value={expenseDateFrom}
+              onChange={(e) => setExpenseDateFrom(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              title="From Date"
+            />
+            <input
+              type="date"
+              value={expenseDateTo}
+              onChange={(e) => setExpenseDateTo(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              title="To Date"
+            />
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>
@@ -533,6 +686,7 @@ export default function BillingModule() {
               loading={expensesLoading}
             />
           )}
+        </div>
         </div>
       )}
 

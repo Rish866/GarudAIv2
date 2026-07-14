@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import type { Driver } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
@@ -23,6 +23,9 @@ export default function DriversModule() {
     setPage,
     setPageSize,
     setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
     loading: driversLoading,
     refresh: refreshDrivers,
     hasNextPage,
@@ -32,6 +35,7 @@ export default function DriversModule() {
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [driverSort, setDriverSort] = useState('created_at:desc');
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [view, setView] = useState<DriverView>('list');
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
@@ -51,6 +55,12 @@ export default function DriversModule() {
     if (status) filters.eq = { status };
     setFilters(filters);
   };
+
+  const handleSortChange = useCallback((value: string) => {
+    setDriverSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   // Performance calculations
   const driverPerformance = useMemo(() => {
@@ -322,10 +332,35 @@ export default function DriversModule() {
       {/* LIST VIEW */}
       {view === 'list' && (
         <>
-          {/* Search */}
-          <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }} />
-            <input type="text" placeholder="Search by name or phone..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          {/* Search + Status Filter + Sort */}
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }} />
+              <input type="text" placeholder="Search by name or phone..." value={searchQuery} onChange={(e) => handleSearch(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => handleStatusFilter(e.target.value)}
+              className="border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+            >
+              <option value="">All Statuses</option>
+              <option value="available">Available</option>
+              <option value="on_trip">On Trip</option>
+              <option value="on_leave">On Leave</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <select
+              value={driverSort}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+            >
+              <option value="created_at:desc">Newest First</option>
+              <option value="created_at:asc">Oldest First</option>
+              <option value="name:asc">Name A-Z</option>
+              <option value="name:desc">Name Z-A</option>
+            </select>
           </div>
 
           {/* Driver Cards Grid */}
@@ -339,6 +374,21 @@ export default function DriversModule() {
 
           {filteredDrivers.length === 0 && (
             <div className="text-center py-12" style={{ color: 'var(--text-tertiary)' }}>No drivers found matching your search.</div>
+          )}
+
+          {/* Pagination */}
+          {totalCount > 0 && (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              hasNextPage={hasNextPage}
+              hasPrevPage={hasPrevPage}
+              loading={driversLoading}
+            />
           )}
         </>
       )}
