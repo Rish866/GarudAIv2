@@ -1,0 +1,127 @@
+name: Deploy Invitations to garudaiv2
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_target:
+        description: 'Type exactly "garudaiv2" to confirm deployment target'
+        required: true
+        type: string
+
+env:
+  APP_URL: https://garud-a-iv2.vercel.app
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify deployment target
+        run: |
+          if [ "${{ github.event.inputs.confirm_target }}" != "garudaiv2" ]; then
+            echo "::error::Deployment aborted. You must type exactly 'garudaiv2' to confirm."
+            echo "::error::Received: '${{ github.event.inputs.confirm_target }}'"
+            exit 1
+          fi
+          echo "✅ Target confirmed: garudaiv2 development project"
+
+  checks:
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+  deploy:
+    needs: checks
+    runs-on: ubuntu-latest
+    environment: garudaiv2-development
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to garudaiv2 project
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Show current migration status
+        run: supabase migration list
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Apply pending migrations
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Deploy send-organization-invite
+        run: supabase functions deploy send-organization-invite --no-verify-jwt
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy accept-organization-invite
+        run: supabase functions deploy accept-organization-invite --no-verify-jwt
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy resend-organization-invite
+        run: supabase functions deploy resend-organization-invite --no-verify-jwt
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy revoke-organization-invite
+        run: supabase functions deploy revoke-organization-invite --no-verify-jwt
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Set Edge Function secrets
+        run: |
+          supabase secrets set RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+          supabase secrets set APP_URL=${{ env.APP_URL }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: List deployed functions
+        run: supabase functions list
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Show final migration status
+        run: supabase migration list
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Deployment summary
+        run: |
+          echo "================================================"
+          echo "✅ Deployment complete: garudaiv2 development"
+          echo "================================================"
+          echo "Migrations: applied"
+          echo "Functions: send, accept, resend, revoke"
+          echo "Secrets: RESEND_API_KEY, APP_URL"
+          echo "Target: ${{ env.APP_URL }}"
+          echo "================================================"
