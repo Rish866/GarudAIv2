@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
-import { Wrench, Clock, CheckCircle2, IndianRupee, Plus, X, Filter } from 'lucide-react';
+import { Wrench, Clock, CheckCircle2, IndianRupee, Plus, X, Filter, Search } from 'lucide-react';
 
 type JobType = 'preventive' | 'repair' | 'breakdown' | 'inspection' | 'body_work';
 type Priority = 'low' | 'medium' | 'high' | 'urgent';
@@ -79,6 +79,9 @@ export default function WorkOrderModule() {
     setPage,
     setPageSize,
     setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
     loading: workOrdersLoading,
     refresh: refreshWorkOrders,
     hasNextPage,
@@ -87,12 +90,31 @@ export default function WorkOrderModule() {
   const { create: createWorkOrder, remove: removeWorkOrder } = useModuleData<WorkOrder>('work_orders', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | WOStatus>('all');
+  const [woSearch, setWoSearch] = useState('');
+  const [woSort, setWoSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (woSearch.trim()) f.search = { columns: ['vehicle_reg', 'description', 'assigned_mechanic'], query: woSearch.trim() };
+    if (statusFilter !== 'all') f.eq = { status: statusFilter };
+    if (dateFrom || dateTo) f.dateRange = { column: 'created_at', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [woSearch, statusFilter, dateFrom, dateTo, setFilters]);
+
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setWoSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   const handleStatusFilter = (status: 'all' | WOStatus) => {
     setStatusFilter(status);
-    const filters: PaginationFilter = {};
-    if (status !== 'all') filters.eq = { status };
-    setFilters(filters);
   };
 
   const [form, setForm] = useState({
@@ -218,21 +240,54 @@ export default function WorkOrderModule() {
         </div>
       </div>
 
-      {/* Status Filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Filter size={16} className="text-slate-400" />
-        {(['all', 'open', 'in_progress', 'parts_waiting', 'completed'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => handleStatusFilter(f)}
-            className={classNames(
-              'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
-              statusFilter === f ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            )}
-          >
-            {f === 'all' ? 'All' : STATUS_LABELS[f]}
-          </button>
-        ))}
+      {/* Search + Sort + Date Range + Status Filter */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search vehicle, description, mechanic..."
+            value={woSearch}
+            onChange={(e) => setWoSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => handleStatusFilter(e.target.value as 'all' | WOStatus)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="all">All Status</option>
+          <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="parts_waiting">Parts Waiting</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <select
+          value={woSort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="cost:desc">Cost High-Low</option>
+          <option value="cost:asc">Cost Low-High</option>
+        </select>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="From Date"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="To Date"
+        />
       </div>
 
       {/* Work Order Cards */}
@@ -310,6 +365,21 @@ export default function WorkOrderModule() {
           <Wrench size={40} className="mx-auto text-slate-300 mb-3" />
           <p className="text-slate-500 text-sm">No work orders found for this filter</p>
         </div>
+      )}
+
+      {/* Pagination */}
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={workOrdersLoading}
+        />
       )}
 
       {/* Create Work Order Modal */}

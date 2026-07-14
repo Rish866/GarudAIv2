@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -45,6 +45,9 @@ export default function VendorModule() {
     setPage,
     setPageSize,
     setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
     loading: vendorsLoading,
     refresh: refreshVendors,
     hasNextPage,
@@ -55,23 +58,32 @@ export default function VendorModule() {
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [vendorSort, setVendorSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const handleSearch = (query: string) => {
-    setSearch(query);
-    const filters: PaginationFilter = {};
-    if (query.trim()) filters.search = { columns: ['name', 'city', 'type'], query: query.trim() };
-    if (typeFilter !== 'all') filters.eq = { type: typeFilter };
-    setFilters(filters);
-  };
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (search.trim()) f.search = { columns: ['name', 'city', 'type'], query: search.trim() };
+    const eq: Record<string, string> = {};
+    if (typeFilter !== 'all') eq.type = typeFilter;
+    if (statusFilter !== 'all') eq.status = statusFilter;
+    if (Object.keys(eq).length > 0) f.eq = eq;
+    if (dateFrom || dateTo) f.dateRange = { column: 'created_at', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [search, typeFilter, statusFilter, dateFrom, dateTo, setFilters]);
 
-  const handleTypeFilter = (type: string) => {
-    setTypeFilter(type);
-    const filters: PaginationFilter = {};
-    if (search.trim()) filters.search = { columns: ['name', 'city', 'type'], query: search.trim() };
-    if (type !== 'all') filters.eq = { type };
-    setFilters(filters);
-  };
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setVendorSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
 
   const [form, setForm] = useState({
@@ -178,12 +190,25 @@ export default function VendorModule() {
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
-          <input type="text" value={search} onChange={(e) => handleSearch(e.target.value)} placeholder="Search vendors..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search vendors..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
         </div>
-        <select value={typeFilter} onChange={(e) => handleTypeFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
           <option value="all">All Types</option>
           {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+        <select value={vendorSort} onChange={(e) => handleSortChange(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="name:asc">Name A-Z</option>
+          <option value="name:desc">Name Z-A</option>
+        </select>
+        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="From Date" />
+        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="To Date" />
       </div>
 
 
@@ -218,6 +243,21 @@ export default function VendorModule() {
           </div>
         ))}
       </div>
+
+      {/* Pagination */}
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={vendorsLoading}
+        />
+      )}
 
       {/* Add Modal */}
       {showModal && (
