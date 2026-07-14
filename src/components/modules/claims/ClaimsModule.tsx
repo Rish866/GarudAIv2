@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -45,6 +45,9 @@ export default function ClaimsModule() {
     setPage,
     setPageSize,
     setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
     loading: claimsLoading,
     refresh: refreshClaims,
     hasNextPage,
@@ -54,24 +57,29 @@ export default function ClaimsModule() {
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | ClaimStatus>('all');
   const [search, setSearch] = useState('');
+  const [claimSort, setClaimSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const [form, setForm] = useState({ type: 'damage' as ClaimType, trip_id: '', incident_date: '', location: '', description: '', claim_amount: '', liability: 'company' as Claim['liability'] });
 
-  const handleSearch = (query: string) => {
-    setSearch(query);
-    const filters: PaginationFilter = {};
-    if (query.trim()) filters.search = { columns: ['vehicle_reg', 'description', 'claim_number'], query: query.trim() };
-    if (filter !== 'all') filters.eq = { status: filter };
-    setFilters(filters);
-  };
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (search.trim()) f.search = { columns: ['vehicle_reg', 'description', 'claim_number'], query: search.trim() };
+    if (filter !== 'all') f.eq = { status: filter };
+    if (dateFrom || dateTo) f.dateRange = { column: 'created_at', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [search, filter, dateFrom, dateTo, setFilters]);
 
-  const handleStatusFilter = (status: 'all' | ClaimStatus) => {
-    setFilter(status);
-    const filters: PaginationFilter = {};
-    if (search.trim()) filters.search = { columns: ['vehicle_reg', 'description', 'claim_number'], query: search.trim() };
-    if (status !== 'all') filters.eq = { status };
-    setFilters(filters);
-  };
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setClaimSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   const filtered = claims;
 
@@ -135,9 +143,9 @@ export default function ClaimsModule() {
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
-          <input type="text" value={search} onChange={(e) => handleSearch(e.target.value)} placeholder="Search claims..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search claims..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
         </div>
-        <select value={filter} onChange={(e) => handleStatusFilter(e.target.value as any)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+        <select value={filter} onChange={(e) => setFilter(e.target.value as any)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
           <option value="all">All Status</option>
           <option value="reported">Reported</option>
           <option value="under_investigation">Under Investigation</option>
@@ -145,6 +153,14 @@ export default function ClaimsModule() {
           <option value="settled">Settled</option>
           <option value="rejected">Rejected</option>
         </select>
+        <select value={claimSort} onChange={(e) => handleSortChange(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="amount:desc">Amount High-Low</option>
+          <option value="amount:asc">Amount Low-High</option>
+        </select>
+        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="From Date" />
+        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="To Date" />
       </div>
 
       {/* Claims List */}
@@ -193,6 +209,20 @@ export default function ClaimsModule() {
           </div>
         ))}
       </div>
+
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={claimsLoading}
+        />
+      )}
 
       {/* File Claim Modal */}
       {showModal && (

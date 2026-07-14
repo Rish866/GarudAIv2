@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
@@ -7,7 +7,7 @@ import Pagination from '../../ui/Pagination';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { generateQuotationPDF } from '../../../lib/pdf';
 import { estimateDistance } from '../../../lib/distance';
-import { ArrowRight, FileText, Send, Truck, Package, MapPin, Calendar, Weight, IndianRupee, Plus, X, Edit } from 'lucide-react';
+import { ArrowRight, FileText, Send, Truck, Package, MapPin, Calendar, Weight, IndianRupee, Plus, X, Edit, Search } from 'lucide-react';
 import type { Enquiry, Quotation, VehicleType } from '../../../types';
 
 type Tab = 'enquiries' | 'quotations';
@@ -26,6 +26,9 @@ export default function EnquiriesModule() {
     setPage,
     setPageSize,
     setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
     loading: enquiriesLoading,
     refresh: refreshEnquiries,
     hasNextPage,
@@ -35,13 +38,28 @@ export default function EnquiriesModule() {
   const { data: quotations, create: addQuotation, update: updateQuotation } = useModuleData<any>('quotations');
   const { data: customers } = useModuleData<any>('customers');
   const [searchQuery, setSearchQuery] = useState('');
+  const [enquirySort, setEnquirySort] = useState('created_at:desc');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    const filters: PaginationFilter = {};
-    if (query.trim()) filters.search = { columns: ['customer_name', 'origin', 'destination'], query: query.trim() };
-    setFilters(filters);
-  };
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (searchQuery.trim()) f.search = { columns: ['customer_name', 'origin', 'destination'], query: searchQuery.trim() };
+    if (statusFilter) f.eq = { status: statusFilter };
+    if (dateFrom || dateTo) f.dateRange = { column: 'created_at', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [searchQuery, statusFilter, dateFrom, dateTo, setFilters]);
+
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setEnquirySort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   const steps = [
     { label: 'Enquiry', color: 'bg-purple-500', active: activeTab === 'enquiries' },
@@ -113,8 +131,56 @@ export default function EnquiriesModule() {
       {activeTab === 'enquiries' && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-            Enquiries <span className="text-sm font-normal text-slate-500">({enquiries.length})</span>
+            Enquiries <span className="text-sm font-normal text-slate-500">({totalCount})</span>
           </h2>
+          {/* Search + Filter + Sort + Date Range */}
+          <div className="flex flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search customer, origin, destination..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="">All Statuses</option>
+              <option value="new">New</option>
+              <option value="quoted">Quoted</option>
+              <option value="converted">Converted</option>
+              <option value="lost">Lost</option>
+            </select>
+            <select
+              value={enquirySort}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="created_at:desc">Newest First</option>
+              <option value="created_at:asc">Oldest First</option>
+              <option value="amount:desc">Amount High-Low</option>
+              <option value="amount:asc">Amount Low-High</option>
+            </select>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              title="From Date"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              title="To Date"
+            />
+          </div>
           {enquiries.length === 0 ? (
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-10 text-center">
               <Package className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
@@ -181,6 +247,19 @@ export default function EnquiriesModule() {
                 </div>
               ))}
             </div>
+          )}
+          {totalCount > 0 && (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              hasNextPage={hasNextPage}
+              hasPrevPage={hasPrevPage}
+              loading={enquiriesLoading}
+            />
           )}
         </div>
       )}

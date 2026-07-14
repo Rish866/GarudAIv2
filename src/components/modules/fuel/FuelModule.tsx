@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -19,6 +19,9 @@ export default function FuelModule() {
     setPage,
     setPageSize,
     setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
     loading: fuelLoading,
     refresh: refreshFuel,
     hasNextPage,
@@ -29,13 +32,26 @@ export default function FuelModule() {
   const { data: drivers } = useModuleData<any>('drivers');
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [fuelSort, setFuelSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
-  const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-    const filters: PaginationFilter = {};
-    if (query.trim()) filters.search = { columns: ['vehicle_reg', 'driver_name', 'station'], query: query.trim() };
-    setFilters(filters);
-  }, [setFilters]);
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (searchQuery.trim()) f.search = { columns: ['vehicle_reg', 'driver_name', 'station'], query: searchQuery.trim() };
+    if (dateFrom || dateTo) f.dateRange = { column: 'date', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [searchQuery, dateFrom, dateTo, setFilters]);
+
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setFuelSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   // Summary calculations
   const totalFuelSpend = fuelEntries.reduce((sum, f) => sum + f.amount, 0);
@@ -120,6 +136,44 @@ export default function FuelModule() {
         </div>
       </div>
 
+      {/* Search + Sort + Date Range */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search vehicle, driver, station..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+        </div>
+        <select
+          value={fuelSort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="amount:desc">Amount High-Low</option>
+          <option value="amount:asc">Amount Low-High</option>
+          <option value="litres:desc">Litres High-Low</option>
+        </select>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="From Date"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="To Date"
+        />
+      </div>
 
       {/* Fuel Log Table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -151,8 +205,24 @@ export default function FuelModule() {
                 <td className="px-4 py-3 text-sm text-slate-600">{entry.station}</td>
               </tr>
             ))}
+            {!fuelLoading && fuelEntries.length === 0 && (
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-slate-400 text-sm">No fuel entries found</td></tr>
+            )}
           </tbody>
         </table>
+        {totalCount > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            hasNextPage={hasNextPage}
+            hasPrevPage={hasPrevPage}
+            loading={fuelLoading}
+          />
+        )}
       </div>
 
 

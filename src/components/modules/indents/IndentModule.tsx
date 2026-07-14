@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -50,6 +50,9 @@ export default function IndentModule() {
     setPage,
     setPageSize,
     setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
     loading: indentsLoading,
     refresh: refreshIndents,
     hasNextPage,
@@ -60,22 +63,27 @@ export default function IndentModule() {
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [indentSort, setIndentSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
-  const handleSearch = (query: string) => {
-    setSearch(query);
-    const filters: PaginationFilter = {};
-    if (query.trim()) filters.search = { columns: ['customer_name', 'origin', 'destination', 'material'], query: query.trim() };
-    if (statusFilter !== 'all') filters.eq = { status: statusFilter };
-    setFilters(filters);
-  };
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (search.trim()) f.search = { columns: ['customer_name', 'origin', 'destination', 'material'], query: search.trim() };
+    if (statusFilter !== 'all') f.eq = { status: statusFilter };
+    if (dateFrom || dateTo) f.dateRange = { column: 'created_at', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [search, statusFilter, dateFrom, dateTo, setFilters]);
 
-  const handleStatusFilter = (status: string) => {
-    setStatusFilter(status);
-    const filters: PaginationFilter = {};
-    if (search.trim()) filters.search = { columns: ['customer_name', 'origin', 'destination', 'material'], query: search.trim() };
-    if (status !== 'all') filters.eq = { status };
-    setFilters(filters);
-  };
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setIndentSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
 
   const [form, setForm] = useState({
@@ -250,9 +258,9 @@ export default function IndentModule() {
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
-          <input type="text" value={search} onChange={(e) => handleSearch(e.target.value)} placeholder="Search indents..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search indents..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
         </div>
-        <select value={statusFilter} onChange={(e) => handleStatusFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
           <option value="allocated">Allocated</option>
@@ -260,6 +268,14 @@ export default function IndentModule() {
           <option value="in_progress">In Progress</option>
           <option value="completed">Completed</option>
         </select>
+        <select value={indentSort} onChange={(e) => handleSortChange(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="amount:desc">Amount High-Low</option>
+          <option value="amount:asc">Amount Low-High</option>
+        </select>
+        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="From Date" />
+        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="To Date" />
       </div>
 
 
@@ -337,6 +353,20 @@ export default function IndentModule() {
           </div>
         ))}
       </div>
+
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={indentsLoading}
+        />
+      )}
 
       {/* Add Modal */}
       {showModal && (

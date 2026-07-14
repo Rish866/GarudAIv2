@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -19,6 +19,9 @@ export default function MaintenanceModule() {
     setPage,
     setPageSize,
     setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
     loading: maintenanceLoading,
     refresh: refreshMaintenance,
     hasNextPage,
@@ -30,24 +33,30 @@ export default function MaintenanceModule() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [maintenanceSort, setMaintenanceSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
-  const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-    const filters: PaginationFilter = {};
-    if (query.trim()) filters.search = { columns: ['vehicle_reg', 'description', 'vendor'], query: query.trim() };
-    if (statusFilter) filters.eq = { ...(filters.eq || {}), status: statusFilter };
-    if (typeFilter) filters.eq = { ...(filters.eq || {}), type: typeFilter };
-    setFilters(filters);
-  }, [setFilters, statusFilter, typeFilter]);
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (searchQuery.trim()) f.search = { columns: ['vehicle_reg', 'description', 'vendor'], query: searchQuery.trim() };
+    const eqFilters: Record<string, string> = {};
+    if (statusFilter) eqFilters.status = statusFilter;
+    if (typeFilter) eqFilters.type = typeFilter;
+    if (Object.keys(eqFilters).length > 0) f.eq = eqFilters;
+    if (dateFrom || dateTo) f.dateRange = { column: 'date', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [searchQuery, statusFilter, typeFilter, dateFrom, dateTo, setFilters]);
 
-  const handleStatusFilter = useCallback((status: string) => {
-    setStatusFilter(status);
-    const filters: PaginationFilter = {};
-    if (searchQuery.trim()) filters.search = { columns: ['vehicle_reg', 'description', 'vendor'], query: searchQuery.trim() };
-    if (status) filters.eq = { ...(filters.eq || {}), status };
-    if (typeFilter) filters.eq = { ...(filters.eq || {}), type: typeFilter };
-    setFilters(filters);
-  }, [setFilters, searchQuery, typeFilter]);
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setMaintenanceSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   // Summary calculations
   const activeJobs = maintenance.filter((m) => m.status === 'scheduled' || m.status === 'in_progress').length;
@@ -121,6 +130,67 @@ export default function MaintenanceModule() {
         </div>
       </div>
 
+      {/* Search + Filter + Sort + Date Range */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search vehicle, description, vendor..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="">All Statuses</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+        </select>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="">All Types</option>
+          <option value="preventive">Preventive</option>
+          <option value="repair">Repair</option>
+          <option value="breakdown">Breakdown</option>
+          <option value="tyre">Tyre</option>
+          <option value="inspection">Inspection</option>
+        </select>
+        <select
+          value={maintenanceSort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="cost:desc">Cost High-Low</option>
+          <option value="cost:asc">Cost Low-High</option>
+          <option value="date:desc">Date (Latest)</option>
+          <option value="date:asc">Date (Oldest)</option>
+        </select>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="From Date"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="To Date"
+        />
+      </div>
 
       {/* Maintenance List (cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -164,8 +234,24 @@ export default function MaintenanceModule() {
             </div>
           </div>
         ))}
+        {!maintenanceLoading && maintenance.length === 0 && (
+          <div className="col-span-2 bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-sm">No maintenance records found</div>
+        )}
       </div>
 
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={maintenanceLoading}
+        />
+      )}
 
       {/* Schedule Maintenance Modal */}
       {showModal && (
