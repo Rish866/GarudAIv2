@@ -4,6 +4,7 @@ import { testSupabaseConnection } from '../../../lib/supabase';
 import { canAccessModule, getRoleLabel } from '../../../lib/rbac';
 import type { UserRole, ModuleName } from '../../../types';
 import { Plus, X, Trash2, Edit, Users, Shield, CheckCircle } from 'lucide-react';
+import InvitationManagement from './InvitationManagement';
 import { useOrganization } from '../../../hooks/useOrganization';
 
 interface ManagedUser {
@@ -207,7 +208,11 @@ export default function SettingsModule() {
 
       {/* USER MANAGEMENT TAB */}
       {activeTab === 'users' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Invitation Management (Edge Function powered) */}
+          <InvitationManagement />
+
+          <div className="border-t border-slate-200 pt-6">
           <div className="flex items-center justify-between">
             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Manage users who can access your ERP. Assign roles to control what they see.</p>
             <button onClick={() => setShowUserModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
@@ -282,6 +287,7 @@ export default function SettingsModule() {
               </div>
             </div>
           )}
+        </div>
         </div>
       )}
 
