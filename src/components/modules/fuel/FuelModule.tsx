@@ -1,15 +1,58 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import type { FuelEntry } from '../../../types';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
+import { Search } from 'lucide-react';
+import BranchField from '../../ui/BranchField';
 
 export default function FuelModule() {
   const { company } = useStore();
-  const { data: fuelEntries, create: addFuelEntry } = useModuleData<any>('fuel_entries');
+  const {
+    data: fuelEntries,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
+    loading: fuelLoading,
+    refresh: refreshFuel,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('fuel_entries', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: addFuelEntry } = useModuleData<any>('fuel_entries', { fetchOnMount: false });
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
   const [showModal, setShowModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [fuelSort, setFuelSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (searchQuery.trim()) f.search = { columns: ['vehicle_reg', 'driver_name', 'station'], query: searchQuery.trim() };
+    if (dateFrom || dateTo) f.dateRange = { column: 'date', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [searchQuery, dateFrom, dateTo, setFilters]);
+
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setFuelSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   // Summary calculations
   const totalFuelSpend = fuelEntries.reduce((sum, f) => sum + f.amount, 0);
@@ -20,6 +63,7 @@ export default function FuelModule() {
 
   // Form state
   const [form, setForm] = useState({
+    branch_id: '',
     vehicle_id: '',
     driver_id: '',
     driver_name: '',
@@ -50,6 +94,7 @@ export default function FuelModule() {
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
     const entry: FuelEntry = {
       id: generateId(),
+      branch_id: form.branch_id || undefined,
       vehicle_id: form.vehicle_id,
       vehicle_reg: vehicle?.reg_number || '',
       driver_id: form.driver_id,
@@ -65,7 +110,7 @@ export default function FuelModule() {
     };
     addFuelEntry(entry);
     setShowModal(false);
-    setForm({ vehicle_id: '', driver_id: '', driver_name: '', date: new Date().toISOString().split('T')[0], litres: 0, rate: 0, odometer: 0, station: '' });
+    setForm({ branch_id: '', vehicle_id: '', driver_id: '', driver_name: '', date: new Date().toISOString().split('T')[0], litres: 0, rate: 0, odometer: 0, station: '' });
   };
 
   return (
@@ -94,6 +139,44 @@ export default function FuelModule() {
         </div>
       </div>
 
+      {/* Search + Sort + Date Range */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search vehicle, driver, station..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+        </div>
+        <select
+          value={fuelSort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="amount:desc">Amount High-Low</option>
+          <option value="amount:asc">Amount Low-High</option>
+          <option value="litres:desc">Litres High-Low</option>
+        </select>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="From Date"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          title="To Date"
+        />
+      </div>
 
       {/* Fuel Log Table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -125,8 +208,24 @@ export default function FuelModule() {
                 <td className="px-4 py-3 text-sm text-slate-600">{entry.station}</td>
               </tr>
             ))}
+            {!fuelLoading && fuelEntries.length === 0 && (
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-slate-400 text-sm">No fuel entries found</td></tr>
+            )}
           </tbody>
         </table>
+        {totalCount > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            hasNextPage={hasNextPage}
+            hasPrevPage={hasPrevPage}
+            loading={fuelLoading}
+          />
+        )}
       </div>
 
 
@@ -137,6 +236,7 @@ export default function FuelModule() {
           <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Add Fuel Entry</h3>
             <div className="space-y-4">
+              <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Vehicle</label>
                 <select value={form.vehicle_id} onChange={(e) => handleVehicleChange(e.target.value)} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">

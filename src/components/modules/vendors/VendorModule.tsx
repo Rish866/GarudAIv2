@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
@@ -33,12 +36,54 @@ interface Vendor {
 
 
 export default function VendorModule() {
-  const { data: vendors, create: createVendor, update: updateVendor, remove: removeVendor, loading: vendorsLoading } = useModuleData<Vendor>('vendors');
+  const {
+    data: vendors,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
+    loading: vendorsLoading,
+    refresh: refreshVendors,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<Vendor>('vendors', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createVendor, update: updateVendor, remove: removeVendor } = useModuleData<Vendor>('vendors', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [vendorSort, setVendorSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (search.trim()) f.search = { columns: ['name', 'city', 'type'], query: search.trim() };
+    const eq: Record<string, string> = {};
+    if (typeFilter !== 'all') eq.type = typeFilter;
+    if (statusFilter !== 'all') eq.status = statusFilter;
+    if (Object.keys(eq).length > 0) f.eq = eq;
+    if (dateFrom || dateTo) f.dateRange = { column: 'created_at', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [search, typeFilter, statusFilter, dateFrom, dateTo, setFilters]);
+
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setVendorSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
 
   const [form, setForm] = useState({
@@ -46,11 +91,7 @@ export default function VendorModule() {
     gstin: '', pan: '', address: '', city: '', state: '', bank_name: '', account_number: '', ifsc: '',
   });
 
-  const filteredVendors = vendors.filter(v => {
-    if (typeFilter !== 'all' && v.type !== typeFilter) return false;
-    if (search && !v.name.toLowerCase().includes(search.toLowerCase()) && !v.contact_person.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const filteredVendors = vendors;
 
   const totalOutstanding = vendors.reduce((s, v) => s + v.outstanding, 0);
   const totalPaid = vendors.reduce((s, v) => s + v.total_paid, 0);
@@ -155,6 +196,19 @@ export default function VendorModule() {
           <option value="all">All Types</option>
           {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+        <select value={vendorSort} onChange={(e) => handleSortChange(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="name:asc">Name A-Z</option>
+          <option value="name:desc">Name Z-A</option>
+        </select>
+        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="From Date" />
+        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="To Date" />
       </div>
 
 
@@ -189,6 +243,21 @@ export default function VendorModule() {
           </div>
         ))}
       </div>
+
+      {/* Pagination */}
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={vendorsLoading}
+        />
+      )}
 
       {/* Add Modal */}
       {showModal && (

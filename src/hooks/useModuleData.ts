@@ -39,6 +39,9 @@ export interface ModuleDataResult<T> {
  * 
  * Usage:
  * const { data: vehicles, loading, create, update, remove } = useModuleData<Vehicle>('vehicles');
+ * 
+ * For CRUD-only (no auto-fetch — use with paginated modules):
+ * const { create, update, remove } = useModuleData<Vehicle>('vehicles', { fetchOnMount: false });
  */
 export function useModuleData<T extends { id: string }>(
   tableName: string,
@@ -47,6 +50,9 @@ export function useModuleData<T extends { id: string }>(
     orderDirection?: 'asc' | 'desc';
     filters?: Record<string, string | number | boolean>;
     enabled?: boolean;
+    /** Set to false to prevent automatic data fetching on mount.
+     *  Use this when the module already uses usePaginatedData for reads. */
+    fetchOnMount?: boolean;
   }
 ): ModuleDataResult<T> {
   const { organizationId, loading: orgLoading } = useOrganization();
@@ -55,6 +61,7 @@ export function useModuleData<T extends { id: string }>(
   const [error, setError] = useState<string | null>(null);
 
   const enabled = options?.enabled !== false;
+  const fetchOnMount = options?.fetchOnMount !== false;
   const isOrgReady = !orgLoading && !!organizationId;
   const databaseTableName = resolveTableName(tableName);
 
@@ -106,8 +113,9 @@ export function useModuleData<T extends { id: string }>(
   }, [organizationId, tableName, databaseTableName, enabled, options?.orderBy, options?.orderDirection]);
 
   useEffect(() => {
-    if (!orgLoading) refresh();
-  }, [orgLoading, refresh]);
+    if (!orgLoading && fetchOnMount) refresh();
+    else if (!fetchOnMount) setLoading(false);
+  }, [orgLoading, refresh, fetchOnMount]);
 
   const create = useCallback(async (record: Partial<T>): Promise<{ data: T | null; error: string | null }> => {
     if (!organizationId) return { data: null, error: 'No organization' };

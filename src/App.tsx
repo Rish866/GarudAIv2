@@ -9,10 +9,12 @@ import LandingPage from './components/LandingPage';
 import OnboardingWizard from './components/ui/OnboardingWizard';
 import ToastContainer from './components/ui/Toast';
 import { OrganizationProvider, useOrganization } from './contexts/OrganizationContext';
+import { BranchProvider } from './contexts/BranchContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
-import { signIn, isPlatformAdmin, getAllTenants, switchTenant } from './lib/auth';
+import { signIn } from './lib/auth';
 import { supabase, supabaseConfigurationError } from './lib/supabase';
+import InviteAcceptPage from './components/InviteAcceptPage';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -198,8 +200,8 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
           id: result.user.id,
           name: result.user.name,
           email: result.user.email,
-          role: result.user.role,
-          phone: result.user.phone,
+          role: 'admin', // Display role — real permissions come from OrganizationContext
+          phone: '',
           status: 'active',
         });
       } else {
@@ -660,6 +662,14 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
 
+  // Route detection: /invite/accept path takes priority over normal app
+  const isInviteAcceptRoute = window.location.pathname === '/invite/accept'
+    || window.location.pathname.startsWith('/invite/accept');
+
+  if (isInviteAcceptRoute) {
+    return <InviteAcceptPage />;
+  }
+
   // Auth bootstrap: verify Supabase session on mount.
   // If Zustand says logged in but Supabase session is gone, log out.
   useEffect(() => {
@@ -719,7 +729,9 @@ export default function App() {
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
       <OrganizationProvider>
-        <MainLayout />
+        <BranchProvider>
+          <MainLayout />
+        </BranchProvider>
       </OrganizationProvider>
       <ToastContainer />
     </div>

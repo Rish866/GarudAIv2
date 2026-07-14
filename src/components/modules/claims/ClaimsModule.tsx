@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { AlertTriangle, Plus, X, Search, Download, FileText, Shield, Clock, CheckCircle, Camera } from 'lucide-react';
@@ -33,18 +36,52 @@ interface Claim {
 
 export default function ClaimsModule() {
   const { data: trips } = useModuleData<any>('trips');
-  const { data: claims, create: createClaim, update: updateClaim } = useModuleData<Claim>('claims');
+  const {
+    data: claims,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
+    loading: claimsLoading,
+    refresh: refreshClaims,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<Claim>('claims', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createClaim, update: updateClaim } = useModuleData<Claim>('claims', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | ClaimStatus>('all');
   const [search, setSearch] = useState('');
+  const [claimSort, setClaimSort] = useState('created_at:desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const [form, setForm] = useState({ type: 'damage' as ClaimType, trip_id: '', incident_date: '', location: '', description: '', claim_amount: '', liability: 'company' as Claim['liability'] });
 
-  const filtered = claims.filter(c => {
-    if (filter !== 'all' && c.status !== filter) return false;
-    if (search && !c.claim_number.toLowerCase().includes(search.toLowerCase()) && !c.customer_name.toLowerCase().includes(search.toLowerCase()) && !c.description.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (search.trim()) f.search = { columns: ['vehicle_reg', 'description', 'claim_number'], query: search.trim() };
+    if (filter !== 'all') f.eq = { status: filter };
+    if (dateFrom || dateTo) f.dateRange = { column: 'created_at', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [search, filter, dateFrom, dateTo, setFilters]);
+
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setClaimSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
+
+  const filtered = claims;
 
   const totalClaimed = claims.reduce((s, c) => s + c.claim_amount, 0);
   const totalSettled = claims.filter(c => c.status === 'settled').reduce((s, c) => s + c.approved_amount, 0);
@@ -116,6 +153,14 @@ export default function ClaimsModule() {
           <option value="settled">Settled</option>
           <option value="rejected">Rejected</option>
         </select>
+        <select value={claimSort} onChange={(e) => handleSortChange(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="amount:desc">Amount High-Low</option>
+          <option value="amount:asc">Amount Low-High</option>
+        </select>
+        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="From Date" />
+        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="To Date" />
       </div>
 
       {/* Claims List */}
@@ -164,6 +209,20 @@ export default function ClaimsModule() {
           </div>
         ))}
       </div>
+
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={claimsLoading}
+        />
+      )}
 
       {/* File Claim Modal */}
       {showModal && (

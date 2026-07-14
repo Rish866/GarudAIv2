@@ -1,8 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
-import { Calendar, Clock, UserCheck, UserX, Plus, X, Download, Filter } from 'lucide-react';
+import { Calendar, Clock, UserCheck, UserX, Plus, X, Download, Filter, Search } from 'lucide-react';
 
 type AttendanceStatus = 'present' | 'absent' | 'half_day' | 'on_leave' | 'on_trip';
 type LeaveType = 'casual' | 'sick' | 'earned' | 'unpaid';
@@ -44,14 +47,54 @@ type TabView = 'attendance' | 'leaves' | 'summary';
 
 export default function AttendanceModule() {
   const { data: drivers } = useModuleData<any>('drivers');
-  const { data: attendance, create: createAttendance, update: updateAttendance } = useModuleData<AttendanceRecord>('attendance');
+  const {
+    data: attendance,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
+    loading: attendanceLoading,
+    refresh: refreshAttendance,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<AttendanceRecord>('attendance', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: createAttendance, update: updateAttendance } = useModuleData<AttendanceRecord>('attendance', { fetchOnMount: false });
   const { data: leaves, create: createLeave, update: updateLeave } = useModuleData<LeaveRequest>('leave_requests');
   const [tab, setTab] = useState<TabView>('attendance');
   const [selectedDate, setSelectedDate] = useState(today);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [attendanceSort, setAttendanceSort] = useState('created_at:desc');
   const [leaveForm, setLeaveForm] = useState({
     employee_id: '', leave_type: 'casual' as LeaveType, from_date: '', to_date: '', reason: '',
   });
+
+  // Combined filter builder
+  const buildFilters = useCallback(() => {
+    const f: PaginationFilter = {};
+    if (searchQuery.trim()) f.search = { columns: ['employee_name'], query: searchQuery.trim() };
+    if (attendanceStatusFilter) f.eq = { status: attendanceStatusFilter };
+    if (dateFrom || dateTo) f.dateRange = { column: 'date', from: dateFrom || undefined, to: dateTo || undefined };
+    setFilters(f);
+  }, [searchQuery, attendanceStatusFilter, dateFrom, dateTo, setFilters]);
+
+  useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  // Sort handler
+  const handleSortChange = useCallback((value: string) => {
+    setAttendanceSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
 
   const todayAttendance = attendance.filter(a => a.date === selectedDate);
   const presentCount = todayAttendance.filter(a => a.status === 'present' || a.status === 'on_trip').length;
@@ -162,6 +205,30 @@ export default function AttendanceModule() {
 
       {/* Attendance Tab */}
       {tab === 'attendance' && (
+        <div className="space-y-4">
+          {/* Search + Filter + Sort + Date Range */}
+          <div className="flex flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
+              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search employee..." className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+            </div>
+            <select value={attendanceStatusFilter} onChange={(e) => setAttendanceStatusFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+              <option value="">All Statuses</option>
+              <option value="present">Present</option>
+              <option value="absent">Absent</option>
+              <option value="half_day">Half Day</option>
+              <option value="on_leave">On Leave</option>
+              <option value="on_trip">On Trip</option>
+            </select>
+            <select value={attendanceSort} onChange={(e) => handleSortChange(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+              <option value="created_at:desc">Newest First</option>
+              <option value="created_at:asc">Oldest First</option>
+              <option value="date:desc">Date (Latest)</option>
+              <option value="date:asc">Date (Oldest)</option>
+            </select>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="From Date" />
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} title="To Date" />
+          </div>
         <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
           <table className="w-full">
             <thead style={{ backgroundColor: 'var(--bg-secondary)' }}>
@@ -198,6 +265,20 @@ export default function AttendanceModule() {
               )}
             </tbody>
           </table>
+        </div>
+          {totalCount > 0 && (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              hasNextPage={hasNextPage}
+              hasPrevPage={hasPrevPage}
+              loading={attendanceLoading}
+            />
+          )}
         </div>
       )}
 

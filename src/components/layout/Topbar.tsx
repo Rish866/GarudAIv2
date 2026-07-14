@@ -20,7 +20,8 @@ import { useStore } from '../../store/useStore';
 import type { ModuleName } from '../../types';
 import HelpButton from '../ui/HelpButton';
 import { MODULE_HELP } from '../../lib/helpContent';
-import { isPlatformAdmin, getAllTenants, switchTenant } from '../../lib/auth';
+import BranchSelector from '../ui/BranchSelector';
+import { isPlatformAdmin } from '../../lib/auth';
 
 const moduleLabels: Record<ModuleName, string> = {
   dashboard: 'Dashboard',
@@ -118,19 +119,11 @@ export default function Topbar() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [tenants, setTenants] = useState<any[]>([]);
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
   const recentNotifications = notifications.slice(0, 5);
-
-  // Load tenants for platform admin switcher
-  useEffect(() => {
-    if (isPlatformAdmin(user.email)) {
-      getAllTenants().then(setTenants);
-    }
-  }, [user.email]);
 
   // Search logic
   const searchResults = searchQuery.length >= 2 ? [
@@ -184,6 +177,7 @@ export default function Topbar() {
           content={MODULE_HELP[activeModule]?.content || 'No help available for this module yet.'}
           steps={MODULE_HELP[activeModule]?.steps}
         />
+        <BranchSelector />
       </div>
 
       {/* Center - Search */}
@@ -433,38 +427,7 @@ export default function Topbar() {
                   </button>
 
                   {/* Platform Admin — Client Account Switcher */}
-                  {isPlatformAdmin(user.email) && (
-                    <>
-                      <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
-                      <div className="px-4 py-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--accent)' }}>
-                          🛡️ Switch Client Account
-                        </p>
-                        <div className="space-y-1 max-h-40 overflow-y-auto">
-                          {tenants.map(tenant => (
-                            <button
-                              key={tenant.id}
-                              onClick={() => {
-                                switchTenant(tenant.id);
-                                setUserOpen(false);
-                                window.location.reload();
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-left transition-colors hover:bg-[var(--bg-secondary)]"
-                              style={{ color: 'var(--text-secondary)' }}
-                            >
-                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shrink-0">
-                                <span className="text-white text-[9px] font-bold">{tenant.company_name.charAt(0)}</span>
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{tenant.company_name}</p>
-                                <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{tenant.owner_email} • {tenant.status}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  {/* Platform admin section removed — organization switching uses OrganizationContext */}
 
                   <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
 

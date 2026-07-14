@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Vehicle, VehicleType, VehicleStatus, OwnershipType } from '../../../types';
 import { formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
 import { exportVehicles } from '../../../lib/excel';
@@ -7,6 +7,10 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import BulkUpload from '../../ui/BulkUpload';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
+import BranchField from '../../ui/BranchField';
 
 // Fix default leaflet icon
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -27,6 +31,7 @@ const STATUS_FILTERS: { label: string; value: VehicleStatus | 'all' }[] = [
 ];
 
 interface VehicleForm {
+  branch_id: string;
   reg_number: string;
   vehicle_type: VehicleType;
   make: string;
@@ -43,6 +48,7 @@ interface VehicleForm {
 }
 
 const emptyForm: VehicleForm = {
+  branch_id: '',
   reg_number: '',
   vehicle_type: 'truck',
   make: '',
@@ -60,10 +66,30 @@ const emptyForm: VehicleForm = {
 
 
 export default function FleetModule() {
-  // Business CRUD via Supabase (useModuleData)
-  const { data: vehicles, create: addVehicle, update: updateVehicle, remove: deleteVehicle, loading: vehiclesLoading } = useModuleData<any>('vehicles');
+  // Server-side paginated vehicle data
+  const {
+    data: vehicles,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    setSort,
+    sortBy,
+    sortDirection,
+    loading: vehiclesLoading,
+    refresh: refreshVehicles,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('vehicles', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  // CRUD operations
+  const { create: addVehicle, update: updateVehicle, remove: deleteVehicle } = useModuleData<any>('vehicles', { fetchOnMount: false });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [vehicleSort, setVehicleSort] = useState('created_at:desc');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [showModal, setShowModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
@@ -73,13 +99,38 @@ export default function FleetModule() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const filteredVehicles = vehicles.filter((v) => {
-    const matchesSearch =
-      v.reg_number.toLowerCase().includes(search.toLowerCase()) ||
-      (v.driver_name && v.driver_name.toLowerCase().includes(search.toLowerCase()));
-    const matchesStatus = statusFilter === 'all' || v.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const buildFilters = useCallback(() => {
+    const filters: PaginationFilter = {};
+    if (search.trim()) filters.search = { columns: ['reg_number', 'make', 'model', 'driver_name'], query: search.trim() };
+    const eqFilters: Record<string, string> = {};
+    if (statusFilter !== 'all') eqFilters.status = statusFilter;
+    if (typeFilter) eqFilters.vehicle_type = typeFilter;
+    if (Object.keys(eqFilters).length > 0) filters.eq = eqFilters;
+    setFilters(filters);
+  }, [search, statusFilter, typeFilter, setFilters]);
+
+  const handleSearch = (query: string) => {
+    setSearch(query);
+  };
+
+  const handleStatusFilter = (status: VehicleStatus | 'all') => {
+    setStatusFilter(status);
+  };
+
+  const handleTypeFilter = (type: string) => {
+    setTypeFilter(type);
+  };
+
+  const handleSortChange = useCallback((value: string) => {
+    setVehicleSort(value);
+    const [col, dir] = value.split(':');
+    setSort(col, dir as 'asc' | 'desc');
+  }, [setSort]);
+
+  // Trigger filter rebuild on state changes
+  React.useEffect(() => { buildFilters(); }, [buildFilters]);
+
+  const filteredVehicles = vehicles; // Already filtered server-side
 
   const vehiclesWithLocation = vehicles.filter(
     (v) =>
@@ -150,6 +201,7 @@ export default function FleetModule() {
       // Let PostgreSQL generate the UUID primary key. The legacy browser ID
       // generator produces non-UUID strings and must not be used for DB rows.
       const newVehicle = {
+        branch_id: form.branch_id || undefined,
         reg_number: form.reg_number,
         vehicle_type: form.vehicle_type,
         make: form.make,
@@ -222,19 +274,19 @@ export default function FleetModule() {
 
 
       {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap">
         <input
           type="text"
           placeholder="Search by reg number or driver..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
           className="w-full sm:w-72 px-4 py-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
         />
         <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
           {STATUS_FILTERS.map((sf) => (
             <button
               key={sf.value}
-              onClick={() => setStatusFilter(sf.value)}
+              onClick={() => handleStatusFilter(sf.value)}
               className={classNames(
                 'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
                 statusFilter === sf.value
@@ -246,6 +298,32 @@ export default function FleetModule() {
             </button>
           ))}
         </div>
+        <select
+          value={typeFilter}
+          onChange={(e) => handleTypeFilter(e.target.value)}
+          className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All Types</option>
+          <option value="truck">Truck</option>
+          <option value="trailer">Trailer</option>
+          <option value="container">Container</option>
+          <option value="tanker">Tanker</option>
+          <option value="tipper">Tipper</option>
+          <option value="reefer">Reefer</option>
+          <option value="lcv">LCV</option>
+        </select>
+        <select
+          value={vehicleSort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="created_at:desc">Newest First</option>
+          <option value="created_at:asc">Oldest First</option>
+          <option value="reg_number:asc">Reg Number A-Z</option>
+          <option value="reg_number:desc">Reg Number Z-A</option>
+          <option value="odometer:desc">Odometer High-Low</option>
+          <option value="odometer:asc">Odometer Low-High</option>
+        </select>
         <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 ml-auto">
           <button
             onClick={() => setView('grid')}
@@ -424,6 +502,21 @@ export default function FleetModule() {
         </div>
       )}
 
+      {/* Pagination */}
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={vehiclesLoading}
+        />
+      )}
+
 
       {/* Map View */}
       {vehiclesWithLocation.length > 0 && (
@@ -498,6 +591,7 @@ export default function FleetModule() {
               {editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Registration Number</label>
                 <input

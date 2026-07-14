@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useStore, generateId } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { tripRepository } from '../../../data/trips/tripRepository';
@@ -13,6 +16,7 @@ import { showToast } from '../../ui/Toast';
 import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download, Eye, Upload, Calendar, Phone, CreditCard, CheckCircle, Circle, Clock, Ban, RotateCcw, Edit3 } from 'lucide-react';
 import DriverAdvanceTracker from './DriverAdvanceTracker';
 import SendNotificationModal from '../../ui/SendNotificationModal';
+import BranchField from '../../ui/BranchField';
 
 const STATUS_FLOW: TripStatus[] = [
   'booked', 'assigned', 'loading', 'in_transit', 'reached', 'unloading', 'pod_pending', 'completed', 'billed', 'settled'
@@ -39,15 +43,46 @@ export default function TripsModule() {
   const { company } = useStore();
   const { organizationId } = useOrganization();
   const { can } = usePermissions();
-  const { data: trips, create: addTrip, update: updateTrip, refresh: refreshTrips, loading: tripsLoading } = useModuleData<any>('trips');
+
+  // Server-side paginated trip data
+  const {
+    data: trips,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    sortBy,
+    sortDirection,
+    setSort,
+    filters,
+    setFilters,
+    loading: tripsLoading,
+    error: tripsError,
+    refresh: refreshTrips,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('trips', {
+    defaultSort: 'created_at',
+    defaultSortDirection: 'desc',
+    defaultPageSize: 25,
+  });
+
+  // Supporting data (non-paginated — small reference tables)
   const { data: customers } = useModuleData<any>('customers');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
-  const { create: addInvoice } = useModuleData<any>('invoices');
-  const { create: addNotification } = useModuleData<any>('notifications');
+  const { create: addInvoice } = useModuleData<any>('invoices', { fetchOnMount: false });
+  const { create: addNotification } = useModuleData<any>('notifications', { fetchOnMount: false });
+  const { create: addTrip } = useModuleData<any>('trips', { fetchOnMount: false });
+
+  // UI state
   const [showModal, setShowModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [statusDropdown, setStatusDropdown] = useState<string | null>(null);
   const [podModalTrip, setPodModalTrip] = useState<Trip | null>(null);
   const [detailTrip, setDetailTrip] = useState<Trip | null>(null);
@@ -60,21 +95,59 @@ export default function TripsModule() {
   const canDeleteTrips = can('trips.delete');
   const canCreateTrips = can('trips.create');
 
-  const filteredTrips = trips.filter((trip) => {
-    const matchesFilter = activeFilter === 'all' || trip.status === activeFilter;
-    const query = searchQuery.toLowerCase();
-    const matchesSearch =
-      !query ||
-      trip.trip_number.toLowerCase().includes(query) ||
-      trip.customer_name.toLowerCase().includes(query) ||
-      trip.vehicle_reg.toLowerCase().includes(query);
-    return matchesFilter && matchesSearch;
-  });
+  // ─── Filter application (server-side) ─────────────────────────────────────
 
-  const getFilterCount = (key: string) => {
-    if (key === 'all') return trips.length;
-    return trips.filter((t) => t.status === key).length;
+  const applyFilters = useCallback((
+    status?: string,
+    search?: string,
+    bookingFrom?: string,
+    bookingTo?: string
+  ) => {
+    const newFilters: PaginationFilter = {};
+
+    // Status filter
+    if (status && status !== 'all') {
+      newFilters.eq = { status };
+    }
+
+    // Search across trip_number, customer_name, vehicle_reg, driver_name, origin, destination
+    if (search && search.trim()) {
+      newFilters.search = {
+        columns: ['trip_number', 'customer_name', 'vehicle_reg', 'driver_name', 'origin', 'destination'],
+        query: search.trim(),
+      };
+    }
+
+    // Date range on booking_date
+    if (bookingFrom || bookingTo) {
+      newFilters.dateRange = {
+        column: 'booking_date',
+        from: bookingFrom || undefined,
+        to: bookingTo || undefined,
+      };
+    }
+
+    setFilters(newFilters);
+  }, [setFilters]);
+
+  // Apply filters when any filter control changes
+  const handleStatusFilter = (status: string) => {
+    setActiveFilter(status);
+    applyFilters(status, searchQuery, dateFrom, dateTo);
   };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    applyFilters(activeFilter, query, dateFrom, dateTo);
+  };
+
+  const handleDateRange = (from: string, to: string) => {
+    setDateFrom(from);
+    setDateTo(to);
+    applyFilters(activeFilter, searchQuery, from, to);
+  };
+
+  // No client-side filtering — all done server-side via usePaginatedData
 
 
   const handleStatusUpdate = async (tripId: string, newStatus: TripStatus) => {
@@ -209,18 +282,18 @@ export default function TripsModule() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Trip Management</h1>
-          <p className="text-sm text-slate-500 mt-1">{trips.length} total trips</p>
+          <p className="text-sm text-slate-500 mt-1">{totalCount.toLocaleString()} total trips</p>
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => generateTripReportPDF(filteredTrips, company, 'Trip Report')}
+            onClick={() => generateTripReportPDF(trips, company, 'Trip Report')}
             className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium"
           >
             <Download size={18} />
             Export PDF
           </button>
           <button
-            onClick={() => exportTrips(filteredTrips)}
+            onClick={() => exportTrips(trips)}
             className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-medium"
           >
             Export Excel
@@ -242,7 +315,7 @@ export default function TripsModule() {
         {FILTER_TABS.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveFilter(tab.key)}
+            onClick={() => handleStatusFilter(tab.key)}
             className={classNames(
               'px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
               activeFilter === tab.key
@@ -251,29 +324,72 @@ export default function TripsModule() {
             )}
           >
             {tab.label}
-            <span className="ml-1.5 text-xs bg-slate-200 px-1.5 py-0.5 rounded-full">
-              {getFilterCount(tab.key)}
-            </span>
           </button>
         ))}
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Search by trip number, customer, or vehicle..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-        />
+      {/* Search + Date Range */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search trip number, customer, vehicle, driver, origin, destination..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => handleDateRange(e.target.value, dateTo)}
+            className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="From"
+          />
+          <span className="text-slate-400 text-sm">to</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => handleDateRange(dateFrom, e.target.value)}
+            className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="To"
+          />
+        </div>
+        {/* Sort */}
+        <select
+          value={`${sortBy}:${sortDirection}`}
+          onChange={(e) => {
+            const [col, dir] = e.target.value.split(':');
+            setSort(col, dir as 'asc' | 'desc');
+          }}
+          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="created_at:desc">Newest first</option>
+          <option value="created_at:asc">Oldest first</option>
+          <option value="booking_date:desc">Booking date (newest)</option>
+          <option value="booking_date:asc">Booking date (oldest)</option>
+          <option value="total_amount:desc">Amount (high to low)</option>
+          <option value="total_amount:asc">Amount (low to high)</option>
+        </select>
       </div>
 
 
       {/* Trip Cards */}
       <div className="space-y-4">
-        {filteredTrips.map((trip) => (
+        {tripsLoading && trips.length === 0 && (
+          <div className="text-center py-12 text-slate-400">
+            <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-3" />
+            Loading trips...
+          </div>
+        )}
+        {!tripsLoading && tripsError && (
+          <div className="text-center py-12 text-red-500">
+            Error: {tripsError}
+          </div>
+        )}
+        {trips.map((trip) => (
           <div
             key={trip.id}
             className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md transition-shadow"
@@ -430,12 +546,27 @@ export default function TripsModule() {
           </div>
         ))}
 
-        {filteredTrips.length === 0 && (
+        {!tripsLoading && !tripsError && trips.length === 0 && (
           <div className="text-center py-12 text-slate-400">
             No trips found matching your criteria.
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={tripsLoading}
+        />
+      )}
 
       {/* Driver Advance Summary */}
       <DriverAdvanceTracker />
@@ -864,7 +995,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
   const { data: quotations } = useModuleData<any>('quotations');
-  const { create: addTrip } = useModuleData<any>('trips');
+  const { create: addTrip } = useModuleData<any>('trips', { fetchOnMount: false });
   const availableVehicles = vehicles;
   const availableDrivers = drivers;
 
@@ -872,6 +1003,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
   const pendingQuotations = quotations.filter(q => q.status === 'sent' || q.status === 'draft' || q.status === 'accepted');
 
   const [form, setForm] = useState({
+    branch_id: '',
     source_type: '' as '' | 'quotation' | 'manual',
     quotation_id: '',
     customer_id: '',
@@ -925,7 +1057,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
 
     const trip: Trip = {
       id: generateId(),
-      
+      branch_id: form.branch_id || undefined,
       trip_number: generateTripNumber(),
       lr_number: generateLRNumber(),
       eway_bill: form.eway_bill || ('EWB-' + Date.now().toString().slice(-9)),
@@ -968,6 +1100,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
           {/* Source Selection — Link to Quotation */}
           <div className="p-3 rounded-xl border border-dashed" style={{ borderColor: 'var(--accent)', backgroundColor: 'var(--accent-light)' }}>
             <label className="block text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>📋 Create from Quotation (auto-fills details)</label>
