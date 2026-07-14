@@ -1,14 +1,53 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import type { MaintenanceRecord } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames } from '../../../lib/utils';
+import { Search } from 'lucide-react';
 
 export default function MaintenanceModule() {
   const { company } = useStore();
-  const { data: maintenance, create: addMaintenance } = useModuleData<any>('maintenance');
+  const {
+    data: maintenance,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: maintenanceLoading,
+    refresh: refreshMaintenance,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('maintenance', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: addMaintenance } = useModuleData<any>('maintenance');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const [showModal, setShowModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['vehicle_reg', 'description', 'vendor'], query: query.trim() };
+    if (statusFilter) filters.eq = { ...(filters.eq || {}), status: statusFilter };
+    if (typeFilter) filters.eq = { ...(filters.eq || {}), type: typeFilter };
+    setFilters(filters);
+  }, [setFilters, statusFilter, typeFilter]);
+
+  const handleStatusFilter = useCallback((status: string) => {
+    setStatusFilter(status);
+    const filters: PaginationFilter = {};
+    if (searchQuery.trim()) filters.search = { columns: ['vehicle_reg', 'description', 'vendor'], query: searchQuery.trim() };
+    if (status) filters.eq = { ...(filters.eq || {}), status };
+    if (typeFilter) filters.eq = { ...(filters.eq || {}), type: typeFilter };
+    setFilters(filters);
+  }, [setFilters, searchQuery, typeFilter]);
 
   // Summary calculations
   const activeJobs = maintenance.filter((m) => m.status === 'scheduled' || m.status === 'in_progress').length;

@@ -1,15 +1,41 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import type { FuelEntry } from '../../../types';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
+import { Search } from 'lucide-react';
 
 export default function FuelModule() {
   const { company } = useStore();
-  const { data: fuelEntries, create: addFuelEntry } = useModuleData<any>('fuel_entries');
+  const {
+    data: fuelEntries,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: fuelLoading,
+    refresh: refreshFuel,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('fuel_entries', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: addFuelEntry } = useModuleData<any>('fuel_entries');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
   const [showModal, setShowModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['vehicle_reg', 'driver_name', 'station'], query: query.trim() };
+    setFilters(filters);
+  }, [setFilters]);
 
   // Summary calculations
   const totalFuelSpend = fuelEntries.reduce((sum, f) => sum + f.amount, 0);

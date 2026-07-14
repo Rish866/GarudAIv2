@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 import { useStore, generateId } from '../../../store/useStore';
 import type { Customer } from '../../../types';
 import { formatCurrency, getStatusColor, classNames } from '../../../lib/utils';
@@ -9,11 +12,42 @@ import CustomerTrackingPortal from '../tracking/CustomerTrackingPortal';
 import BulkUpload from '../../ui/BulkUpload';
 
 export default function CustomersModule() {
-  const { data: customers, create: addCustomer, update: updateCustomer, loading: customersLoading } = useModuleData<any>('customers');
+  const {
+    data: customers,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: customersLoading,
+    refresh: refreshCustomers,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('customers', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: addCustomer, update: updateCustomer } = useModuleData<any>('customers');
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showTracking, setShowTracking] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['name', 'phone', 'email', 'gstin'], query: query.trim() };
+    if (statusFilter) filters.eq = { status: statusFilter };
+    setFilters(filters);
+  };
+
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status);
+    const filters: PaginationFilter = {};
+    if (searchQuery.trim()) filters.search = { columns: ['name', 'phone', 'email', 'gstin'], query: searchQuery.trim() };
+    if (status) filters.eq = { status };
+    setFilters(filters);
+  };
 
   if (showTracking) {
     return (
@@ -31,19 +65,8 @@ export default function CustomersModule() {
     );
   }
 
-  const filteredCustomers = customers.filter((customer) => {
-    const query = searchQuery.toLowerCase();
-    if (!query) return true;
-    return (
-      customer.name.toLowerCase().includes(query) ||
-      customer.contact_person.toLowerCase().includes(query) ||
-      customer.gstin.toLowerCase().includes(query)
-    );
-  });
-
-  const totalOutstanding = customers.reduce((sum, c) => sum + c.outstanding, 0);
-  const totalBusiness = customers.reduce((sum, c) => sum + c.total_business, 0);
-  const activeCount = customers.filter((c) => c.status === 'active').length;
+  const totalOutstanding = customers.reduce((sum, c) => sum + (c.outstanding || 0), 0);
+  const totalBusiness = customers.reduce((sum, c) => sum + (c.total_business || 0), 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -51,7 +74,7 @@ export default function CustomersModule() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
-          <p className="text-sm text-slate-500 mt-1">{customers.length} total customers</p>
+          <p className="text-sm text-slate-500 mt-1">{totalCount.toLocaleString()} total customers</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -115,7 +138,7 @@ export default function CustomersModule() {
             </div>
             <div>
               <p className="text-sm text-slate-500">Active Customers</p>
-              <p className="text-xl font-bold text-slate-900">{activeCount}</p>
+              <p className="text-xl font-bold text-slate-900">{totalCount}</p>
             </div>
           </div>
         </div>
@@ -128,7 +151,7 @@ export default function CustomersModule() {
           type="text"
           placeholder="Search by company name, contact person, or GSTIN..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
         />
       </div>
@@ -149,7 +172,7 @@ export default function CustomersModule() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredCustomers.map((customer) => (
+              {customers.map((customer) => (
                 <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-4">
                     <div>
@@ -195,12 +218,27 @@ export default function CustomersModule() {
           </table>
         </div>
 
-        {filteredCustomers.length === 0 && (
+        {customers.length === 0 && !customersLoading && (
           <div className="text-center py-12 text-slate-400">
             No customers found matching your search.
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalCount > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          hasNextPage={hasNextPage}
+          hasPrevPage={hasPrevPage}
+          loading={customersLoading}
+        />
+      )}
 
       {/* Add Customer Modal */}
       {showModal && <AddCustomerModal onClose={() => setShowModal(false)} />}

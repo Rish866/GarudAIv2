@@ -6,17 +6,51 @@ import { exportDrivers } from '../../../lib/excel';
 import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle, TrendingUp, Clock, Award, Fuel, ChevronRight, BarChart3, Star } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 
 type DriverView = 'list' | 'performance' | 'detail';
 
 export default function DriversModule() {
   const { data: trips } = useModuleData<any>('trips');
-  const { data: drivers, create: addDriver, loading: driversLoading } = useModuleData<any>('drivers');
+  const {
+    data: drivers,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: driversLoading,
+    refresh: refreshDrivers,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('drivers', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: addDriver } = useModuleData<any>('drivers');
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [view, setView] = useState<DriverView>('list');
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['name', 'phone', 'license_number'], query: query.trim() };
+    if (statusFilter) filters.eq = { status: statusFilter };
+    setFilters(filters);
+  };
+
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status);
+    const filters: PaginationFilter = {};
+    if (searchQuery.trim()) filters.search = { columns: ['name', 'phone', 'license_number'], query: searchQuery.trim() };
+    if (status) filters.eq = { status };
+    setFilters(filters);
+  };
 
   // Performance calculations
   const driverPerformance = useMemo(() => {

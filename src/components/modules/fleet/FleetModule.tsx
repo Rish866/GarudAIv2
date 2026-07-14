@@ -7,6 +7,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import BulkUpload from '../../ui/BulkUpload';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
+import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import Pagination from '../../ui/Pagination';
 
 // Fix default leaflet icon
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -60,8 +63,23 @@ const emptyForm: VehicleForm = {
 
 
 export default function FleetModule() {
-  // Business CRUD via Supabase (useModuleData)
-  const { data: vehicles, create: addVehicle, update: updateVehicle, remove: deleteVehicle, loading: vehiclesLoading } = useModuleData<any>('vehicles');
+  // Server-side paginated vehicle data
+  const {
+    data: vehicles,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    setFilters,
+    loading: vehiclesLoading,
+    refresh: refreshVehicles,
+    hasNextPage,
+    hasPrevPage,
+  } = usePaginatedData<any>('vehicles', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  // CRUD operations
+  const { create: addVehicle, update: updateVehicle, remove: deleteVehicle } = useModuleData<any>('vehicles');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -73,13 +91,23 @@ export default function FleetModule() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const filteredVehicles = vehicles.filter((v) => {
-    const matchesSearch =
-      v.reg_number.toLowerCase().includes(search.toLowerCase()) ||
-      (v.driver_name && v.driver_name.toLowerCase().includes(search.toLowerCase()));
-    const matchesStatus = statusFilter === 'all' || v.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const handleSearch = (query: string) => {
+    setSearch(query);
+    const filters: PaginationFilter = {};
+    if (query.trim()) filters.search = { columns: ['reg_number', 'make', 'model', 'driver_name'], query: query.trim() };
+    if (statusFilter !== 'all') filters.eq = { status: statusFilter };
+    setFilters(filters);
+  };
+
+  const handleStatusFilter = (status: VehicleStatus | 'all') => {
+    setStatusFilter(status);
+    const filters: PaginationFilter = {};
+    if (search.trim()) filters.search = { columns: ['reg_number', 'make', 'model', 'driver_name'], query: search.trim() };
+    if (status !== 'all') filters.eq = { status };
+    setFilters(filters);
+  };
+
+  const filteredVehicles = vehicles; // Already filtered server-side
 
   const vehiclesWithLocation = vehicles.filter(
     (v) =>
@@ -227,14 +255,14 @@ export default function FleetModule() {
           type="text"
           placeholder="Search by reg number or driver..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
           className="w-full sm:w-72 px-4 py-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
         />
         <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
           {STATUS_FILTERS.map((sf) => (
             <button
               key={sf.value}
-              onClick={() => setStatusFilter(sf.value)}
+              onClick={() => handleStatusFilter(sf.value)}
               className={classNames(
                 'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
                 statusFilter === sf.value
