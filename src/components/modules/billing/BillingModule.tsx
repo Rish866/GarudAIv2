@@ -265,13 +265,39 @@ export default function BillingModule() {
                     <span className={classNames('px-2 py-0.5 rounded-full text-xs font-medium', getStatusColor(inv.status))}>{inv.status}</span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => generateInvoicePDF(inv, company, trips)}
-                      className="px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                      title="Print Invoice PDF"
-                    >
-                      Print
-                    </button>
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => generateInvoicePDF(inv, company, trips)}
+                        className="px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded"
+                        title="Print"
+                      >
+                        Print
+                      </button>
+                      {inv.status === 'draft' && (
+                        <>
+                          <button
+                            onClick={async () => { await updateInvoice(inv.id, { status: 'sent' }); showToast('success', 'Invoice sent'); }}
+                            className="px-2 py-1 text-xs font-medium text-green-600 hover:bg-green-50 rounded"
+                          >
+                            Send
+                          </button>
+                          <button
+                            onClick={async () => { await removeInvoice(inv.id); showToast('success', 'Draft deleted'); }}
+                            className="px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                      {(inv.status === 'sent' || inv.status === 'partial' || inv.status === 'overdue') && (
+                        <button
+                          onClick={async () => { await updateInvoice(inv.id, { status: 'cancelled' }); showToast('success', 'Invoice cancelled'); }}
+                          className="px-2 py-1 text-xs font-medium text-orange-600 hover:bg-orange-50 rounded"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
