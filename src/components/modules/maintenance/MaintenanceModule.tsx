@@ -1,63 +1,18 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { usePaginatedData } from '../../../hooks/usePaginatedData';
-import type { PaginationFilter } from '../../../hooks/usePaginatedData';
-import Pagination from '../../ui/Pagination';
-import { useStore, generateId } from '../../../store/useStore';
 import type { MaintenanceRecord } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames } from '../../../lib/utils';
-import { Search } from 'lucide-react';
-import BranchField from '../../ui/BranchField';
+import { showToast } from '../../ui/Toast';
+import { usePermission } from '../../../hooks/usePermission';
 
 export default function MaintenanceModule() {
-  const { company } = useStore();
-  const {
-    data: maintenance,
-    totalCount,
-    totalPages,
-    page,
-    pageSize,
-    setPage,
-    setPageSize,
-    setFilters,
-    setSort,
-    sortBy,
-    sortDirection,
-    loading: maintenanceLoading,
-    refresh: refreshMaintenance,
-    hasNextPage,
-    hasPrevPage,
-  } = usePaginatedData<any>('maintenance', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: addMaintenance } = useModuleData<any>('maintenance', { fetchOnMount: false });
+  const { data: maintenance, create: addMaintenance, update: updateMaintenance, remove: removeMaintenance } = useModuleData<any>('maintenance');
   const { data: vehicles } = useModuleData<any>('vehicles');
+  const { can } = usePermission();
+  const canCreate = can('maintenance.create');
+  const canUpdate = can('maintenance.update');
   const [showModal, setShowModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [maintenanceSort, setMaintenanceSort] = useState('created_at:desc');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-
-  // Combined filter builder
-  const buildFilters = useCallback(() => {
-    const f: PaginationFilter = {};
-    if (searchQuery.trim()) f.search = { columns: ['vehicle_reg', 'description', 'vendor'], query: searchQuery.trim() };
-    const eqFilters: Record<string, string> = {};
-    if (statusFilter) eqFilters.status = statusFilter;
-    if (typeFilter) eqFilters.type = typeFilter;
-    if (Object.keys(eqFilters).length > 0) f.eq = eqFilters;
-    if (dateFrom || dateTo) f.dateRange = { column: 'date', from: dateFrom || undefined, to: dateTo || undefined };
-    setFilters(f);
-  }, [searchQuery, statusFilter, typeFilter, dateFrom, dateTo, setFilters]);
-
-  useEffect(() => { buildFilters(); }, [buildFilters]);
-
-  // Sort handler
-  const handleSortChange = useCallback((value: string) => {
-    setMaintenanceSort(value);
-    const [col, dir] = value.split(':');
-    setSort(col, dir as 'asc' | 'desc');
-  }, [setSort]);
+  const [editingRecord, setEditingRecord] = useState<any | null>(null);
 
   // Summary calculations
   const activeJobs = maintenance.filter((m) => m.status === 'scheduled' || m.status === 'in_progress').length;
@@ -66,36 +21,40 @@ export default function MaintenanceModule() {
 
   // Form state
   const [form, setForm] = useState({
-    branch_id: '',
-    vehicle_id: '',
-    type: 'preventive' as MaintenanceRecord['type'],
-    description: '',
-    date: new Date().toISOString().split('T')[0],
-    odometer: 0,
-    cost: 0,
-    vendor: '',
+    vehicle_id: editingRecord?.vehicle_id || '',
+    type: (editingRecord?.type || 'preventive') as MaintenanceRecord['type'],
+    description: editingRecord?.description || '',
+    date: editingRecord?.date || new Date().toISOString().split('T')[0],
+    odometer: editingRecord?.odometer || 0,
+    cost: editingRecord?.cost || 0,
+    vendor: editingRecord?.vendor || '',
   });
 
-  const handleSubmit = () => {
-    if (!form.vehicle_id) return;
+  const handleSubmit = async () => {
+    if (!form.vehicle_id) { showToast('error', 'Select a vehicle'); return; }
+    if (!form.description.trim()) { showToast('error', 'Description is required'); return; }
+    if (form.cost < 0) { showToast('error', 'Cost cannot be negative'); return; }
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
-    const record: MaintenanceRecord = {
-      id: generateId(),
-      branch_id: form.branch_id || undefined,
+    const data = {
       vehicle_id: form.vehicle_id,
       vehicle_reg: vehicle?.reg_number || '',
       type: form.type,
-      description: form.description,
+      description: form.description.trim(),
       date: form.date,
       odometer: form.odometer,
       cost: form.cost,
       vendor: form.vendor,
-      status: 'scheduled',
-      created_at: new Date().toISOString(),
     };
-    addMaintenance(record);
+    if (editingRecord) {
+      await updateMaintenance(editingRecord.id, data);
+      showToast('success', 'Maintenance record updated');
+    } else {
+      await addMaintenance({ ...data, status: 'scheduled' });
+      showToast('success', 'Maintenance scheduled');
+    }
     setShowModal(false);
-    setForm({ branch_id: '', vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' });
+    setEditingRecord(null);
+    setForm({ vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' });
   };
 
 
@@ -112,9 +71,9 @@ export default function MaintenanceModule() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-slate-900">Maintenance</h2>
-        <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">
+        {canCreate && <button onClick={() => { setEditingRecord(null); setForm({ vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' }); setShowModal(true); }} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">
           Schedule Maintenance
-        </button>
+        </button>}
       </div>
 
       {/* Summary Cards */}
@@ -133,67 +92,6 @@ export default function MaintenanceModule() {
         </div>
       </div>
 
-      {/* Search + Filter + Sort + Date Range */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search vehicle, description, vendor..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-        >
-          <option value="">All Statuses</option>
-          <option value="scheduled">Scheduled</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-        </select>
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-        >
-          <option value="">All Types</option>
-          <option value="preventive">Preventive</option>
-          <option value="repair">Repair</option>
-          <option value="breakdown">Breakdown</option>
-          <option value="tyre">Tyre</option>
-          <option value="inspection">Inspection</option>
-        </select>
-        <select
-          value={maintenanceSort}
-          onChange={(e) => handleSortChange(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-        >
-          <option value="created_at:desc">Newest First</option>
-          <option value="created_at:asc">Oldest First</option>
-          <option value="cost:desc">Cost High-Low</option>
-          <option value="cost:asc">Cost Low-High</option>
-          <option value="date:desc">Date (Latest)</option>
-          <option value="date:asc">Date (Oldest)</option>
-        </select>
-        <input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-          title="From Date"
-        />
-        <input
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-          title="To Date"
-        />
-      </div>
 
       {/* Maintenance List (cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -235,35 +133,39 @@ export default function MaintenanceModule() {
                 </div>
               )}
             </div>
+            {/* Actions */}
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+              {canUpdate && record.status !== 'completed' && (
+                <button onClick={() => { setEditingRecord(record); setForm({ vehicle_id: record.vehicle_id, type: record.type, description: record.description, date: record.date, odometer: record.odometer, cost: record.cost, vendor: record.vendor }); setShowModal(true); }} className="px-3 py-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg font-medium hover:bg-blue-50">Edit</button>
+              )}
+              {canUpdate && record.status === 'scheduled' && (
+                <>
+                  <button onClick={() => { updateMaintenance(record.id, { status: 'in_progress' }); showToast('success', 'Started'); }} className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Start</button>
+                  <button onClick={() => { updateMaintenance(record.id, { status: 'cancelled' }); showToast('success', 'Cancelled'); }} className="px-3 py-1.5 text-xs text-orange-600 border border-orange-200 rounded-lg font-medium hover:bg-orange-50">Cancel</button>
+                </>
+              )}
+              {canUpdate && record.status === 'in_progress' && (
+                <button onClick={() => { updateMaintenance(record.id, { status: 'completed' }); showToast('success', 'Completed'); }} className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">Complete</button>
+              )}
+              {canUpdate && record.status !== 'completed' && (
+                <button onClick={() => { removeMaintenance(record.id); showToast('success', 'Deleted'); }} className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg font-medium ml-auto">Delete</button>
+              )}
+              {record.status === 'completed' && (
+                <span className="text-xs text-slate-400 italic">Completed records are locked</span>
+              )}
+            </div>
           </div>
         ))}
-        {!maintenanceLoading && maintenance.length === 0 && (
-          <div className="col-span-2 bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-sm">No maintenance records found</div>
-        )}
       </div>
 
-      {totalCount > 0 && (
-        <Pagination
-          page={page}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          hasNextPage={hasNextPage}
-          hasPrevPage={hasPrevPage}
-          loading={maintenanceLoading}
-        />
-      )}
 
       {/* Schedule Maintenance Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
           <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Schedule Maintenance</h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">{editingRecord ? 'Edit Maintenance' : 'Schedule Maintenance'}</h3>
             <div className="space-y-4">
-              <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Vehicle</label>

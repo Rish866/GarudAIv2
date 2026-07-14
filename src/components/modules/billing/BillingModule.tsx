@@ -1,84 +1,27 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { usePaginatedData } from '../../../hooks/usePaginatedData';
-import type { PaginationFilter } from '../../../hooks/usePaginatedData';
-import Pagination from '../../ui/Pagination';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
+import { useOrganization } from '../../../contexts/OrganizationContext';
+import { supabase } from '../../../lib/supabase';
+import { usePermission } from '../../../hooks/usePermission';
 import type { Invoice, Payment, Expense, ExpenseCategory } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateInvoiceNumber } from '../../../lib/utils';
 import { generateInvoicePDF } from '../../../lib/pdf';
 import { exportInvoices, exportExpenses } from '../../../lib/excel';
-import { Search } from 'lucide-react';
-import BranchField from '../../ui/BranchField';
+import { showToast } from '../../ui/Toast';
 
 type BillingTab = 'invoices' | 'payments' | 'expenses';
 
 export default function BillingModule() {
   const { company } = useStore();
-
-  // Server-side paginated invoices
-  const {
-    data: invoices,
-    totalCount: invoiceTotalCount,
-    totalPages: invoiceTotalPages,
-    page: invoicePage,
-    pageSize: invoicePageSize,
-    setPage: setInvoicePage,
-    setPageSize: setInvoicePageSize,
-    filters: invoiceFilters,
-    setFilters: setInvoiceFilters,
-    setSort: setInvoiceSortFn,
-    sortBy: invoiceSortBy,
-    sortDirection: invoiceSortDirection,
-    loading: invoicesLoading,
-    refresh: refreshInvoices,
-    hasNextPage: invoiceHasNext,
-    hasPrevPage: invoiceHasPrev,
-  } = usePaginatedData<any>('invoices', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-
-  // Server-side paginated payments
-  const {
-    data: payments,
-    totalCount: paymentTotalCount,
-    totalPages: paymentTotalPages,
-    page: paymentPage,
-    pageSize: paymentPageSize,
-    setPage: setPaymentPage,
-    setPageSize: setPaymentPageSize,
-    filters: paymentFilters,
-    setFilters: setPaymentFilters,
-    setSort: setPaymentSortFn,
-    sortBy: paymentSortBy,
-    sortDirection: paymentSortDirection,
-    loading: paymentsLoading,
-    refresh: refreshPayments,
-    hasNextPage: paymentHasNext,
-    hasPrevPage: paymentHasPrev,
-  } = usePaginatedData<any>('payments', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-
-  // Expenses (paginated)
-  const {
-    data: expenses,
-    totalCount: expenseTotalCount,
-    totalPages: expenseTotalPages,
-    page: expensePage,
-    pageSize: expensePageSize,
-    setPage: setExpensePage,
-    setPageSize: setExpensePageSize,
-    setFilters: setExpenseFilters,
-    setSort: setExpenseSortFn,
-    sortBy: expenseSortBy,
-    sortDirection: expenseSortDirection,
-    loading: expensesLoading,
-    refresh: refreshExpenses,
-    hasNextPage: expenseHasNext,
-    hasPrevPage: expenseHasPrev,
-  } = usePaginatedData<any>('expenses', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-
-  // CRUD operations via useModuleData (non-paginated, for create only)
-  const { create: addInvoice } = useModuleData<any>('invoices', { fetchOnMount: false });
-  const { create: addPayment } = useModuleData<any>('payments', { fetchOnMount: false });
-  const { create: addExpense } = useModuleData<any>('expenses', { fetchOnMount: false });
+  const { organizationId } = useOrganization();
+  const { can } = usePermission();
+  const canCreateInvoice = can('invoices.create');
+  const canCreatePayment = can('payments.create');
+  const canCreateExpense = can('expenses.create');
+  const { data: invoices, create: addInvoice, update: updateInvoice, remove: removeInvoice } = useModuleData<any>('invoices');
+  const { data: payments, create: addPayment, update: updatePayment } = useModuleData<any>('payments');
+  const { data: expenses, create: addExpense, update: updateExpense, remove: removeExpense } = useModuleData<any>('expenses');
   const { data: customers } = useModuleData<any>('customers');
   const { data: trips } = useModuleData<any>('trips');
   const { data: vehicles } = useModuleData<any>('vehicles');
@@ -86,82 +29,6 @@ export default function BillingModule() {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
-
-  // Invoice search/filter state
-  const [invoiceSearch, setInvoiceSearch] = useState('');
-  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('');
-  const [invoiceDateFrom, setInvoiceDateFrom] = useState('');
-  const [invoiceDateTo, setInvoiceDateTo] = useState('');
-  const [invoiceSort, setInvoiceSort] = useState('created_at:desc');
-
-  // Payment search/filter state
-  const [paymentSearch, setPaymentSearch] = useState('');
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
-  const [paymentDateFrom, setPaymentDateFrom] = useState('');
-  const [paymentDateTo, setPaymentDateTo] = useState('');
-  const [paymentSort, setPaymentSort] = useState('created_at:desc');
-
-  // Expense search/filter state
-  const [expenseSearch, setExpenseSearch] = useState('');
-  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('');
-  const [expenseDateFrom, setExpenseDateFrom] = useState('');
-  const [expenseDateTo, setExpenseDateTo] = useState('');
-  const [expenseSort, setExpenseSort] = useState('created_at:desc');
-
-  // Invoice combined filter builder
-  const buildInvoiceFilters = useCallback(() => {
-    const f: PaginationFilter = {};
-    if (invoiceSearch.trim()) f.search = { columns: ['invoice_number', 'customer_name'], query: invoiceSearch.trim() };
-    if (invoiceStatusFilter) f.eq = { status: invoiceStatusFilter };
-    if (invoiceDateFrom || invoiceDateTo) f.dateRange = { column: 'invoice_date', from: invoiceDateFrom || undefined, to: invoiceDateTo || undefined };
-    setInvoiceFilters(f);
-  }, [invoiceSearch, invoiceStatusFilter, invoiceDateFrom, invoiceDateTo, setInvoiceFilters]);
-
-  // Payment combined filter builder
-  const buildPaymentFilters = useCallback(() => {
-    const f: PaginationFilter = {};
-    if (paymentSearch.trim()) f.search = { columns: ['reference_number', 'customer_name'], query: paymentSearch.trim() };
-    const eqFilters: Record<string, string> = {};
-    if (paymentStatusFilter) eqFilters.status = paymentStatusFilter;
-    if (paymentMethodFilter) eqFilters.payment_mode = paymentMethodFilter;
-    if (Object.keys(eqFilters).length > 0) f.eq = eqFilters;
-    if (paymentDateFrom || paymentDateTo) f.dateRange = { column: 'payment_date', from: paymentDateFrom || undefined, to: paymentDateTo || undefined };
-    setPaymentFilters(f);
-  }, [paymentSearch, paymentStatusFilter, paymentMethodFilter, paymentDateFrom, paymentDateTo, setPaymentFilters]);
-
-  // Expense combined filter builder
-  const buildExpenseFilters = useCallback(() => {
-    const f: PaginationFilter = {};
-    if (expenseSearch.trim()) f.search = { columns: ['description', 'paid_to', 'vehicle_reg'], query: expenseSearch.trim() };
-    if (expenseCategoryFilter) f.eq = { category: expenseCategoryFilter };
-    if (expenseDateFrom || expenseDateTo) f.dateRange = { column: 'date', from: expenseDateFrom || undefined, to: expenseDateTo || undefined };
-    setExpenseFilters(f);
-  }, [expenseSearch, expenseCategoryFilter, expenseDateFrom, expenseDateTo, setExpenseFilters]);
-
-  // Trigger filter rebuilds on state changes
-  useEffect(() => { buildInvoiceFilters(); }, [buildInvoiceFilters]);
-  useEffect(() => { buildPaymentFilters(); }, [buildPaymentFilters]);
-  useEffect(() => { buildExpenseFilters(); }, [buildExpenseFilters]);
-
-  // Sort handlers
-  const handleInvoiceSortChange = useCallback((value: string) => {
-    setInvoiceSort(value);
-    const [col, dir] = value.split(':');
-    setInvoiceSortFn(col, dir as 'asc' | 'desc');
-  }, [setInvoiceSortFn]);
-
-  const handlePaymentSortChange = useCallback((value: string) => {
-    setPaymentSort(value);
-    const [col, dir] = value.split(':');
-    setPaymentSortFn(col, dir as 'asc' | 'desc');
-  }, [setPaymentSortFn]);
-
-  const handleExpenseSortChange = useCallback((value: string) => {
-    setExpenseSort(value);
-    const [col, dir] = value.split(':');
-    setExpenseSortFn(col, dir as 'asc' | 'desc');
-  }, [setExpenseSortFn]);
 
   // Summary calculations
   const totalOutstanding = invoices.reduce((sum, inv) => sum + inv.balance_amount, 0);
@@ -176,7 +43,6 @@ export default function BillingModule() {
 
   // Invoice form state
   const [invForm, setInvForm] = useState({
-    branch_id: '',
     customer_id: '',
     trip_id: '',
     freight_total: 0,
@@ -208,79 +74,93 @@ export default function BillingModule() {
     date: new Date().toISOString().split('T')[0],
   });
 
-  const handleCreateInvoice = () => {
+  const handleCreateInvoice = async () => {
     const customer = customers.find((c) => c.id === invForm.customer_id);
     if (!customer) return;
-    const subtotal = invForm.freight_total + invForm.detention_total + invForm.other_charges;
-    const gst_amount = Math.round(subtotal * invForm.gst_percent / 100);
-    const tds_amount = Math.round(subtotal * 0.02);
-    const total_amount = subtotal + gst_amount - tds_amount;
-    const invoice: Invoice = {
-      id: generateId(),
-      branch_id: invForm.branch_id || undefined,
-      invoice_number: generateInvoiceNumber(),
-      customer_id: customer.id,
-      customer_name: customer.name,
-      invoice_date: new Date().toISOString().split('T')[0],
-      due_date: new Date(Date.now() + customer.credit_days * 86400000).toISOString().split('T')[0],
-      trip_ids: invForm.trip_id ? [invForm.trip_id] : [],
-      freight_total: invForm.freight_total,
-      detention_total: invForm.detention_total,
-      other_charges: invForm.other_charges,
-      subtotal,
-      gst_percent: invForm.gst_percent,
-      gst_amount,
-      tds_amount,
-      total_amount,
-      paid_amount: 0,
-      balance_amount: total_amount,
-      status: 'draft',
-      created_at: new Date().toISOString(),
-    };
-    addInvoice(invoice);
+
+    // Use transaction-safe RPC
+    const { data: result, error } = await supabase.rpc('create_invoice_with_outstanding', {
+      p_organization_id: organizationId,
+      p_customer_id: customer.id,
+      p_invoice_number: generateInvoiceNumber(),
+      p_invoice_date: new Date().toISOString().split('T')[0],
+      p_due_date: new Date(Date.now() + (customer.credit_days || 30) * 86400000).toISOString().split('T')[0],
+      p_trip_ids: invForm.trip_id ? JSON.stringify([invForm.trip_id]) : '[]',
+      p_freight_total: invForm.freight_total,
+      p_detention_total: invForm.detention_total,
+      p_other_charges: invForm.other_charges,
+      p_gst_percent: invForm.gst_percent,
+      p_status: 'draft',
+    });
+
+    if (error) {
+      showToast('error', error.message);
+      return;
+    }
+    if (result && !result.success) {
+      showToast('error', result.error || 'Failed to create invoice');
+      return;
+    }
+
+    showToast('success', 'Invoice created');
     setShowInvoiceModal(false);
-    setInvForm({ branch_id: '', customer_id: '', trip_id: '', freight_total: 0, detention_total: 0, other_charges: 0, gst_percent: 5 });
+    setInvForm({ customer_id: '', trip_id: '', freight_total: 0, detention_total: 0, other_charges: 0, gst_percent: 5 });
+    // Refresh data to reflect the RPC changes
+    window.location.hash = '#billing';
   };
 
 
-  const handleRecordPayment = () => {
+  const handleRecordPayment = async () => {
     const customer = customers.find((c) => c.id === payForm.customer_id);
     if (!customer) return;
-    const payment: Payment = {
-      id: generateId(),
-      invoice_id: payForm.invoice_id || undefined,
-      customer_id: customer.id,
-      customer_name: customer.name,
-      amount: payForm.amount,
-      payment_mode: payForm.payment_mode,
-      reference_number: payForm.reference_number,
-      payment_date: new Date().toISOString().split('T')[0],
-      tds_amount: payForm.tds_amount,
-      status: 'received',
-      created_at: new Date().toISOString(),
-    };
-    addPayment(payment);
+    if (payForm.amount <= 0) {
+      showToast('error', 'Payment amount must be positive');
+      return;
+    }
+
+    // Use transaction-safe RPC
+    const { data: result, error } = await supabase.rpc('record_payment', {
+      p_organization_id: organizationId,
+      p_customer_id: customer.id,
+      p_invoice_id: payForm.invoice_id || null,
+      p_amount: payForm.amount,
+      p_tds_amount: payForm.tds_amount,
+      p_payment_mode: payForm.payment_mode,
+      p_reference_number: payForm.reference_number,
+      p_payment_date: new Date().toISOString().split('T')[0],
+    });
+
+    if (error) {
+      showToast('error', error.message);
+      return;
+    }
+    if (result && !result.success) {
+      showToast('error', result.error || 'Failed to record payment');
+      return;
+    }
+
+    showToast('success', 'Payment recorded & accounts updated');
     setShowPaymentModal(false);
     setPayForm({ customer_id: '', invoice_id: '', amount: 0, payment_mode: 'bank_transfer', reference_number: '', tds_amount: 0 });
+    // Refresh data to reflect the RPC changes
+    window.location.hash = '#billing';
   };
 
   const handleAddExpense = () => {
     const vehicle = vehicles.find((v) => v.id === expForm.vehicle_id);
-    const expense: Expense = {
-      id: generateId(),
-      trip_id: expForm.trip_id || undefined,
-      vehicle_id: vehicle?.id,
-      vehicle_reg: vehicle?.reg_number,
+    addExpense({
+      trip_id: expForm.trip_id || null,
+      vehicle_id: vehicle?.id || null,
+      vehicle_reg: vehicle?.reg_number || '',
       category: expForm.category,
       amount: expForm.amount,
       date: expForm.date,
       description: expForm.description,
       paid_to: expForm.paid_to,
       payment_mode: expForm.payment_mode,
-      approved: true,
-      created_at: new Date().toISOString(),
-    };
-    addExpense(expense);
+      approved: false,
+    });
+    showToast('success', 'Expense added');
     setShowExpenseModal(false);
     setExpForm({ category: 'diesel', amount: 0, description: '', paid_to: '', vehicle_id: '', trip_id: '', payment_mode: 'cash', date: new Date().toISOString().split('T')[0] });
   };
@@ -314,16 +194,16 @@ export default function BillingModule() {
           {activeTab === 'invoices' && (
             <>
               <button onClick={() => exportInvoices(invoices)} className="px-3 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">Export</button>
-              <button onClick={() => setShowInvoiceModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Create Invoice</button>
+              {canCreateInvoice && <button onClick={() => setShowInvoiceModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Create Invoice</button>}
             </>
           )}
           {activeTab === 'payments' && (
-            <button onClick={() => setShowPaymentModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Record Payment</button>
+            canCreatePayment && <button onClick={() => setShowPaymentModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Record Payment</button>
           )}
           {activeTab === 'expenses' && (
             <>
               <button onClick={() => exportExpenses(expenses)} className="px-3 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">Export</button>
-              <button onClick={() => setShowExpenseModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Add Expense</button>
+              {canCreateExpense && <button onClick={() => setShowExpenseModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Add Expense</button>}
             </>
           )}
         </div>
@@ -365,290 +245,104 @@ export default function BillingModule() {
 
       {/* Invoices Tab */}
       {activeTab === 'invoices' && (
-        <div>
-          {/* Invoice Search + Filter + Sort + Date Range */}
-          <div className="flex flex-wrap gap-3 mb-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search invoice number, customer..."
-                value={invoiceSearch}
-                onChange={(e) => setInvoiceSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <select
-              value={invoiceStatusFilter}
-              onChange={(e) => setInvoiceStatusFilter(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="sent">Sent</option>
-              <option value="partial">Partial</option>
-              <option value="paid">Paid</option>
-              <option value="overdue">Overdue</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            <select
-              value={invoiceSort}
-              onChange={(e) => handleInvoiceSortChange(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="created_at:desc">Newest First</option>
-              <option value="created_at:asc">Oldest First</option>
-              <option value="total_amount:desc">Amount High-Low</option>
-              <option value="total_amount:asc">Amount Low-High</option>
-              <option value="due_date:asc">Due Date (Soonest)</option>
-              <option value="invoice_date:desc">Invoice Date (Latest)</option>
-            </select>
-            <input
-              type="date"
-              value={invoiceDateFrom}
-              onChange={(e) => setInvoiceDateFrom(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="From"
-              title="From Date"
-            />
-            <input
-              type="date"
-              value={invoiceDateTo}
-              onChange={(e) => setInvoiceDateTo(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="To"
-              title="To Date"
-            />
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Invoice #</th>
-                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Customer</th>
-                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Date</th>
-                  <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Total</th>
-                  <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Balance</th>
-                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Status</th>
-                  <th className="px-4 py-3 text-center text-[11px] uppercase font-semibold text-slate-500">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {invoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-sm font-medium text-blue-600">{inv.invoice_number}</td>
-                    <td className="px-4 py-3 text-sm text-slate-700">{inv.customer_name}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{formatDate(inv.invoice_date)}</td>
-                    <td className="px-4 py-3 text-sm text-slate-700 text-right font-medium">{formatCurrency(inv.total_amount)}</td>
-                    <td className="px-4 py-3 text-sm text-slate-700 text-right font-medium">{formatCurrency(inv.balance_amount)}</td>
-                    <td className="px-4 py-3">
-                      <span className={classNames('px-2 py-0.5 rounded-full text-xs font-medium', getStatusColor(inv.status))}>{inv.status}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Invoice #</th>
+                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Customer</th>
+                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Date</th>
+                <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Total</th>
+                <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Balance</th>
+                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Status</th>
+                <th className="px-4 py-3 text-center text-[11px] uppercase font-semibold text-slate-500">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {invoices.map((inv) => (
+                <tr key={inv.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 text-sm font-medium text-blue-600">{inv.invoice_number}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{inv.customer_name}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(inv.invoice_date)}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700 text-right font-medium">{formatCurrency(inv.total_amount)}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700 text-right font-medium">{formatCurrency(inv.balance_amount)}</td>
+                  <td className="px-4 py-3">
+                    <span className={classNames('px-2 py-0.5 rounded-full text-xs font-medium', getStatusColor(inv.status))}>{inv.status}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
                       <button
                         onClick={() => generateInvoicePDF(inv, company, trips)}
-                        className="px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                        title="Print Invoice PDF"
+                        className="px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded"
+                        title="Print"
                       >
                         Print
                       </button>
-                    </td>
-                  </tr>
-                ))}
-                {!invoicesLoading && invoices.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">No invoices found</td></tr>
-                )}
-              </tbody>
-            </table>
-            {invoiceTotalCount > 0 && (
-              <Pagination
-                page={invoicePage}
-                totalPages={invoiceTotalPages}
-                totalCount={invoiceTotalCount}
-                pageSize={invoicePageSize}
-                onPageChange={setInvoicePage}
-                onPageSizeChange={setInvoicePageSize}
-                hasNextPage={invoiceHasNext}
-                hasPrevPage={invoiceHasPrev}
-                loading={invoicesLoading}
-              />
-            )}
-          </div>
+                      {inv.status === 'draft' && (
+                        <>
+                          <button
+                            onClick={async () => { await updateInvoice(inv.id, { status: 'sent' }); showToast('success', 'Invoice sent'); }}
+                            className="px-2 py-1 text-xs font-medium text-green-600 hover:bg-green-50 rounded"
+                          >
+                            Send
+                          </button>
+                          <button
+                            onClick={async () => { await removeInvoice(inv.id); showToast('success', 'Draft deleted'); }}
+                            className="px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                      {(inv.status === 'sent' || inv.status === 'partial' || inv.status === 'overdue') && (
+                        <button
+                          onClick={async () => { await updateInvoice(inv.id, { status: 'cancelled' }); showToast('success', 'Invoice cancelled'); }}
+                          className="px-2 py-1 text-xs font-medium text-orange-600 hover:bg-orange-50 rounded"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
 
       {/* Payments Tab */}
       {activeTab === 'payments' && (
-        <div>
-          {/* Payment Search + Filter + Sort + Date Range */}
-          <div className="flex flex-wrap gap-3 mb-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search reference number, customer..."
-                value={paymentSearch}
-                onChange={(e) => setPaymentSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <select
-              value={paymentStatusFilter}
-              onChange={(e) => setPaymentStatusFilter(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="">All Statuses</option>
-              <option value="received">Received</option>
-              <option value="cleared">Cleared</option>
-              <option value="bounced">Bounced</option>
-            </select>
-            <select
-              value={paymentMethodFilter}
-              onChange={(e) => setPaymentMethodFilter(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="">All Methods</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="cheque">Cheque</option>
-              <option value="cash">Cash</option>
-              <option value="upi">UPI</option>
-            </select>
-            <select
-              value={paymentSort}
-              onChange={(e) => handlePaymentSortChange(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="created_at:desc">Newest First</option>
-              <option value="created_at:asc">Oldest First</option>
-              <option value="amount:desc">Amount High-Low</option>
-              <option value="amount:asc">Amount Low-High</option>
-              <option value="payment_date:desc">Payment Date (Latest)</option>
-            </select>
-            <input
-              type="date"
-              value={paymentDateFrom}
-              onChange={(e) => setPaymentDateFrom(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              title="From Date"
-            />
-            <input
-              type="date"
-              value={paymentDateTo}
-              onChange={(e) => setPaymentDateTo(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              title="To Date"
-            />
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Reference</th>
-                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Customer</th>
-                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Date</th>
-                  <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Amount</th>
-                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Mode</th>
-                  <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Status</th>
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Reference</th>
+                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Customer</th>
+                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Date</th>
+                <th className="px-4 py-3 text-right text-[11px] uppercase font-semibold text-slate-500">Amount</th>
+                <th className="px-4 py-3 text-left text-[11px] uppercase font-semibold text-slate-500">Mode</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {payments.map((pay) => (
+                <tr key={pay.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 text-sm font-medium text-slate-700">{pay.reference_number}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{pay.customer_name}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(pay.payment_date)}</td>
+                  <td className="px-4 py-3 text-sm text-green-600 text-right font-semibold">{formatCurrency(pay.amount)}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{pay.payment_mode.replace('_', ' ')}</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {payments.map((pay) => (
-                  <tr key={pay.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-sm font-medium text-slate-700">{pay.reference_number}</td>
-                    <td className="px-4 py-3 text-sm text-slate-700">{pay.customer_name}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{formatDate(pay.payment_date)}</td>
-                    <td className="px-4 py-3 text-sm text-green-600 text-right font-semibold">{formatCurrency(pay.amount)}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{pay.payment_mode.replace('_', ' ')}</td>
-                    <td className="px-4 py-3">
-                      <span className={classNames('px-2 py-0.5 rounded-full text-xs font-medium', getStatusColor(pay.status))}>{pay.status}</span>
-                    </td>
-                  </tr>
-                ))}
-                {!paymentsLoading && payments.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400 text-sm">No payments found</td></tr>
-                )}
-              </tbody>
-            </table>
-            {paymentTotalCount > 0 && (
-              <Pagination
-                page={paymentPage}
-                totalPages={paymentTotalPages}
-                totalCount={paymentTotalCount}
-                pageSize={paymentPageSize}
-                onPageChange={setPaymentPage}
-                onPageSizeChange={setPaymentPageSize}
-                hasNextPage={paymentHasNext}
-                hasPrevPage={paymentHasPrev}
-                loading={paymentsLoading}
-              />
-            )}
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
       {/* Expenses Tab */}
       {activeTab === 'expenses' && (
-        <div>
-          {/* Expense Search + Filter + Sort + Date Range */}
-          <div className="flex flex-wrap gap-3 mb-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search description, paid to, vehicle..."
-                value={expenseSearch}
-                onChange={(e) => setExpenseSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <select
-              value={expenseCategoryFilter}
-              onChange={(e) => setExpenseCategoryFilter(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="">All Categories</option>
-              <option value="diesel">Diesel</option>
-              <option value="toll">Toll</option>
-              <option value="driver_bata">Driver Bata</option>
-              <option value="loading">Loading</option>
-              <option value="unloading">Unloading</option>
-              <option value="repair">Repair</option>
-              <option value="tyre">Tyre</option>
-              <option value="insurance">Insurance</option>
-              <option value="emi">EMI</option>
-              <option value="salary">Salary</option>
-              <option value="office">Office</option>
-              <option value="misc">Misc</option>
-            </select>
-            <select
-              value={expenseSort}
-              onChange={(e) => handleExpenseSortChange(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="created_at:desc">Newest First</option>
-              <option value="created_at:asc">Oldest First</option>
-              <option value="amount:desc">Amount High-Low</option>
-              <option value="amount:asc">Amount Low-High</option>
-              <option value="date:desc">Date (Latest)</option>
-              <option value="date:asc">Date (Oldest)</option>
-            </select>
-            <input
-              type="date"
-              value={expenseDateFrom}
-              onChange={(e) => setExpenseDateFrom(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              title="From Date"
-            />
-            <input
-              type="date"
-              value={expenseDateTo}
-              onChange={(e) => setExpenseDateTo(e.target.value)}
-              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              title="To Date"
-            />
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>
@@ -671,25 +365,8 @@ export default function BillingModule() {
                   <td className="px-4 py-3 text-sm text-red-600 text-right font-semibold">{formatCurrency(exp.amount)}</td>
                 </tr>
               ))}
-              {!expensesLoading && expenses.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400 text-sm">No expenses found</td></tr>
-              )}
             </tbody>
           </table>
-          {expenseTotalCount > 0 && (
-            <Pagination
-              page={expensePage}
-              totalPages={expenseTotalPages}
-              totalCount={expenseTotalCount}
-              pageSize={expensePageSize}
-              onPageChange={setExpensePage}
-              onPageSizeChange={setExpensePageSize}
-              hasNextPage={expenseHasNext}
-              hasPrevPage={expenseHasPrev}
-              loading={expensesLoading}
-            />
-          )}
-        </div>
         </div>
       )}
 
@@ -701,7 +378,6 @@ export default function BillingModule() {
           <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Create Invoice</h3>
             <div className="space-y-4">
-              <BranchField value={invForm.branch_id} onChange={(v) => setInvForm({...invForm, branch_id: v})} />
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Customer</label>
                 <select value={invForm.customer_id} onChange={(e) => setInvForm({ ...invForm, customer_id: e.target.value, trip_id: '' })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">

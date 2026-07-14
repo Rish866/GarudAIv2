@@ -29,8 +29,6 @@ import {
   AlertTriangle,
   MapPin,
   ArrowRight,
-  ArrowUpRight,
-  ArrowDownRight,
   TrendingUp,
   Package,
   Calendar,
@@ -235,7 +233,7 @@ export default function DashboardModule() {
     value: count,
   }));
 
-  // KPI Cards
+  // KPI Cards — values are live from Supabase, no fake trends
   const kpiCards = [
     {
       label: 'Total Fleet',
@@ -243,8 +241,7 @@ export default function DashboardModule() {
       icon: Truck,
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
       iconColor: 'text-blue-600 dark:text-blue-400',
-      trend: '+2',
-      trendUp: true,
+      subtitle: `${metrics.availableVehicles} available`,
     },
     {
       label: 'Active Trips',
@@ -252,17 +249,15 @@ export default function DashboardModule() {
       icon: Route,
       bgColor: 'bg-green-50 dark:bg-green-900/20',
       iconColor: 'text-green-600 dark:text-green-400',
-      trend: '+12%',
-      trendUp: true,
+      subtitle: `${metrics.completedTrips} completed`,
     },
     {
-      label: 'Monthly Revenue',
+      label: 'Revenue',
       value: formatCompact(metrics.totalRevenue),
       icon: IndianRupee,
       bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
       iconColor: 'text-indigo-600 dark:text-indigo-400',
-      trend: '+18%',
-      trendUp: true,
+      subtitle: `${formatCompact(metrics.totalReceived)} received`,
     },
     {
       label: 'Outstanding',
@@ -270,26 +265,23 @@ export default function DashboardModule() {
       icon: Clock,
       bgColor: 'bg-orange-50 dark:bg-orange-900/20',
       iconColor: 'text-orange-600 dark:text-orange-400',
-      trend: '-5%',
-      trendUp: false,
+      subtitle: `${formatCompact(metrics.totalExpenses)} expenses`,
     },
     {
-      label: 'Available Drivers',
+      label: 'Drivers',
       value: `${metrics.availableDrivers}/${metrics.totalDrivers}`,
       icon: Users,
       bgColor: 'bg-purple-50 dark:bg-purple-900/20',
       iconColor: 'text-purple-600 dark:text-purple-400',
-      trend: '+1',
-      trendUp: true,
+      subtitle: 'available',
     },
     {
-      label: 'Unread Alerts',
+      label: 'Alerts',
       value: metrics.unreadAlerts.toString(),
       icon: AlertTriangle,
       bgColor: 'bg-red-50 dark:bg-red-900/20',
       iconColor: 'text-red-600 dark:text-red-400',
-      trend: '-3',
-      trendUp: false,
+      subtitle: 'unread',
     },
   ];
 
@@ -316,10 +308,16 @@ export default function DashboardModule() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-colors shadow-sm">
+          <button
+            onClick={() => useStore.getState().setActiveModule('trips')}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-colors shadow-sm"
+          >
             New Trip
           </button>
-          <button className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-full transition-colors shadow-sm">
+          <button
+            onClick={() => useStore.getState().setActiveModule('fleet')}
+            className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-full transition-colors shadow-sm"
+          >
             Add Vehicle
           </button>
         </div>
@@ -354,19 +352,8 @@ export default function DashboardModule() {
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {card.label}
                 </p>
-                <span
-                  className={`flex items-center text-xs font-medium ${
-                    card.trendUp
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-500 dark:text-red-400'
-                  }`}
-                >
-                  {card.trendUp ? (
-                    <ArrowUpRight className="w-3 h-3 mr-0.5" />
-                  ) : (
-                    <ArrowDownRight className="w-3 h-3 mr-0.5" />
-                  )}
-                  {card.trend}
+                <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                  {card.subtitle}
                 </span>
               </div>
             </motion.div>

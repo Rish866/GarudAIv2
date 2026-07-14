@@ -1,67 +1,29 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { useStore, generateId } from '../../../store/useStore';
+import React, { useState, useMemo } from 'react';
 import type { Driver } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
 import { exportDrivers } from '../../../lib/excel';
-import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle, TrendingUp, Clock, Award, Fuel, ChevronRight, BarChart3, Star } from 'lucide-react';
+import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle, TrendingUp, Clock, Award, Fuel, ChevronRight, BarChart3, Star, Edit, Trash2 } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { usePaginatedData } from '../../../hooks/usePaginatedData';
-import type { PaginationFilter } from '../../../hooks/usePaginatedData';
-import Pagination from '../../ui/Pagination';
-import BranchField from '../../ui/BranchField';
+import { showToast } from '../../ui/Toast';
+import { usePermission } from '../../../hooks/usePermission';
 
 type DriverView = 'list' | 'performance' | 'detail';
 
 export default function DriversModule() {
   const { data: trips } = useModuleData<any>('trips');
-  const {
-    data: drivers,
-    totalCount,
-    totalPages,
-    page,
-    pageSize,
-    setPage,
-    setPageSize,
-    setFilters,
-    setSort,
-    sortBy,
-    sortDirection,
-    loading: driversLoading,
-    refresh: refreshDrivers,
-    hasNextPage,
-    hasPrevPage,
-  } = usePaginatedData<any>('drivers', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: addDriver } = useModuleData<any>('drivers', { fetchOnMount: false });
+  const { data: drivers, create: addDriver, update: updateDriver, remove: removeDriver, loading: driversLoading } = useModuleData<any>('drivers');
+  const { can } = usePermission();
+  const canCreate = can('drivers.create');
+  const canEdit = can('drivers.update');
+  const canDelete = can('drivers.delete');
   const [showModal, setShowModal] = useState(false);
+  const [editingDriver, setEditingDriver] = useState<any | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [driverSort, setDriverSort] = useState('created_at:desc');
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [view, setView] = useState<DriverView>('list');
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    const filters: PaginationFilter = {};
-    if (query.trim()) filters.search = { columns: ['name', 'phone', 'license_number'], query: query.trim() };
-    if (statusFilter) filters.eq = { status: statusFilter };
-    setFilters(filters);
-  };
-
-  const handleStatusFilter = (status: string) => {
-    setStatusFilter(status);
-    const filters: PaginationFilter = {};
-    if (searchQuery.trim()) filters.search = { columns: ['name', 'phone', 'license_number'], query: searchQuery.trim() };
-    if (status) filters.eq = { status };
-    setFilters(filters);
-  };
-
-  const handleSortChange = useCallback((value: string) => {
-    setDriverSort(value);
-    const [col, dir] = value.split(':');
-    setSort(col, dir as 'asc' | 'desc');
-  }, [setSort]);
 
   // Performance calculations
   const driverPerformance = useMemo(() => {
@@ -139,6 +101,26 @@ export default function DriversModule() {
     setView('detail');
   };
 
+  /** Safe delete: blocks if driver is assigned to an active trip, otherwise deactivates */
+  const handleDeleteDriver = async (driver: any) => {
+    const activeTrip = trips.find(
+      (t: any) => t.driver_id === driver.id && ['assigned', 'loading', 'in_transit', 'reached', 'unloading'].includes(t.status)
+    );
+    if (activeTrip) {
+      showToast('error', `Cannot remove: driver is on active trip ${activeTrip.trip_number}. Complete or reassign the trip first.`);
+      setDeleteConfirmId(null);
+      return;
+    }
+    // Soft-delete: set status to inactive rather than hard deleting
+    const result = await updateDriver(driver.id, { status: 'inactive' });
+    if (result.error) {
+      showToast('error', result.error);
+    } else {
+      showToast('success', `${driver.name} deactivated`);
+    }
+    setDeleteConfirmId(null);
+  };
+
   // Top performers
   const topPerformers = driverPerformance.slice(0, 3);
   const avgOnTime = driverPerformance.length > 0 ? Math.round(driverPerformance.reduce((s, d) => s + d.onTimePercent, 0) / driverPerformance.length) : 0;
@@ -155,9 +137,11 @@ export default function DriversModule() {
         <div className="flex gap-2">
           <button onClick={() => setShowBulkUpload(true)} className="px-3 py-2 text-sm border rounded-lg" style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>Bulk Upload</button>
           <button onClick={() => exportDrivers(drivers)} className="px-3 py-2 text-sm border rounded-lg" style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>Export</button>
-          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-            <Plus size={16} /> Add Driver
-          </button>
+          {canCreate && (
+            <button onClick={() => { setEditingDriver(null); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+              <Plus size={16} /> Add Driver
+            </button>
+          )}
         </div>
       </div>
 
@@ -333,63 +317,52 @@ export default function DriversModule() {
       {/* LIST VIEW */}
       {view === 'list' && (
         <>
-          {/* Search + Status Filter + Sort */}
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }} />
-              <input type="text" placeholder="Search by name or phone..." value={searchQuery} onChange={(e) => handleSearch(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
-            </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => handleStatusFilter(e.target.value)}
-              className="border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-            >
-              <option value="">All Statuses</option>
-              <option value="available">Available</option>
-              <option value="on_trip">On Trip</option>
-              <option value="on_leave">On Leave</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <select
-              value={driverSort}
-              onChange={(e) => handleSortChange(e.target.value)}
-              className="border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-            >
-              <option value="created_at:desc">Newest First</option>
-              <option value="created_at:asc">Oldest First</option>
-              <option value="name:asc">Name A-Z</option>
-              <option value="name:desc">Name Z-A</option>
-            </select>
+          {/* Search */}
+          <div className="relative">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }} />
+            <input type="text" placeholder="Search by name or phone..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
           </div>
 
           {/* Driver Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {filteredDrivers.map((driver) => (
-              <div key={driver.id} onClick={() => openDriverDetail(driver)} className="cursor-pointer">
-                <DriverCard driver={driver} onTimePercent={driver.onTimePercent} overallScore={driver.overallScore} rating={driver.rating} />
+              <div key={driver.id} className="relative">
+                <div onClick={() => openDriverDetail(driver)} className="cursor-pointer">
+                  <DriverCard driver={driver} onTimePercent={driver.onTimePercent} overallScore={driver.overallScore} rating={driver.rating} />
+                </div>
+                <div className="absolute top-3 right-3 flex gap-1 z-10">
+                  {canEdit && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditingDriver(driver); setShowModal(true); }}
+                      className="p-1.5 bg-white border border-slate-200 rounded-lg text-blue-600 hover:bg-blue-50 shadow-sm"
+                      title="Edit"
+                    >
+                      <Edit size={14} />
+                    </button>
+                  )}
+                  {canDelete && (
+                    deleteConfirmId === driver.id ? (
+                      <div className="flex gap-1">
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteDriver(driver); }} className="px-2 py-1 text-xs bg-red-600 text-white rounded font-medium">Yes</button>
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }} className="px-2 py-1 text-xs bg-slate-200 text-slate-700 rounded font-medium">No</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(driver.id); }}
+                        className="p-1.5 bg-white border border-slate-200 rounded-lg text-red-600 hover:bg-red-50 shadow-sm"
+                        title="Deactivate"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
             ))}
           </div>
 
           {filteredDrivers.length === 0 && (
             <div className="text-center py-12" style={{ color: 'var(--text-tertiary)' }}>No drivers found matching your search.</div>
-          )}
-
-          {/* Pagination */}
-          {totalCount > 0 && (
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              totalCount={totalCount}
-              pageSize={pageSize}
-              onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-              hasNextPage={hasNextPage}
-              hasPrevPage={hasPrevPage}
-              loading={driversLoading}
-            />
           )}
         </>
       )}
@@ -402,8 +375,6 @@ export default function DriversModule() {
           onUpload={(data) => {
             data.forEach(row => {
               addDriver({
-                id: generateId(),
-                
                 name: row.name || '',
                 phone: row.phone || '',
                 license_number: row.license_number || '',
@@ -426,8 +397,8 @@ export default function DriversModule() {
         />
       )}
 
-      {/* Add Driver Modal */}
-      {showModal && <AddDriverModal onClose={() => setShowModal(false)} />}
+      {/* Add/Edit Driver Modal */}
+      {showModal && <AddDriverModal driver={editingDriver} onClose={() => { setShowModal(false); setEditingDriver(null); }} />}
     </div>
   );
 }
@@ -523,51 +494,89 @@ function DriverCard({ driver, onTimePercent, overallScore, rating }: { key?: str
   );
 }
 
-function AddDriverModal({ onClose }: { onClose: () => void }) {
-  const { create: addDriver } = useModuleData<any>('drivers', { fetchOnMount: false });
+function AddDriverModal({ driver: editDriver, onClose }: { driver?: any | null; onClose: () => void }) {
+  const { create: addDriver, update: updateDriver } = useModuleData<any>('drivers');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const [form, setForm] = useState({
-    branch_id: '',
-    name: '',
-    phone: '',
-    license_number: '',
-    license_expiry: '',
-    address: '',
-    emergency_contact: '',
-    emergency_phone: '',
-    salary_type: 'monthly' as 'monthly' | 'per_trip' | 'per_km',
-    base_salary: '',
-    date_of_joining: new Date().toISOString().split('T')[0],
+    name: editDriver?.name || '',
+    phone: editDriver?.phone || '',
+    license_number: editDriver?.license_number || '',
+    license_expiry: editDriver?.license_expiry || '',
+    address: editDriver?.address || '',
+    emergency_contact: editDriver?.emergency_contact || '',
+    emergency_phone: editDriver?.emergency_phone || '',
+    salary_type: (editDriver?.salary_type || 'monthly') as 'monthly' | 'per_trip' | 'per_km',
+    base_salary: editDriver?.base_salary ? String(editDriver.base_salary) : '',
+    date_of_joining: editDriver?.date_of_joining || new Date().toISOString().split('T')[0],
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const validate = (): string | null => {
+    if (!form.name.trim()) return 'Name is required';
+    if (form.name.trim().length < 2) return 'Name must be at least 2 characters';
+    if (!form.phone.trim()) return 'Phone number is required';
+    if (!/^\+?\d{10,13}$/.test(form.phone.replace(/[\s-]/g, ''))) return 'Enter a valid phone number (10-13 digits)';
+    if (!form.license_number.trim()) return 'License number is required';
+    if (!form.license_expiry) return 'License expiry date is required';
+    if (!form.date_of_joining) return 'Date of joining is required';
+    if (Number(form.base_salary) < 0) return 'Salary cannot be negative';
+    return null;
+  };
 
-    const driver: Driver = {
-      id: generateId(),
-      branch_id: form.branch_id || undefined,
-      name: form.name,
-      phone: form.phone,
-      license_number: form.license_number,
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setSaving(true);
+
+    const data = {
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      license_number: form.license_number.trim(),
       license_expiry: form.license_expiry,
-      address: form.address,
-      emergency_contact: form.emergency_contact,
-      emergency_phone: form.emergency_phone,
+      address: form.address.trim(),
+      emergency_contact: form.emergency_contact.trim(),
+      emergency_phone: form.emergency_phone.trim(),
       salary_type: form.salary_type,
       base_salary: Number(form.base_salary) || 0,
       date_of_joining: form.date_of_joining,
-      status: 'available',
-      safety_score: 85,
-      total_trips: 0,
-      total_km: 0,
-      created_at: new Date().toISOString(),
     };
 
-    addDriver(driver);
+    if (editDriver) {
+      const result = await updateDriver(editDriver.id, data);
+      setSaving(false);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      showToast('success', 'Driver updated successfully');
+    } else {
+      const result = await addDriver({
+        ...data,
+        status: 'available',
+        safety_score: 100,
+        total_trips: 0,
+        total_km: 0,
+      });
+      setSaving(false);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      showToast('success', 'Driver added successfully');
+    }
     onClose();
   };
 
@@ -575,51 +584,53 @@ function AddDriverModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
-          <h2 className="text-lg font-bold text-slate-900">Add Driver</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
+          <h2 className="text-lg font-bold text-slate-900">{editDriver ? 'Edit Driver' : 'Add Driver'}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg" disabled={saving}>
             <X size={18} className="text-slate-500" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-              <input type="text" name="name" value={form.name} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+              <input type="text" name="name" value={form.name} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="Full name" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-              <input type="text" name="phone" value={form.phone} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Phone *</label>
+              <input type="text" name="phone" value={form.phone} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="+91 98765 43210" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">License Number</label>
-              <input type="text" name="license_number" value={form.license_number} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">License Number *</label>
+              <input type="text" name="license_number" value={form.license_number} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">License Expiry</label>
-              <input type="date" name="license_expiry" value={form.license_expiry} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">License Expiry *</label>
+              <input type="date" name="license_expiry" value={form.license_expiry} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
-            <input type="text" name="address" value={form.address} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <input type="text" name="address" value={form.address} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Emergency Contact</label>
-              <input type="text" name="emergency_contact" value={form.emergency_contact} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <input type="text" name="emergency_contact" value={form.emergency_contact} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Emergency Phone</label>
-              <input type="text" name="emergency_phone" value={form.emergency_phone} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <input type="text" name="emergency_phone" value={form.emergency_phone} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Salary Type</label>
-              <select name="salary_type" value={form.salary_type} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+              <select name="salary_type" value={form.salary_type} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
                 <option value="monthly">Monthly</option>
                 <option value="per_trip">Per Trip</option>
                 <option value="per_km">Per KM</option>
@@ -627,19 +638,19 @@ function AddDriverModal({ onClose }: { onClose: () => void }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Base Salary</label>
-              <input type="number" name="base_salary" value={form.base_salary} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <input type="number" name="base_salary" value={form.base_salary} onChange={handleChange} min="0" className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Joining Date *</label>
+              <input type="date" name="date_of_joining" value={form.date_of_joining} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Date of Joining</label>
-            <input type="date" name="date_of_joining" value={form.date_of_joining} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">
+            <button type="button" onClick={onClose} disabled={saving} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50">
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700">
-              Add Driver
+            <button type="submit" disabled={saving} className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {saving ? 'Saving...' : editDriver ? 'Update Driver' : 'Add Driver'}
             </button>
           </div>
         </form>
