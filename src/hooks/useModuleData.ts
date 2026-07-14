@@ -28,6 +28,10 @@ export interface ModuleDataResult<T> {
   error: string | null;
   organizationId: string | null;
   isOrgReady: boolean;
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  setPage: (page: number) => void;
   refresh: () => Promise<void>;
   create: (record: Partial<T>) => Promise<{ data: T | null; error: string | null }>;
   update: (id: string, updates: Partial<T>) => Promise<{ error: string | null }>;
@@ -39,6 +43,7 @@ export interface ModuleDataResult<T> {
  * 
  * Usage:
  * const { data: vehicles, loading, create, update, remove } = useModuleData<Vehicle>('vehicles');
+ * const { data, page, setPage, totalCount } = useModuleData<Vehicle>('vehicles', { pageSize: 50 });
  */
 export function useModuleData<T extends { id: string }>(
   tableName: string,
@@ -46,17 +51,22 @@ export function useModuleData<T extends { id: string }>(
     orderBy?: string;
     orderDirection?: 'asc' | 'desc';
     filters?: Record<string, string | number | boolean>;
+    search?: { column: string; value: string };
     enabled?: boolean;
+    pageSize?: number;
   }
 ): ModuleDataResult<T> {
   const { organizationId, loading: orgLoading } = useOrganization();
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0);
 
   const enabled = options?.enabled !== false;
   const isOrgReady = !orgLoading && !!organizationId;
   const databaseTableName = resolveTableName(tableName);
+  const pageSize = options?.pageSize || 0; // 0 means no pagination (load all)
 
   const refresh = useCallback(async () => {
     if (!organizationId || !enabled) {
@@ -71,7 +81,7 @@ export function useModuleData<T extends { id: string }>(
     try {
       let query = supabase
         .from(databaseTableName)
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('organization_id', organizationId)
         .order(options?.orderBy || 'created_at', { ascending: options?.orderDirection === 'asc' });
 
@@ -82,14 +92,25 @@ export function useModuleData<T extends { id: string }>(
         });
       }
 
-      const { data: result, error: fetchError } = await query;
+      // Apply search
+      if (options?.search && options.search.value) {
+        query = query.ilike(options.search.column, `%${options.search.value}%`);
+      }
+
+      // Apply pagination
+      if (pageSize > 0) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        query = query.range(from, to);
+      }
+
+      const { data: result, error: fetchError, count } = await query;
 
       if (fetchError) {
         setError(fetchError.message);
         setData([]);
       } else {
-        // PostgREST normally returns rows only, but defensive filtering keeps
-        // malformed/null records from crashing module render functions.
+        setTotalCount(count ?? 0);
         setData(
           (((result as T[]) || [])
             .filter(Boolean)
@@ -103,7 +124,7 @@ export function useModuleData<T extends { id: string }>(
     } finally {
       setLoading(false);
     }
-  }, [organizationId, tableName, databaseTableName, enabled, options?.orderBy, options?.orderDirection]);
+  }, [organizationId, tableName, databaseTableName, enabled, options?.orderBy, options?.orderDirection, page, pageSize]);
 
   useEffect(() => {
     if (!orgLoading) refresh();
@@ -255,6 +276,10 @@ export function useModuleData<T extends { id: string }>(
     error,
     organizationId,
     isOrgReady,
+    totalCount,
+    page,
+    pageSize: pageSize || data.length,
+    setPage,
     refresh,
     create,
     update,
