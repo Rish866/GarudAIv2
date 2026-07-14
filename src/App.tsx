@@ -11,7 +11,7 @@ import ToastContainer from './components/ui/Toast';
 import { OrganizationProvider, useOrganization } from './contexts/OrganizationContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
-import { signIn } from './lib/auth';
+import { signIn, requestPasswordReset } from './lib/auth';
 import { supabase, supabaseConfigurationError } from './lib/supabase';
 import type { UserRole } from './types';
 
@@ -201,6 +201,9 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
   const [regForm, setRegForm] = useState({ name: '', email: '', password: '', company_name: '', phone: '' });
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
@@ -452,6 +455,7 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
               </label>
               <button
                 type="button"
+                onClick={() => { setShowForgotPassword(true); setResetEmail(email); }}
                 className="text-sm font-medium hover:opacity-80 transition-opacity"
                 style={{ color: 'var(--accent)' }}
               >
@@ -535,6 +539,55 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
                     <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Register</button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Forgot Password Modal */}
+          {showForgotPassword && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="rounded-2xl shadow-xl w-full max-w-md p-6 m-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
+                <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Reset Password</h2>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>Enter your email address and we will send a reset link</p>
+                {resetSuccess && <p className="text-xs text-green-600 mb-3 p-2 bg-green-50 rounded">{resetSuccess}</p>}
+                {error && <p className="text-xs text-red-600 mb-3 p-2 bg-red-50 rounded">{error}</p>}
+                <div className="space-y-3">
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                    style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => { setShowForgotPassword(false); setError(''); setResetSuccess(''); }}
+                      className="flex-1 py-2.5 border rounded-lg text-sm font-medium"
+                      style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!resetEmail) return;
+                        setError('');
+                        setResetSuccess('');
+                        const result = await requestPasswordReset(resetEmail);
+                        if (result.success) {
+                          setResetSuccess('Password reset email sent! Check your inbox.');
+                        } else {
+                          setError(result.error || 'Failed to send reset email');
+                        }
+                      }}
+                      className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                    >
+                      Send Reset Link
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

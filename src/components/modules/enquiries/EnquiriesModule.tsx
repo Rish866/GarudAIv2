@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { generateQuotationPDF } from '../../../lib/pdf';
@@ -251,11 +251,13 @@ export default function EnquiriesModule() {
                     )}
                     {quotation.status === 'sent' && (
                       <button
-                        onClick={() => updateQuotation(quotation.id, { status: 'accepted' })}
+                        onClick={() => {
+                          updateQuotation(quotation.id, { status: 'accepted', accepted_at: new Date().toISOString() });
+                        }}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
                       >
                         <Truck className="w-3.5 h-3.5" />
-                        Convert to Trip
+                        Accept &amp; Book
                       </button>
                     )}
                     <button
@@ -311,9 +313,7 @@ function AddEnquiryModal({ onClose }: { onClose: () => void }) {
     const customer = customers.find(c => c.id === form.customer_id);
     if (!customer) return;
 
-    const enquiry: Enquiry = {
-      id: generateId(),
-      
+    addEnquiry({
       customer_id: customer.id,
       customer_name: customer.name,
       origin: form.origin,
@@ -324,11 +324,9 @@ function AddEnquiryModal({ onClose }: { onClose: () => void }) {
       loading_date: form.loading_date,
       target_rate: Number(form.target_rate) || 0,
       status: 'new',
-      remarks: form.remarks || undefined,
-      created_at: new Date().toISOString(),
-    };
+      remarks: form.remarks || null,
+    });
 
-    addEnquiry(enquiry);
     onClose();
   };
 
