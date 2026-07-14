@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
+
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Circle, Plus, X, RotateCcw, Trash2, Truck } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
 interface TyreRecord {
   id: string;

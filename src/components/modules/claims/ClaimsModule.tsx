@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
+
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { AlertTriangle, Plus, X, Search, Download, FileText, Shield, Clock, CheckCircle, Camera } from 'lucide-react';
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
 type ClaimType = 'shortage' | 'damage' | 'theft' | 'accident' | 'breakdown' | 'delay_penalty';
 type ClaimStatus = 'reported' | 'under_investigation' | 'evidence_collected' | 'claim_filed' | 'approved' | 'settled' | 'rejected';

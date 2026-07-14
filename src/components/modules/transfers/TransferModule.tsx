@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
+
 import { formatDate, classNames } from '../../../lib/utils';
 import { ArrowLeftRight, Plus, X, Truck, Package, Search, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
 type TransferType = 'vehicle' | 'driver' | 'inventory';
 type TransferStatus = 'initiated' | 'in_transit' | 'received' | 'cancelled';

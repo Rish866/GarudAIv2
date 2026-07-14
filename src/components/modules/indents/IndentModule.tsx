@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Package, Plus, X, Search, Download, Truck, CheckCircle, Clock, ArrowRight } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
 type IndentStatus = 'pending' | 'allocated' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
 
