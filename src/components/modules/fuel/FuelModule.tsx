@@ -3,11 +3,15 @@ import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency, formatDate } from '../../../lib/utils';
 import { showToast } from '../../ui/Toast';
 import { Edit, Trash2, X } from 'lucide-react';
+import { usePermission } from '../../../hooks/usePermission';
 
 export default function FuelModule() {
   const { data: fuelEntries, create: addFuelEntry, update: updateFuelEntry, remove: removeFuelEntry } = useModuleData<any>('fuel_entries');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
+  const { can } = usePermission();
+  const canCreate = can('fuel.create');
+  const canEdit = can('fuel.update');
   const [showModal, setShowModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState<any | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -28,7 +32,7 @@ export default function FuelModule() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-slate-900">Fuel Management</h2>
-        <button onClick={() => { setEditingEntry(null); setShowModal(true); }} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Add Fuel Entry</button>
+        {canCreate && <button onClick={() => { setEditingEntry(null); setShowModal(true); }} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Add Fuel Entry</button>}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
@@ -74,15 +78,15 @@ export default function FuelModule() {
                 <td className="px-4 py-3 text-sm text-slate-600">{entry.station || '\u2014'}</td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <button onClick={() => { setEditingEntry(entry); setShowModal(true); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit"><Edit size={14} /></button>
-                    {deleteConfirmId === entry.id ? (
+                    {canEdit && <button onClick={() => { setEditingEntry(entry); setShowModal(true); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit"><Edit size={14} /></button>}
+                    {canEdit && (deleteConfirmId === entry.id ? (
                       <div className="flex gap-1">
                         <button onClick={() => handleDelete(entry.id)} className="px-2 py-1 text-xs bg-red-600 text-white rounded font-medium">Yes</button>
                         <button onClick={() => setDeleteConfirmId(null)} className="px-2 py-1 text-xs bg-slate-200 text-slate-700 rounded font-medium">No</button>
                       </div>
                     ) : (
                       <button onClick={() => setDeleteConfirmId(entry.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 size={14} /></button>
-                    )}
+                    ))}
                   </div>
                 </td>
               </tr>
@@ -98,6 +102,7 @@ export default function FuelModule() {
           entry={editingEntry}
           vehicles={vehicles}
           drivers={drivers}
+          allEntries={fuelEntries}
           onClose={() => { setShowModal(false); setEditingEntry(null); }}
           onSave={async (data) => {
             if (editingEntry) {
@@ -119,8 +124,8 @@ export default function FuelModule() {
 }
 
 
-function FuelFormModal({ entry, vehicles, drivers, onClose, onSave }: {
-  entry: any | null; vehicles: any[]; drivers: any[]; onClose: () => void; onSave: (data: any) => Promise<void>;
+function FuelFormModal({ entry, vehicles, drivers, allEntries, onClose, onSave }: {
+  entry: any | null; vehicles: any[]; drivers: any[]; allEntries: any[]; onClose: () => void; onSave: (data: any) => Promise<void>;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -148,6 +153,18 @@ function FuelFormModal({ entry, vehicles, drivers, onClose, onSave }: {
     if (form.rate <= 0) { setError('Rate must be greater than 0'); return; }
     if (form.odometer <= 0) { setError('Odometer reading is required'); return; }
     if (!form.date) { setError('Date is required'); return; }
+    
+    // Odometer validation: must be greater than previous entry for this vehicle
+    if (!entry) {
+      const previousEntries = allEntries
+        .filter((e: any) => e.vehicle_id === form.vehicle_id && e.id !== entry?.id)
+        .sort((a: any, b: any) => (b.odometer || 0) - (a.odometer || 0));
+      if (previousEntries.length > 0 && form.odometer <= previousEntries[0].odometer) {
+        setError(`Odometer must be greater than last reading (${previousEntries[0].odometer.toLocaleString()} km)`);
+        return;
+      }
+    }
+
     const vehicle = vehicles.find((v: any) => v.id === form.vehicle_id);
     setSaving(true);
     await onSave({
