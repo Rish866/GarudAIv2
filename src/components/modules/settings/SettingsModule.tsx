@@ -1,18 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useStore } from '../../../store/useStore';
-import { testSupabaseConnection } from '../../../lib/supabase';
-import { canAccessModule, getRoleLabel } from '../../../lib/rbac';
+import { supabase, testSupabaseConnection } from '../../../lib/supabase';
+import { canAccessModule, getRoleLabel, getOrgRoleLabel, getAllOrganizationRoles } from '../../../lib/rbac';
 import type { UserRole, ModuleName } from '../../../types';
-import { Plus, X, Trash2, Edit, Users, Shield, CheckCircle } from 'lucide-react';
+import type { OrganizationRole } from '../../../types/organization';
+import { Plus, X, Trash2, Edit, Users, Shield, CheckCircle, Mail, Clock, RefreshCw, Ban, UserCheck } from 'lucide-react';
 import { useOrganization } from '../../../hooks/useOrganization';
+import { inviteUser, updateOrganization } from '../../../services/organizationService';
+import { showToast } from '../../ui/Toast';
 
-interface ManagedUser {
+interface OrgMember {
   id: string;
-  name: string;
+  user_id: string;
+  role: OrganizationRole;
+  status: 'active' | 'inactive' | 'suspended';
+  created_at: string;
+  user_profiles?: { full_name: string | null; phone: string | null } | null;
+  email?: string;
+}
+
+interface OrgInvitation {
+  id: string;
   email: string;
-  phone: string;
-  role: UserRole;
-  status: 'active' | 'inactive';
+  role: string;
+  status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+  expires_at: string;
+  created_at: string;
 }
 
 const ALL_ROLES: UserRole[] = ['super_admin', 'admin', 'operations', 'fleet_manager', 'accounts', 'driver'];
@@ -34,60 +47,135 @@ const ALL_MODULES: { id: ModuleName; label: string }[] = [
 
 export default function SettingsModule() {
   const { company, user } = useStore();
+  const { organizationId, organization, role: currentUserRole } = useOrganization();
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'company' | 'users' | 'roles'>('company');
 
-  // User management state — loaded from organization members
-  const [users, setUsers] = useState<ManagedUser[]>([]);
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [userForm, setUserForm] = useState({ name: '', email: '', phone: '', role: 'operations' as UserRole });
+  // Real Supabase-backed user management
+  const [members, setMembers] = useState<OrgMember[]>([]);
+  const [invitations, setInvitations] = useState<OrgInvitation[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: '', role: 'dispatcher' as OrganizationRole });
+  const [inviting, setInviting] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('super_admin');
+
+  // Load members from Supabase
+  const loadMembers = useCallback(async () => {
+    if (!organizationId) return;
+    setMembersLoading(true);
+
+    // Load members with user profiles
+    const { data: memberData } = await supabase
+      .from('organization_members')
+      .select('id, user_id, role, status, created_at, user_profiles(full_name, phone)')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: true });
+
+    if (memberData) {
+      // Get emails from auth metadata where possible
+      const enriched: OrgMember[] = memberData.map((m: any) => ({
+        ...m,
+        user_profiles: m.user_profiles,
+        email: '', // Email comes from auth, not accessible via client - show user_id prefix
+      }));
+      setMembers(enriched);
+    }
+
+    // Load pending invitations
+    const { data: invData } = await supabase
+      .from('organization_invitations')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .in('status', ['pending'])
+      .order('created_at', { ascending: false });
+
+    if (invData) setInvitations(invData);
+    setMembersLoading(false);
+  }, [organizationId]);
 
   useEffect(() => {
     testSupabaseConnection().then(setDbStatus);
   }, []);
 
-  const [companyForm, setCompanyForm] = useState({
-    name: company.name,
-    address: company.address,
-    city: company.city,
-    state: company.state,
-    gstin: company.gstin,
-    pan: company.pan,
-    phone: company.phone,
-    email: company.email,
-  });
+  useEffect(() => {
+    if (activeTab === 'users') loadMembers();
+  }, [activeTab, loadMembers]);
 
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  // Invite a new user
+  const handleInviteUser = async () => {
+    if (!inviteForm.email || !organizationId) return;
+    setInviting(true);
+    const result = await inviteUser(organizationId, inviteForm.email, inviteForm.role);
+    setInviting(false);
+    if (result.success) {
+      showToast('success', `Invitation sent to ${inviteForm.email}`);
+      setShowInviteModal(false);
+      setInviteForm({ email: '', role: 'dispatcher' });
+      loadMembers();
+    } else {
+      showToast('error', result.error || 'Failed to send invitation');
+    }
   };
 
-  const handleResetDemo = () => {
-    window.location.reload();
+  // Revoke invitation
+  const handleRevokeInvitation = async (invId: string) => {
+    await supabase.from('organization_invitations').update({ status: 'cancelled' }).eq('id', invId);
+    showToast('success', 'Invitation revoked');
+    loadMembers();
   };
 
-  const handleAddUser = () => {
-    if (!userForm.name || !userForm.email) return;
-    setUsers([...users, { id: 'user_' + Date.now().toString(36), ...userForm, status: 'active' }]);
-    setShowUserModal(false);
-    setUserForm({ name: '', email: '', phone: '', role: 'operations' });
+  // Update member role
+  const handleUpdateRole = async (memberId: string, newRole: OrganizationRole) => {
+    // Prevent unauthorized role escalation
+    if (currentUserRole !== 'organization_owner' && currentUserRole !== 'admin') {
+      showToast('error', 'Only owners and admins can change roles');
+      return;
+    }
+    // Prevent changing own role
+    const member = members.find(m => m.id === memberId);
+    if (member?.user_id === user.id) {
+      showToast('error', 'Cannot change your own role');
+      return;
+    }
+    await supabase.from('organization_members').update({ role: newRole }).eq('id', memberId);
+    showToast('success', 'Role updated');
+    loadMembers();
   };
 
-  const handleDeleteUser = (id: string) => {
-    if (id === user.id) return;
-    setUsers(users.filter(u => u.id !== id));
+  // Deactivate/reactivate member
+  const handleToggleMemberStatus = async (memberId: string) => {
+    const member = members.find(m => m.id === memberId);
+    if (!member) return;
+    if (member.user_id === user.id) {
+      showToast('error', 'Cannot deactivate yourself');
+      return;
+    }
+    const newStatus = member.status === 'active' ? 'inactive' : 'active';
+    await supabase.from('organization_members').update({ status: newStatus }).eq('id', memberId);
+    showToast('success', newStatus === 'active' ? 'Member reactivated' : 'Member deactivated');
+    loadMembers();
   };
 
-  const handleChangeRole = (id: string, role: UserRole) => {
-    setUsers(users.map(u => u.id === id ? { ...u, role } : u));
-  };
-
-  const handleToggleStatus = (id: string) => {
-    if (id === user.id) return;
-    setUsers(users.map(u => u.id === id ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' } : u));
+  // Remove member (with owner protection)
+  const handleRemoveMember = async (memberId: string) => {
+    const member = members.find(m => m.id === memberId);
+    if (!member) return;
+    if (member.user_id === user.id) {
+      showToast('error', 'Cannot remove yourself');
+      return;
+    }
+    // Prevent removing the last owner
+    if (member.role === 'organization_owner') {
+      const ownerCount = members.filter(m => m.role === 'organization_owner' && m.status === 'active').length;
+      if (ownerCount <= 1) {
+        showToast('error', 'Cannot remove the last organization owner');
+        return;
+      }
+    }
+    await supabase.from('organization_members').delete().eq('id', memberId);
+    showToast('success', 'Member removed');
+    loadMembers();
   };
 
   const roleColors: Record<UserRole, string> = {
@@ -97,6 +185,40 @@ export default function SettingsModule() {
     fleet_manager: 'bg-teal-100 text-teal-800',
     accounts: 'bg-green-100 text-green-800',
     driver: 'bg-gray-100 text-gray-800',
+  };
+
+  // Company profile form (persists to Supabase organizations table)
+  const [companyForm, setCompanyForm] = useState({
+    name: organization?.name || company.name || '',
+    address: organization?.address || company.address || '',
+    city: organization?.city || company.city || '',
+    state: organization?.state || company.state || '',
+    gstin: organization?.gstin || company.gstin || '',
+    pan: organization?.pan || company.pan || '',
+    phone: organization?.phone || company.phone || '',
+    email: organization?.email || company.email || '',
+  });
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = async () => {
+    if (!organizationId) return;
+    const result = await updateOrganization(organizationId, {
+      name: companyForm.name,
+      address: companyForm.address,
+      city: companyForm.city,
+      state: companyForm.state,
+      gstin: companyForm.gstin,
+      pan: companyForm.pan,
+      phone: companyForm.phone,
+      email: companyForm.email,
+    });
+    if (result.success) {
+      setSaved(true);
+      showToast('success', 'Company profile updated');
+      setTimeout(() => setSaved(false), 2000);
+    } else {
+      showToast('error', result.error || 'Failed to save');
+    }
   };
 
   return (
@@ -207,77 +329,134 @@ export default function SettingsModule() {
 
       {/* USER MANAGEMENT TAB */}
       {activeTab === 'users' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Manage users who can access your ERP. Assign roles to control what they see.</p>
-            <button onClick={() => setShowUserModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-              <Plus className="w-4 h-4" /> Add User
-            </button>
-          </div>
-          <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
-            <table className="w-full">
-              <thead style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                <tr>
-                  <th className="text-left px-4 py-3 text-xs font-medium uppercase" style={{ color: 'var(--text-tertiary)' }}>Name</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium uppercase" style={{ color: 'var(--text-tertiary)' }}>Email</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium uppercase" style={{ color: 'var(--text-tertiary)' }}>Phone</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium uppercase" style={{ color: 'var(--text-tertiary)' }}>Role</th>
-                  <th className="text-center px-4 py-3 text-xs font-medium uppercase" style={{ color: 'var(--text-tertiary)' }}>Status</th>
-                  <th className="text-center px-4 py-3 text-xs font-medium uppercase" style={{ color: 'var(--text-tertiary)' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id} className="border-t" style={{ borderColor: 'var(--border-color)' }}>
-                    <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{u.name} {u.id === user.id && <span className="text-xs text-blue-600">(You)</span>}</td>
-                    <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
-                    <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-secondary)' }}>{u.phone}</td>
-                    <td className="px-4 py-3">
-                      <select value={u.role} onChange={(e) => handleChangeRole(u.id, e.target.value as UserRole)} disabled={u.id === user.id} className="px-2 py-1 border rounded text-xs" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-                        {ALL_ROLES.map(r => <option key={r} value={r}>{getRoleLabel(r)}</option>)}
-                      </select>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button onClick={() => handleToggleStatus(u.id)} disabled={u.id === user.id} className={`px-2 py-1 rounded-full text-xs font-medium ${u.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{u.status}</button>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {u.id !== user.id && <button onClick={() => handleDeleteUser(u.id)} className="p-1.5 rounded hover:bg-red-50"><Trash2 className="w-4 h-4 text-red-400" /></button>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div>
+              <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Team Members</h3>
+              <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Manage who can access your organization</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={loadMembers} className="p-2 border rounded-lg hover:bg-slate-50" style={{ borderColor: 'var(--border-color)' }} title="Refresh">
+                <RefreshCw size={16} style={{ color: 'var(--text-secondary)' }} />
+              </button>
+              <button onClick={() => setShowInviteModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                <Mail size={16} /> Invite User
+              </button>
+            </div>
           </div>
 
-          {/* Add User Modal */}
-          {showUserModal && (
+          {/* Active Members */}
+          {membersLoading ? (
+            <div className="text-center py-8 text-slate-400">Loading members...</div>
+          ) : (
+            <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
+              <table className="w-full">
+                <thead style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                  <tr>
+                    <th className="text-left px-4 py-3 text-xs font-medium uppercase" style={{ color: 'var(--text-tertiary)' }}>Member</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium uppercase" style={{ color: 'var(--text-tertiary)' }}>Role</th>
+                    <th className="text-center px-4 py-3 text-xs font-medium uppercase" style={{ color: 'var(--text-tertiary)' }}>Status</th>
+                    <th className="text-center px-4 py-3 text-xs font-medium uppercase" style={{ color: 'var(--text-tertiary)' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map(m => (
+                    <tr key={m.id} className="border-t" style={{ borderColor: 'var(--border-color)' }}>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                          {m.user_profiles?.full_name || 'User'}
+                          {m.user_id === user.id && <span className="ml-1 text-xs text-blue-600">(You)</span>}
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>ID: {m.user_id.slice(0, 8)}...</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={m.role}
+                          onChange={(e) => handleUpdateRole(m.id, e.target.value as OrganizationRole)}
+                          disabled={m.user_id === user.id}
+                          className="px-2 py-1 border rounded text-xs"
+                          style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                        >
+                          {getAllOrganizationRoles().map(r => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${m.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          {m.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {m.user_id !== user.id && (
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => handleToggleMemberStatus(m.id)} className="p-1.5 rounded hover:bg-slate-100" title={m.status === 'active' ? 'Deactivate' : 'Reactivate'}>
+                              {m.status === 'active' ? <Ban size={14} className="text-orange-500" /> : <UserCheck size={14} className="text-green-500" />}
+                            </button>
+                            <button onClick={() => handleRemoveMember(m.id)} className="p-1.5 rounded hover:bg-red-50" title="Remove">
+                              <Trash2 size={14} className="text-red-400" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {members.length === 0 && (
+                <div className="text-center py-8 text-slate-400 text-sm">No members found</div>
+              )}
+            </div>
+          )}
+
+          {/* Pending Invitations */}
+          {invitations.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
+                <Clock size={14} className="inline mr-1.5" />Pending Invitations
+              </h4>
+              <div className="space-y-2">
+                {invitations.map(inv => (
+                  <div key={inv.id} className="flex items-center justify-between px-4 py-3 rounded-lg border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{inv.email}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Role: {inv.role} &bull; Expires: {new Date(inv.expires_at).toLocaleDateString()}</p>
+                    </div>
+                    <button onClick={() => handleRevokeInvitation(inv.id)} className="px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50 font-medium">
+                      Revoke
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Invite User Modal */}
+          {showInviteModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowUserModal(false)} />
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowInviteModal(false)} />
               <div className="relative rounded-2xl shadow-xl w-full max-w-md p-6 m-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Add User</h2>
-                  <button onClick={() => setShowUserModal(false)} className="p-1 rounded-lg hover:opacity-70"><X className="w-5 h-5" style={{ color: 'var(--text-tertiary)' }} /></button>
+                  <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Invite Team Member</h2>
+                  <button onClick={() => setShowInviteModal(false)} className="p-1 rounded-lg hover:opacity-70"><X size={18} style={{ color: 'var(--text-tertiary)' }} /></button>
                 </div>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>They will receive an email invitation to join your organization.</p>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Full Name *</label>
-                    <input type="text" value={userForm.name} onChange={(e) => setUserForm({...userForm, name: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Email *</label>
-                    <input type="email" value={userForm.email} onChange={(e) => setUserForm({...userForm, email: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Phone</label>
-                    <input type="text" value={userForm.phone} onChange={(e) => setUserForm({...userForm, phone: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Email Address *</label>
+                    <input type="email" value={inviteForm.email} onChange={(e) => setInviteForm({...inviteForm, email: e.target.value})} placeholder="colleague@company.com" className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Role *</label>
-                    <select value={userForm.role} onChange={(e) => setUserForm({...userForm, role: e.target.value as UserRole})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-                      {ALL_ROLES.map(r => <option key={r} value={r}>{getRoleLabel(r)}</option>)}
+                    <select value={inviteForm.role} onChange={(e) => setInviteForm({...inviteForm, role: e.target.value as OrganizationRole})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                      {getAllOrganizationRoles().map(r => (
+                        <option key={r.value} value={r.value}>{r.label}</option>
+                      ))}
                     </select>
                   </div>
-                  <button onClick={handleAddUser} className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Create User</button>
+                  <button onClick={handleInviteUser} disabled={inviting || !inviteForm.email} className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                    {inviting ? 'Sending...' : 'Send Invitation'}
+                  </button>
                 </div>
               </div>
             </div>
