@@ -1,111 +1,36 @@
-// Authentication & Multi-Tenant System for Garud AI ERP
-// Uses Supabase Auth (bcrypt hashed passwords, JWT sessions)
-// NO hardcoded passwords in source code
+// Authentication helpers for Garud AI ERP
+// Uses Supabase Auth exclusively. Organization access is managed by
+// OrganizationContext + organization_members table, NOT localStorage.
 
 import { supabase } from './supabase';
+
+// ========== TYPES ==========
 
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  company_name: string;
-  phone: string;
-  role: 'super_admin' | 'admin' | 'operations' | 'fleet_manager' | 'accounts' | 'driver';
-  tenant_id: string;
 }
-
-export interface Tenant {
-  id: string;
-  company_name: string;
-  owner_email: string;
-  created_at: string;
-  status: 'active' | 'trial' | 'suspended';
-}
-
-// Platform admin email — this is the platform owner who can see all tenants
-const PLATFORM_ADMIN_EMAIL = import.meta.env.VITE_PLATFORM_ADMIN_EMAIL || 'rishkatiyar1@gmail.com';
 
 // ========== SUPABASE AUTH FUNCTIONS ==========
 
 /**
- * Sign up a new user with Supabase Auth (password hashed server-side by Supabase)
+ * Sign in with Supabase Auth (server validates password hash).
+ * Organization membership is loaded by OrganizationContext after login.
  */
-export async function signUp(data: {
-  email: string;
-  password: string;
-  name: string;
-  company_name: string;
-  phone: string;
-}): Promise<{ success: boolean; error?: string }> {
+export async function signIn(
+  email: string,
+  password: string
+): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
   try {
-    // 1. Create user in Supabase Auth (password hashed with bcrypt on server)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: {
-        data: {
-          name: data.name,
-          company_name: data.company_name,
-          phone: data.phone,
-        },
-      },
-    });
-
-    if (authError) {
-      return { success: false, error: authError.message };
-    }
-
-    if (!authData.user) {
-      return { success: false, error: 'Registration failed. Please try again.' };
-    }
-
-    // 2. Create tenant record
-    const tenantId = 'tenant_' + authData.user.id.slice(0, 12);
-    await supabase.from('tenants').upsert({
-      id: tenantId,
-      name: data.company_name,
-      domain: data.email.split('@')[1],
-      industry: 'Logistics & Freight',
-      total_trips: 0,
-      safety_score: 0,
-      billing_due: '₹0',
-    });
-
-    // 3. Create user profile in users table
-    await supabase.from('users').upsert({
-      id: authData.user.id,
-      tenant_id: tenantId,
-      name: data.name,
-      email: data.email,
-      role: 'super_admin',
-      phone: data.phone,
-      status: 'active',
-    });
-
-    return { success: true };
-  } catch (e: any) {
-    return { success: false, error: e.message || 'Network error' };
-  }
-}
-
-/**
- * Sign in with Supabase Auth (server validates password hash)
- */
-export async function signIn(email: string, password: string): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      // If Supabase Auth returns error about email not confirmed or provider not enabled,
-      // it means Auth isn't fully configured yet
       if (error.message.includes('Email not confirmed') || error.message.includes('Signups not allowed')) {
         return { success: false, error: 'Email verification required. Check your inbox.' };
       }
       if (error.message.includes('Invalid login')) {
-        return { success: false, error: 'Invalid email or password. Please check and try again.' };
+        return { success: false, error: 'Invalid email or password.' };
       }
       return { success: false, error: error.message };
     }
@@ -114,21 +39,10 @@ export async function signIn(email: string, password: string): Promise<{ success
       return { success: false, error: 'Login failed. Please try again.' };
     }
 
-    // Get user profile from users table
-    const { data: profile } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
-
     const user: AuthUser = {
       id: data.user.id,
       email: data.user.email || email,
-      name: profile?.name || data.user.user_metadata?.name || email.split('@')[0],
-      company_name: profile?.company_name || data.user.user_metadata?.company_name || 'My Company',
-      phone: profile?.phone || data.user.user_metadata?.phone || '',
-      role: profile?.role || 'super_admin',
-      tenant_id: profile?.tenant_id || 'tenant_' + data.user.id.slice(0, 12),
+      name: data.user.user_metadata?.name || email.split('@')[0],
     };
 
     return { success: true, user };
@@ -138,73 +52,37 @@ export async function signIn(email: string, password: string): Promise<{ success
 }
 
 /**
- * Sign out — clears Supabase session
+ * Sign out — clears Supabase session.
  */
 export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
 }
 
 /**
- * Get current Supabase Auth session
+ * Get current authenticated user from Supabase session.
+ * Does NOT determine organization or role — that's OrganizationContext's job.
  */
 export async function getSession(): Promise<AuthUser | null> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return null;
 
-    const { data: profile } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
-
     return {
       id: session.user.id,
       email: session.user.email || '',
-      name: profile?.name || session.user.user_metadata?.name || '',
-      company_name: profile?.company_name || session.user.user_metadata?.company_name || '',
-      phone: profile?.phone || '',
-      role: profile?.role || 'super_admin',
-      tenant_id: profile?.tenant_id || 'tenant_' + session.user.id.slice(0, 12),
+      name: session.user.user_metadata?.name || '',
     };
   } catch {
-    // Supabase Auth not configured or network error
     return null;
   }
 }
 
-// ========== PLATFORM ADMIN FUNCTIONS ==========
-
+/**
+ * Check if a user is a platform admin (can see all organizations).
+ * Uses the VITE_PLATFORM_ADMIN_EMAIL env var — NOT a security boundary,
+ * just a UI visibility flag. Real admin access is enforced by RLS + is_platform_admin() in DB.
+ */
 export function isPlatformAdmin(email: string): boolean {
-  return email.toLowerCase() === PLATFORM_ADMIN_EMAIL.toLowerCase();
-}
-
-export async function getAllTenants(): Promise<Tenant[]> {
-  const { data } = await supabase.from('tenants').select('*');
-  return (data || []).map(t => ({
-    id: t.id,
-    company_name: t.name || t.company_name || 'Unknown',
-    owner_email: t.domain || '',
-    created_at: t.created_at || '',
-    status: 'active' as const,
-  }));
-}
-
-export function getAllUsers(): { email: string; tenant_id: string; name: string }[] {
-  // For session validation — returns from Supabase Auth
-  // In production this should be an async call, but for backward compatibility with existing code:
-  return [];
-}
-
-export function switchTenant(tenantId: string): void {
-  // Tenant switching now handled by OrganizationContext
-  // No localStorage persistence needed
-}
-
-export function getCurrentTenantId(): string {
-  return ''; // Deprecated — use useOrganization() hook instead
-}
-
-export function getStorageKeyForTenant(tenantId: string): string {
-  return ''; // Deprecated — business data in Supabase, not localStorage
+  const adminEmail = import.meta.env.VITE_PLATFORM_ADMIN_EMAIL || '';
+  return adminEmail !== '' && email.toLowerCase() === adminEmail.toLowerCase();
 }
