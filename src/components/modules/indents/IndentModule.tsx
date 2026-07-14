@@ -145,22 +145,21 @@ export default function IndentModule() {
     updateIndent(indentId, { allocated_vehicles: updated });
   };
 
-  const convertToTrip = (indent: Indent) => {
+  const convertToTrip = async (indent: Indent) => {
     if (indent.allocated_vehicles.length === 0) return;
     // Create one trip per allocated vehicle
-    indent.allocated_vehicles.forEach((allocVeh, idx) => {
+    for (let idx = 0; idx < indent.allocated_vehicles.length; idx++) {
+      const allocVeh = indent.allocated_vehicles[idx];
       const vehicle = vehicles.find(v => v.id === allocVeh.id);
       const driver = allocVeh.driver_id ? drivers.find(d => d.id === allocVeh.driver_id) : null;
-      const trip = {
-        id: 'trip_' + generateId(),
-        
-        trip_number: `TRP-2025-${String(150 + Math.floor(Math.random() * 50) + idx).padStart(4, '0')}`,
-        lr_number: `LR-${7850 + Math.floor(Math.random() * 100) + idx}`,
+      const tripData = {
+        trip_number: `TRP-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}${idx}`,
+        lr_number: `LR-${String(Date.now()).slice(-5)}${idx}`,
         customer_id: indent.customer_id,
         customer_name: indent.customer_name,
         vehicle_id: allocVeh.id,
         vehicle_reg: allocVeh.reg,
-        driver_id: allocVeh.driver_id || vehicle?.driver_id || '',
+        driver_id: allocVeh.driver_id || vehicle?.driver_id || null,
         driver_name: allocVeh.driver_name || vehicle?.driver_name || '',
         driver_phone: driver?.phone || '',
         origin: indent.origin,
@@ -177,11 +176,16 @@ export default function IndentModule() {
         other_charges: 0,
         total_amount: Math.round(indent.rate / indent.num_vehicles),
         status: 'booked' as const,
-        created_at: new Date().toISOString(),
       };
-      addTrip(trip);
-    });
-    updateIndent(indent.id, { status: 'in_progress' });
+      const result = await addTrip(tripData);
+      // Link the first created trip back to the indent
+      if (idx === 0 && result.data?.id) {
+        await updateIndent(indent.id, { trip_id: result.data.id, status: 'in_progress' });
+      }
+    }
+    if (indent.allocated_vehicles.length > 1) {
+      await updateIndent(indent.id, { status: 'in_progress' });
+    }
   };
 
 

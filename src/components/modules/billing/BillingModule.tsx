@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
+import { useOrganization } from '../../../contexts/OrganizationContext';
+import { supabase } from '../../../lib/supabase';
 import type { Invoice, Payment, Expense, ExpenseCategory } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateInvoiceNumber } from '../../../lib/utils';
 import { generateInvoicePDF } from '../../../lib/pdf';
@@ -11,10 +13,11 @@ type BillingTab = 'invoices' | 'payments' | 'expenses';
 
 export default function BillingModule() {
   const { company } = useStore();
+  const { organizationId } = useOrganization();
   const { data: invoices, create: addInvoice, update: updateInvoice, remove: removeInvoice } = useModuleData<any>('invoices');
   const { data: payments, create: addPayment, update: updatePayment } = useModuleData<any>('payments');
   const { data: expenses, create: addExpense, update: updateExpense, remove: removeExpense } = useModuleData<any>('expenses');
-  const { data: customers, update: updateCustomer } = useModuleData<any>('customers');
+  const { data: customers } = useModuleData<any>('customers');
   const { data: trips } = useModuleData<any>('trips');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const [activeTab, setActiveTab] = useState<BillingTab>('invoices');
@@ -69,84 +72,73 @@ export default function BillingModule() {
   const handleCreateInvoice = async () => {
     const customer = customers.find((c) => c.id === invForm.customer_id);
     if (!customer) return;
-    const subtotal = invForm.freight_total + invForm.detention_total + invForm.other_charges;
-    const gst_amount = Math.round(subtotal * invForm.gst_percent / 100);
-    const tds_amount = Math.round(subtotal * 0.02);
-    const total_amount = subtotal + gst_amount - tds_amount;
-    
-    await addInvoice({
-      invoice_number: generateInvoiceNumber(),
-      customer_id: customer.id,
-      customer_name: customer.name,
-      invoice_date: new Date().toISOString().split('T')[0],
-      due_date: new Date(Date.now() + (customer.credit_days || 30) * 86400000).toISOString().split('T')[0],
-      trip_ids: invForm.trip_id ? [invForm.trip_id] : [],
-      freight_total: invForm.freight_total,
-      detention_total: invForm.detention_total,
-      other_charges: invForm.other_charges,
-      subtotal,
-      gst_percent: invForm.gst_percent,
-      gst_amount,
-      tds_amount,
-      total_amount,
-      paid_amount: 0,
-      balance_amount: total_amount,
-      status: 'draft',
+
+    // Use transaction-safe RPC
+    const { data: result, error } = await supabase.rpc('create_invoice_with_outstanding', {
+      p_organization_id: organizationId,
+      p_customer_id: customer.id,
+      p_invoice_number: generateInvoiceNumber(),
+      p_invoice_date: new Date().toISOString().split('T')[0],
+      p_due_date: new Date(Date.now() + (customer.credit_days || 30) * 86400000).toISOString().split('T')[0],
+      p_trip_ids: invForm.trip_id ? JSON.stringify([invForm.trip_id]) : '[]',
+      p_freight_total: invForm.freight_total,
+      p_detention_total: invForm.detention_total,
+      p_other_charges: invForm.other_charges,
+      p_gst_percent: invForm.gst_percent,
+      p_status: 'draft',
     });
 
-    // Auto-update customer outstanding and total_business
-    await updateCustomer(customer.id, {
-      outstanding: (customer.outstanding || 0) + total_amount,
-      total_business: (customer.total_business || 0) + total_amount,
-    });
+    if (error) {
+      showToast('error', error.message);
+      return;
+    }
+    if (result && !result.success) {
+      showToast('error', result.error || 'Failed to create invoice');
+      return;
+    }
 
     showToast('success', 'Invoice created');
     setShowInvoiceModal(false);
     setInvForm({ customer_id: '', trip_id: '', freight_total: 0, detention_total: 0, other_charges: 0, gst_percent: 5 });
+    // Refresh data to reflect the RPC changes
+    window.location.hash = '#billing';
   };
 
 
   const handleRecordPayment = async () => {
     const customer = customers.find((c) => c.id === payForm.customer_id);
     if (!customer) return;
-    
-    const paymentAmount = payForm.amount + payForm.tds_amount;
-    
-    // 1. Record the payment
-    await addPayment({
-      invoice_id: payForm.invoice_id || null,
-      customer_id: customer.id,
-      customer_name: customer.name,
-      amount: payForm.amount,
-      payment_mode: payForm.payment_mode,
-      reference_number: payForm.reference_number,
-      payment_date: new Date().toISOString().split('T')[0],
-      tds_amount: payForm.tds_amount,
-      status: 'received',
-    });
-
-    // 2. Auto-update invoice if linked (reduce balance, update status)
-    if (payForm.invoice_id) {
-      const invoice = invoices.find((inv) => inv.id === payForm.invoice_id);
-      if (invoice) {
-        const newPaid = (invoice.paid_amount || 0) + paymentAmount;
-        const newBalance = Math.max(0, (invoice.total_amount || 0) - newPaid);
-        const newStatus = newBalance <= 0 ? 'paid' : 'partial';
-        await updateInvoice(invoice.id, {
-          paid_amount: newPaid,
-          balance_amount: newBalance,
-          status: newStatus,
-        });
-      }
+    if (payForm.amount <= 0) {
+      showToast('error', 'Payment amount must be positive');
+      return;
     }
 
-    // 3. Auto-update customer outstanding
-    const newOutstanding = Math.max(0, (customer.outstanding || 0) - paymentAmount);
-    await updateCustomer(customer.id, { outstanding: newOutstanding });
+    // Use transaction-safe RPC
+    const { data: result, error } = await supabase.rpc('record_payment', {
+      p_organization_id: organizationId,
+      p_customer_id: customer.id,
+      p_invoice_id: payForm.invoice_id || null,
+      p_amount: payForm.amount,
+      p_tds_amount: payForm.tds_amount,
+      p_payment_mode: payForm.payment_mode,
+      p_reference_number: payForm.reference_number,
+      p_payment_date: new Date().toISOString().split('T')[0],
+    });
+
+    if (error) {
+      showToast('error', error.message);
+      return;
+    }
+    if (result && !result.success) {
+      showToast('error', result.error || 'Failed to record payment');
+      return;
+    }
 
     showToast('success', 'Payment recorded & accounts updated');
     setShowPaymentModal(false);
     setPayForm({ customer_id: '', invoice_id: '', amount: 0, payment_mode: 'bank_transfer', reference_number: '', tds_amount: 0 });
+    // Refresh data to reflect the RPC changes
+    window.location.hash = '#billing';
   };
 
   const handleAddExpense = () => {
