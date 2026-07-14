@@ -10,6 +10,7 @@ import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
+import BranchField from '../../ui/BranchField';
 
 // Fix default leaflet icon
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -30,6 +31,7 @@ const STATUS_FILTERS: { label: string; value: VehicleStatus | 'all' }[] = [
 ];
 
 interface VehicleForm {
+  branch_id: string;
   reg_number: string;
   vehicle_type: VehicleType;
   make: string;
@@ -46,6 +48,7 @@ interface VehicleForm {
 }
 
 const emptyForm: VehicleForm = {
+  branch_id: '',
   reg_number: '',
   vehicle_type: 'truck',
   make: '',
@@ -198,6 +201,7 @@ export default function FleetModule() {
       // Let PostgreSQL generate the UUID primary key. The legacy browser ID
       // generator produces non-UUID strings and must not be used for DB rows.
       const newVehicle = {
+        branch_id: form.branch_id || undefined,
         reg_number: form.reg_number,
         vehicle_type: form.vehicle_type,
         make: form.make,
@@ -587,6 +591,7 @@ export default function FleetModule() {
               {editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Registration Number</label>
                 <input

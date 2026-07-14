@@ -9,6 +9,7 @@ import { formatCurrency, formatDate, getStatusColor, classNames, generateInvoice
 import { generateInvoicePDF } from '../../../lib/pdf';
 import { exportInvoices, exportExpenses } from '../../../lib/excel';
 import { Search } from 'lucide-react';
+import BranchField from '../../ui/BranchField';
 
 type BillingTab = 'invoices' | 'payments' | 'expenses';
 
@@ -175,6 +176,7 @@ export default function BillingModule() {
 
   // Invoice form state
   const [invForm, setInvForm] = useState({
+    branch_id: '',
     customer_id: '',
     trip_id: '',
     freight_total: 0,
@@ -215,6 +217,7 @@ export default function BillingModule() {
     const total_amount = subtotal + gst_amount - tds_amount;
     const invoice: Invoice = {
       id: generateId(),
+      branch_id: invForm.branch_id || undefined,
       invoice_number: generateInvoiceNumber(),
       customer_id: customer.id,
       customer_name: customer.name,
@@ -236,7 +239,7 @@ export default function BillingModule() {
     };
     addInvoice(invoice);
     setShowInvoiceModal(false);
-    setInvForm({ customer_id: '', trip_id: '', freight_total: 0, detention_total: 0, other_charges: 0, gst_percent: 5 });
+    setInvForm({ branch_id: '', customer_id: '', trip_id: '', freight_total: 0, detention_total: 0, other_charges: 0, gst_percent: 5 });
   };
 
 
@@ -698,6 +701,7 @@ export default function BillingModule() {
           <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Create Invoice</h3>
             <div className="space-y-4">
+              <BranchField value={invForm.branch_id} onChange={(v) => setInvForm({...invForm, branch_id: v})} />
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Customer</label>
                 <select value={invForm.customer_id} onChange={(e) => setInvForm({ ...invForm, customer_id: e.target.value, trip_id: '' })} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">

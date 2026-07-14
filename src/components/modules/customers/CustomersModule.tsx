@@ -10,6 +10,7 @@ import { exportCustomers } from '../../../lib/excel';
 import { Plus, Search, Users, IndianRupee, TrendingUp, X, ExternalLink, Upload } from 'lucide-react';
 import CustomerTrackingPortal from '../tracking/CustomerTrackingPortal';
 import BulkUpload from '../../ui/BulkUpload';
+import BranchField from '../../ui/BranchField';
 
 export default function CustomersModule() {
   const {
@@ -314,6 +315,7 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
   const { create: addCustomer } = useModuleData<any>("customers");
 
   const [form, setForm] = useState({
+    branch_id: '',
     name: '',
     contact_person: '',
     phone: '',
@@ -333,7 +335,7 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
 
     const customer: Customer = {
       id: generateId(),
-      
+      branch_id: form.branch_id || undefined,
       name: form.name,
       contact_person: form.contact_person,
       phone: form.phone,
@@ -362,6 +364,7 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Company Name</label>
             <input type="text" name="name" value={form.name} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />

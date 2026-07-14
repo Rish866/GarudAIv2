@@ -7,6 +7,7 @@ import { useStore, generateId } from '../../../store/useStore';
 import type { MaintenanceRecord } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames } from '../../../lib/utils';
 import { Search } from 'lucide-react';
+import BranchField from '../../ui/BranchField';
 
 export default function MaintenanceModule() {
   const { company } = useStore();
@@ -65,6 +66,7 @@ export default function MaintenanceModule() {
 
   // Form state
   const [form, setForm] = useState({
+    branch_id: '',
     vehicle_id: '',
     type: 'preventive' as MaintenanceRecord['type'],
     description: '',
@@ -79,6 +81,7 @@ export default function MaintenanceModule() {
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
     const record: MaintenanceRecord = {
       id: generateId(),
+      branch_id: form.branch_id || undefined,
       vehicle_id: form.vehicle_id,
       vehicle_reg: vehicle?.reg_number || '',
       type: form.type,
@@ -92,7 +95,7 @@ export default function MaintenanceModule() {
     };
     addMaintenance(record);
     setShowModal(false);
-    setForm({ vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' });
+    setForm({ branch_id: '', vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' });
   };
 
 
@@ -260,6 +263,7 @@ export default function MaintenanceModule() {
           <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Schedule Maintenance</h3>
             <div className="space-y-4">
+              <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Vehicle</label>

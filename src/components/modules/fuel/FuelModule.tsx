@@ -7,6 +7,7 @@ import { useStore, generateId } from '../../../store/useStore';
 import type { FuelEntry } from '../../../types';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Search } from 'lucide-react';
+import BranchField from '../../ui/BranchField';
 
 export default function FuelModule() {
   const { company } = useStore();
@@ -62,6 +63,7 @@ export default function FuelModule() {
 
   // Form state
   const [form, setForm] = useState({
+    branch_id: '',
     vehicle_id: '',
     driver_id: '',
     driver_name: '',
@@ -92,6 +94,7 @@ export default function FuelModule() {
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
     const entry: FuelEntry = {
       id: generateId(),
+      branch_id: form.branch_id || undefined,
       vehicle_id: form.vehicle_id,
       vehicle_reg: vehicle?.reg_number || '',
       driver_id: form.driver_id,
@@ -107,7 +110,7 @@ export default function FuelModule() {
     };
     addFuelEntry(entry);
     setShowModal(false);
-    setForm({ vehicle_id: '', driver_id: '', driver_name: '', date: new Date().toISOString().split('T')[0], litres: 0, rate: 0, odometer: 0, station: '' });
+    setForm({ branch_id: '', vehicle_id: '', driver_id: '', driver_name: '', date: new Date().toISOString().split('T')[0], litres: 0, rate: 0, odometer: 0, station: '' });
   };
 
   return (
@@ -233,6 +236,7 @@ export default function FuelModule() {
           <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Add Fuel Entry</h3>
             <div className="space-y-4">
+              <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Vehicle</label>
                 <select value={form.vehicle_id} onChange={(e) => handleVehicleChange(e.target.value)} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">

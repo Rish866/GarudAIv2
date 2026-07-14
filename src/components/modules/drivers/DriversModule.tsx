@@ -9,6 +9,7 @@ import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
+import BranchField from '../../ui/BranchField';
 
 type DriverView = 'list' | 'performance' | 'detail';
 
@@ -526,6 +527,7 @@ function AddDriverModal({ onClose }: { onClose: () => void }) {
   const { create: addDriver } = useModuleData<any>('drivers', { fetchOnMount: false });
 
   const [form, setForm] = useState({
+    branch_id: '',
     name: '',
     phone: '',
     license_number: '',
@@ -547,7 +549,7 @@ function AddDriverModal({ onClose }: { onClose: () => void }) {
 
     const driver: Driver = {
       id: generateId(),
-      
+      branch_id: form.branch_id || undefined,
       name: form.name,
       phone: form.phone,
       license_number: form.license_number,
@@ -579,6 +581,7 @@ function AddDriverModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>

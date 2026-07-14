@@ -16,6 +16,7 @@ import { showToast } from '../../ui/Toast';
 import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download, Eye, Upload, Calendar, Phone, CreditCard, CheckCircle, Circle, Clock, Ban, RotateCcw, Edit3 } from 'lucide-react';
 import DriverAdvanceTracker from './DriverAdvanceTracker';
 import SendNotificationModal from '../../ui/SendNotificationModal';
+import BranchField from '../../ui/BranchField';
 
 const STATUS_FLOW: TripStatus[] = [
   'booked', 'assigned', 'loading', 'in_transit', 'reached', 'unloading', 'pod_pending', 'completed', 'billed', 'settled'
@@ -1002,6 +1003,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
   const pendingQuotations = quotations.filter(q => q.status === 'sent' || q.status === 'draft' || q.status === 'accepted');
 
   const [form, setForm] = useState({
+    branch_id: '',
     source_type: '' as '' | 'quotation' | 'manual',
     quotation_id: '',
     customer_id: '',
@@ -1055,7 +1057,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
 
     const trip: Trip = {
       id: generateId(),
-      
+      branch_id: form.branch_id || undefined,
       trip_number: generateTripNumber(),
       lr_number: generateLRNumber(),
       eway_bill: form.eway_bill || ('EWB-' + Date.now().toString().slice(-9)),
@@ -1098,6 +1100,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <BranchField value={form.branch_id} onChange={(v) => setForm({...form, branch_id: v})} />
           {/* Source Selection — Link to Quotation */}
           <div className="p-3 rounded-xl border border-dashed" style={{ borderColor: 'var(--accent)', backgroundColor: 'var(--accent-light)' }}>
             <label className="block text-xs font-medium mb-1" style={{ color: 'var(--accent)' }}>📋 Create from Quotation (auto-fills details)</label>
