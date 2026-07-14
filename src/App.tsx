@@ -14,6 +14,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
 import { signIn } from './lib/auth';
 import { supabase, supabaseConfigurationError } from './lib/supabase';
+import InviteAcceptPage from './components/InviteAcceptPage';
 
 // Lazy-loaded modules
 const DashboardModule = lazy(() => import('./components/modules/dashboard/DashboardModule'));
@@ -660,6 +661,14 @@ export default function App() {
   const { isLoggedIn, theme, user, login, logout } = useStore();
   const [showLanding, setShowLanding] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
+
+  // Route detection: /invite/accept path takes priority over normal app
+  const isInviteAcceptRoute = window.location.pathname === '/invite/accept'
+    || window.location.pathname.startsWith('/invite/accept');
+
+  if (isInviteAcceptRoute) {
+    return <InviteAcceptPage />;
+  }
 
   // Auth bootstrap: verify Supabase session on mount.
   // If Zustand says logged in but Supabase session is gone, log out.
