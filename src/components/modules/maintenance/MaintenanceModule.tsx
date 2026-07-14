@@ -3,10 +3,14 @@ import { useModuleData } from '../../../hooks/useModuleData';
 import type { MaintenanceRecord } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames } from '../../../lib/utils';
 import { showToast } from '../../ui/Toast';
+import { usePermission } from '../../../hooks/usePermission';
 
 export default function MaintenanceModule() {
   const { data: maintenance, create: addMaintenance, update: updateMaintenance, remove: removeMaintenance } = useModuleData<any>('maintenance');
   const { data: vehicles } = useModuleData<any>('vehicles');
+  const { can } = usePermission();
+  const canCreate = can('maintenance.create');
+  const canUpdate = can('maintenance.update');
   const [showModal, setShowModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState<any | null>(null);
 
@@ -67,9 +71,9 @@ export default function MaintenanceModule() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-slate-900">Maintenance</h2>
-        <button onClick={() => { setEditingRecord(null); setForm({ vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' }); setShowModal(true); }} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">
+        {canCreate && <button onClick={() => { setEditingRecord(null); setForm({ vehicle_id: '', type: 'preventive', description: '', date: new Date().toISOString().split('T')[0], odometer: 0, cost: 0, vendor: '' }); setShowModal(true); }} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">
           Schedule Maintenance
-        </button>
+        </button>}
       </div>
 
       {/* Summary Cards */}
@@ -131,14 +135,24 @@ export default function MaintenanceModule() {
             </div>
             {/* Actions */}
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
-              <button onClick={() => { setEditingRecord(record); setForm({ vehicle_id: record.vehicle_id, type: record.type, description: record.description, date: record.date, odometer: record.odometer, cost: record.cost, vendor: record.vendor }); setShowModal(true); }} className="px-3 py-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg font-medium hover:bg-blue-50">Edit</button>
-              {record.status === 'scheduled' && (
-                <button onClick={() => { updateMaintenance(record.id, { status: 'in_progress' }); showToast('success', 'Started'); }} className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Start</button>
+              {canUpdate && record.status !== 'completed' && (
+                <button onClick={() => { setEditingRecord(record); setForm({ vehicle_id: record.vehicle_id, type: record.type, description: record.description, date: record.date, odometer: record.odometer, cost: record.cost, vendor: record.vendor }); setShowModal(true); }} className="px-3 py-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg font-medium hover:bg-blue-50">Edit</button>
               )}
-              {record.status === 'in_progress' && (
+              {canUpdate && record.status === 'scheduled' && (
+                <>
+                  <button onClick={() => { updateMaintenance(record.id, { status: 'in_progress' }); showToast('success', 'Started'); }} className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Start</button>
+                  <button onClick={() => { updateMaintenance(record.id, { status: 'cancelled' }); showToast('success', 'Cancelled'); }} className="px-3 py-1.5 text-xs text-orange-600 border border-orange-200 rounded-lg font-medium hover:bg-orange-50">Cancel</button>
+                </>
+              )}
+              {canUpdate && record.status === 'in_progress' && (
                 <button onClick={() => { updateMaintenance(record.id, { status: 'completed' }); showToast('success', 'Completed'); }} className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">Complete</button>
               )}
-              <button onClick={() => { removeMaintenance(record.id); showToast('success', 'Deleted'); }} className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg font-medium ml-auto">Delete</button>
+              {canUpdate && record.status !== 'completed' && (
+                <button onClick={() => { removeMaintenance(record.id); showToast('success', 'Deleted'); }} className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg font-medium ml-auto">Delete</button>
+              )}
+              {record.status === 'completed' && (
+                <span className="text-xs text-slate-400 italic">Completed records are locked</span>
+              )}
             </div>
           </div>
         ))}
