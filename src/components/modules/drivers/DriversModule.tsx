@@ -96,6 +96,26 @@ export default function DriversModule() {
     setView('detail');
   };
 
+  /** Safe delete: blocks if driver is assigned to an active trip, otherwise deactivates */
+  const handleDeleteDriver = async (driver: any) => {
+    const activeTrip = trips.find(
+      (t: any) => t.driver_id === driver.id && ['assigned', 'loading', 'in_transit', 'reached', 'unloading'].includes(t.status)
+    );
+    if (activeTrip) {
+      showToast('error', `Cannot remove: driver is on active trip ${activeTrip.trip_number}. Complete or reassign the trip first.`);
+      setDeleteConfirmId(null);
+      return;
+    }
+    // Soft-delete: set status to inactive rather than hard deleting
+    const result = await updateDriver(driver.id, { status: 'inactive' });
+    if (result.error) {
+      showToast('error', result.error);
+    } else {
+      showToast('success', `${driver.name} deactivated`);
+    }
+    setDeleteConfirmId(null);
+  };
+
   // Top performers
   const topPerformers = driverPerformance.slice(0, 3);
   const avgOnTime = driverPerformance.length > 0 ? Math.round(driverPerformance.reduce((s, d) => s + d.onTimePercent, 0) / driverPerformance.length) : 0;
@@ -313,7 +333,7 @@ export default function DriversModule() {
                   </button>
                   {deleteConfirmId === driver.id ? (
                     <div className="flex gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); removeDriver(driver.id); setDeleteConfirmId(null); showToast('success', 'Driver removed'); }} className="px-2 py-1 text-xs bg-red-600 text-white rounded font-medium">Yes</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteDriver(driver); }} className="px-2 py-1 text-xs bg-red-600 text-white rounded font-medium">Yes</button>
                       <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }} className="px-2 py-1 text-xs bg-slate-200 text-slate-700 rounded font-medium">No</button>
                     </div>
                   ) : (
@@ -465,6 +485,8 @@ function DriverCard({ driver, onTimePercent, overallScore, rating }: { key?: str
 
 function AddDriverModal({ driver: editDriver, onClose }: { driver?: any | null; onClose: () => void }) {
   const { create: addDriver, update: updateDriver } = useModuleData<any>('drivers');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const [form, setForm] = useState({
     name: editDriver?.name || '',
@@ -481,36 +503,68 @@ function AddDriverModal({ driver: editDriver, onClose }: { driver?: any | null; 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError('');
+  };
+
+  const validate = (): string | null => {
+    if (!form.name.trim()) return 'Name is required';
+    if (form.name.trim().length < 2) return 'Name must be at least 2 characters';
+    if (!form.phone.trim()) return 'Phone number is required';
+    if (!/^\+?\d{10,13}$/.test(form.phone.replace(/[\s-]/g, ''))) return 'Enter a valid phone number (10-13 digits)';
+    if (!form.license_number.trim()) return 'License number is required';
+    if (!form.license_expiry) return 'License expiry date is required';
+    if (!form.date_of_joining) return 'Date of joining is required';
+    if (Number(form.base_salary) < 0) return 'Salary cannot be negative';
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setSaving(true);
 
     const data = {
-      name: form.name,
-      phone: form.phone,
-      license_number: form.license_number,
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      license_number: form.license_number.trim(),
       license_expiry: form.license_expiry,
-      address: form.address,
-      emergency_contact: form.emergency_contact,
-      emergency_phone: form.emergency_phone,
+      address: form.address.trim(),
+      emergency_contact: form.emergency_contact.trim(),
+      emergency_phone: form.emergency_phone.trim(),
       salary_type: form.salary_type,
       base_salary: Number(form.base_salary) || 0,
       date_of_joining: form.date_of_joining,
     };
 
     if (editDriver) {
-      await updateDriver(editDriver.id, data);
-      showToast('success', 'Driver updated');
+      const result = await updateDriver(editDriver.id, data);
+      setSaving(false);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      showToast('success', 'Driver updated successfully');
     } else {
-      await addDriver({
+      const result = await addDriver({
         ...data,
         status: 'available',
-        safety_score: 85,
+        safety_score: 100,
         total_trips: 0,
         total_km: 0,
       });
-      showToast('success', 'Driver added');
+      setSaving(false);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      showToast('success', 'Driver added successfully');
     }
     onClose();
   };
@@ -520,49 +574,52 @@ function AddDriverModal({ driver: editDriver, onClose }: { driver?: any | null; 
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
           <h2 className="text-lg font-bold text-slate-900">{editDriver ? 'Edit Driver' : 'Add Driver'}</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg" disabled={saving}>
             <X size={18} className="text-slate-500" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-              <input type="text" name="name" value={form.name} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+              <input type="text" name="name" value={form.name} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="Full name" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-              <input type="text" name="phone" value={form.phone} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Phone *</label>
+              <input type="text" name="phone" value={form.phone} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="+91 98765 43210" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">License Number</label>
-              <input type="text" name="license_number" value={form.license_number} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">License Number *</label>
+              <input type="text" name="license_number" value={form.license_number} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">License Expiry</label>
-              <input type="date" name="license_expiry" value={form.license_expiry} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">License Expiry *</label>
+              <input type="date" name="license_expiry" value={form.license_expiry} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
-            <input type="text" name="address" value={form.address} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <input type="text" name="address" value={form.address} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Emergency Contact</label>
-              <input type="text" name="emergency_contact" value={form.emergency_contact} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <input type="text" name="emergency_contact" value={form.emergency_contact} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Emergency Phone</label>
-              <input type="text" name="emergency_phone" value={form.emergency_phone} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <input type="text" name="emergency_phone" value={form.emergency_phone} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Salary Type</label>
-              <select name="salary_type" value={form.salary_type} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+              <select name="salary_type" value={form.salary_type} onChange={handleChange} className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
                 <option value="monthly">Monthly</option>
                 <option value="per_trip">Per Trip</option>
                 <option value="per_km">Per KM</option>
@@ -570,19 +627,19 @@ function AddDriverModal({ driver: editDriver, onClose }: { driver?: any | null; 
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Base Salary</label>
-              <input type="number" name="base_salary" value={form.base_salary} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <input type="number" name="base_salary" value={form.base_salary} onChange={handleChange} min="0" className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Joining Date *</label>
+              <input type="date" name="date_of_joining" value={form.date_of_joining} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Date of Joining</label>
-            <input type="date" name="date_of_joining" value={form.date_of_joining} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">
+            <button type="button" onClick={onClose} disabled={saving} className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50">
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700">
-              Add Driver
+            <button type="submit" disabled={saving} className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-lg shadow-blue-500/25 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {saving ? 'Saving...' : editDriver ? 'Update Driver' : 'Add Driver'}
             </button>
           </div>
         </form>
