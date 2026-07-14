@@ -5,12 +5,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('APP_URL') || '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  '''Access-Control-Allow-Methods''': '''POST, OPTIONS''',' 
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
   try {
     const authHeader = req.headers.get('Authorization')
@@ -56,6 +58,20 @@ serve(async (req) => {
 
     if (invite.status !== 'pending') {
       return new Response(JSON.stringify({ error: 'Only pending invitations can be resent' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // Resend cooldown: minimum 60 seconds between resends
+    const lastSent = new Date(invite.last_sent_at).getTime()
+    const now = Date.now()
+    const cooldownMs = 60 * 1000 // 60 seconds
+    if (now - lastSent < cooldownMs) {
+      const waitSeconds = Math.ceil((cooldownMs - (now - lastSent)) / 1000)
+      return new Response(JSON.stringify({ error: `Please wait ${waitSeconds} seconds before resending` }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // Maximum 10 resend attempts
+    if (invite.send_count >= 10) {
+      return new Response(JSON.stringify({ error: 'Maximum resend attempts reached (10). Please revoke and create a new invitation.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // Generate new token

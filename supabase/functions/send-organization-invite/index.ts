@@ -10,12 +10,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('APP_URL') || '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
   try {
     // 1. Authenticate caller
@@ -75,6 +77,18 @@ serve(async (req) => {
 
     if (existing) {
       return new Response(JSON.stringify({ error: 'An active invitation already exists for this email' }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // 5b. Validate branch_ids belong to the same organization
+    if (branch_ids && branch_ids.length > 0) {
+      const { count } = await supabaseAdmin
+        .from('branches')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organization_id)
+        .in('id', branch_ids)
+      if (count !== branch_ids.length) {
+        return new Response(JSON.stringify({ error: 'One or more branch IDs do not belong to this organization' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
     }
 
     // 6. Generate cryptographically secure token
