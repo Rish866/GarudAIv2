@@ -3,6 +3,7 @@ import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { supabase } from '../../../lib/supabase';
+import { usePermission } from '../../../hooks/usePermission';
 import type { Invoice, Payment, Expense, ExpenseCategory } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateInvoiceNumber } from '../../../lib/utils';
 import { generateInvoicePDF } from '../../../lib/pdf';
@@ -14,6 +15,10 @@ type BillingTab = 'invoices' | 'payments' | 'expenses';
 export default function BillingModule() {
   const { company } = useStore();
   const { organizationId } = useOrganization();
+  const { can } = usePermission();
+  const canCreateInvoice = can('invoices.create');
+  const canCreatePayment = can('payments.create');
+  const canCreateExpense = can('expenses.create');
   const { data: invoices, create: addInvoice, update: updateInvoice, remove: removeInvoice } = useModuleData<any>('invoices');
   const { data: payments, create: addPayment, update: updatePayment } = useModuleData<any>('payments');
   const { data: expenses, create: addExpense, update: updateExpense, remove: removeExpense } = useModuleData<any>('expenses');
@@ -189,16 +194,16 @@ export default function BillingModule() {
           {activeTab === 'invoices' && (
             <>
               <button onClick={() => exportInvoices(invoices)} className="px-3 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">Export</button>
-              <button onClick={() => setShowInvoiceModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Create Invoice</button>
+              {canCreateInvoice && <button onClick={() => setShowInvoiceModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Create Invoice</button>}
             </>
           )}
           {activeTab === 'payments' && (
-            <button onClick={() => setShowPaymentModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Record Payment</button>
+            canCreatePayment && <button onClick={() => setShowPaymentModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Record Payment</button>
           )}
           {activeTab === 'expenses' && (
             <>
               <button onClick={() => exportExpenses(expenses)} className="px-3 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">Export</button>
-              <button onClick={() => setShowExpenseModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Add Expense</button>
+              {canCreateExpense && <button onClick={() => setShowExpenseModal(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700">Add Expense</button>}
             </>
           )}
         </div>
