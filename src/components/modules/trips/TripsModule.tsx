@@ -9,6 +9,7 @@ import { estimateDistance } from '../../../lib/distance';
 import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download, Eye, Upload, Calendar, Phone, CreditCard, CheckCircle, Circle, Clock } from 'lucide-react';
 import DriverAdvanceTracker from './DriverAdvanceTracker';
 import SendNotificationModal from '../../ui/SendNotificationModal';
+import { showToast } from '../../ui/Toast';
 
 const STATUS_FLOW: TripStatus[] = [
   'booked', 'assigned', 'loading', 'in_transit', 'reached', 'unloading', 'pod_pending', 'completed', 'billed', 'settled'
@@ -21,6 +22,7 @@ const FILTER_TABS = [
   { key: 'pod_pending', label: 'POD Pending' },
   { key: 'completed', label: 'Completed' },
   { key: 'billed', label: 'Billed' },
+  { key: 'cancelled', label: 'Cancelled' },
 ] as const;
 
 function getNextStatuses(current: TripStatus): TripStatus[] {
@@ -272,8 +274,20 @@ export default function TripsModule() {
                         {status.replace(/_/g, ' ')}
                       </button>
                     ))}
-                    {getNextStatuses(trip.status).length === 0 && (
-                      <span className="px-3 py-2 text-sm text-slate-400 block">No further status</span>
+                    {!['billed', 'settled', 'cancelled'].includes(trip.status) && (
+                      <button
+                        onClick={() => {
+                          updateTrip(trip.id, { status: 'cancelled', cancellation_reason: 'Cancelled by user', cancelled_at: new Date().toISOString() });
+                          setStatusDropdown(null);
+                          showToast('success', `Trip ${trip.trip_number} cancelled`);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-slate-100"
+                      >
+                        Cancel Trip
+                      </button>
+                    )}
+                    {getNextStatuses(trip.status).length === 0 && trip.status !== 'cancelled' && ['billed', 'settled'].includes(trip.status) && (
+                      <span className="px-3 py-2 text-sm text-slate-400 block">Trip is finalized</span>
                     )}
                   </div>
                 )}
