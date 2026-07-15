@@ -239,6 +239,46 @@ export function validateDriverForTrip(driver: {
 }
 
 /**
+ * Validate customer credit status before creating a trip/indent.
+ * Blocks operations when customer exceeds credit limit.
+ */
+export function validateCustomerCredit(customer: {
+  id: string;
+  name?: string;
+  credit_limit?: number;
+  outstanding?: number;
+  status?: string;
+}, proposedAmount?: number): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (customer.status === 'blocked' || customer.status === 'inactive') {
+    errors.push(`Customer "${customer.name || customer.id}" is ${customer.status}. Cannot create booking.`);
+    return { allowed: false, errors, warnings };
+  }
+
+  const creditLimit = customer.credit_limit || 0;
+  const outstanding = customer.outstanding || 0;
+  const exposure = outstanding + (proposedAmount || 0);
+
+  if (creditLimit > 0 && exposure > creditLimit) {
+    const overAmount = exposure - creditLimit;
+    errors.push(
+      `Credit limit exceeded for "${customer.name || ''}". ` +
+      `Limit: ₹${creditLimit.toLocaleString()}, Outstanding: ₹${outstanding.toLocaleString()}, ` +
+      `Proposed: ₹${(proposedAmount || 0).toLocaleString()}, Over by: ₹${overAmount.toLocaleString()}. ` +
+      `Requires credit override approval.`
+    );
+  } else if (creditLimit > 0 && exposure > creditLimit * 0.8) {
+    warnings.push(
+      `Customer "${customer.name || ''}" at ${Math.round((exposure / creditLimit) * 100)}% credit utilisation.`
+    );
+  }
+
+  return { allowed: errors.length === 0, errors, warnings };
+}
+
+/**
  * Validate invoice generation for a trip.
  */
 export function canGenerateInvoice(trip: TripRecord): ValidationResult {

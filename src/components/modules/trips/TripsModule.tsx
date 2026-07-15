@@ -7,7 +7,7 @@ import Pagination from '../../ui/Pagination';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { tripRepository } from '../../../data/trips/tripRepository';
-import { validateStatusTransition, validateVehicleForTrip, validateDriverForTrip, canGenerateInvoice, getValidNextStatuses } from '../../../lib/workflowRules';
+import { validateStatusTransition, validateVehicleForTrip, validateDriverForTrip, validateCustomerCredit, canGenerateInvoice, getValidNextStatuses } from '../../../lib/workflowRules';
 import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
@@ -1087,7 +1087,31 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
 
     if (!customer || !vehicle || !driver) return;
 
+    // Credit block enforcement
     const freight = Number(form.freight_amount) || 0;
+    const creditCheck = validateCustomerCredit(customer, freight);
+    if (!creditCheck.allowed) {
+      showToast('error', creditCheck.errors[0]);
+      return;
+    }
+    if (creditCheck.warnings.length > 0) {
+      creditCheck.warnings.forEach((w: string) => showToast('warning', w));
+    }
+
+    // Vehicle validation
+    const vehCheck = validateVehicleForTrip(vehicle);
+    if (!vehCheck.allowed) {
+      showToast('error', vehCheck.errors[0]);
+      return;
+    }
+
+    // Driver validation
+    const drvCheck = validateDriverForTrip(driver);
+    if (!drvCheck.allowed) {
+      showToast('error', drvCheck.errors[0]);
+      return;
+    }
+
     const advance = Number(form.advance_amount) || 0;
 
     const trip: Partial<Trip> = {
