@@ -766,20 +766,22 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
   const { data: enquiries } = useModuleData<any>('enquiries');
   const currentIdx = STATUS_FLOW.indexOf(trip.status);
 
-  // P0.1 — Trip-Level Profitability Calculation
-  const tripExpenses = expenses.filter(e => e.trip_id === trip.id || e.vehicle_id === trip.vehicle_id);
-  const tripFuel = fuelEntries.filter(f => f.vehicle_id === trip.vehicle_id);
-  const fuelCostEstimate = trip.distance_km > 0 ? Math.round(trip.distance_km * 3.5 * 95 / 4.5) : 0; // ~3.5km/l at ₹95/l avg
-  const tollEstimate = Math.round(trip.distance_km * 2.8); // ~₹2.8/km average toll
-  const driverBata = tripExpenses.filter(e => e.category === 'driver_bata').reduce((s, e) => s + e.amount, 0) || Math.round(trip.distance_km * 1.5);
-  const loadingUnloading = tripExpenses.filter(e => e.category === 'loading' || e.category === 'unloading').reduce((s, e) => s + e.amount, 0) || 2000;
-  const repairCost = tripExpenses.filter(e => e.category === 'repair').reduce((s, e) => s + e.amount, 0);
-  const miscExpenses = tripExpenses.filter(e => e.category === 'misc' || e.category === 'office').reduce((s, e) => s + e.amount, 0);
-  
-  const totalCost = fuelCostEstimate + tollEstimate + driverBata + loadingUnloading + repairCost + trip.detention_charges + miscExpenses;
-  const totalRevenue = trip.freight_amount + trip.detention_charges + trip.other_charges;
+  // P0.1 — Trip-Level Profitability (uses linked real data where available)
+  const tripExpenses = expenses.filter((e: any) => e.trip_id === trip.id || e.vehicle_id === trip.vehicle_id);
+  const tripFuel = fuelEntries.filter((f: any) => f.trip_id === trip.id);
+
+  // Revenue from trip record
+  const totalRevenue = (trip.freight_amount || 0) + (trip.detention_charges || 0) + (trip.other_charges || 0);
+
+  // Costs from linked records (real data, not estimates)
+  const fuelCost = tripFuel.reduce((s: number, f: any) => s + (f.amount || 0), 0);
+  const expenseCost = tripExpenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
+  const totalCost = fuelCost + expenseCost;
   const tripProfit = totalRevenue - totalCost;
   const profitMargin = totalRevenue > 0 ? Math.round((tripProfit / totalRevenue) * 100) : 0;
+  const profitMissingData: string[] = [];
+  if (tripFuel.length === 0) profitMissingData.push('Fuel entries');
+  if (tripExpenses.length === 0) profitMissingData.push('Trip expenses');
 
   // P0.2 — Linked Document Chain
   const linkedInvoice = invoices.find(i => i.trip_ids.includes(trip.id));
@@ -1018,11 +1020,8 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
               <div>
                 <p className="text-xs font-semibold text-red-700 mb-2 uppercase">Costs</p>
                 <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between"><span className="text-slate-600">Fuel (est.)</span><span className="font-medium text-red-700">{formatCurrency(fuelCostEstimate)}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-600">Toll (est.)</span><span className="font-medium text-red-700">{formatCurrency(tollEstimate)}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-600">Driver Bata</span><span className="font-medium text-red-700">{formatCurrency(driverBata)}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-600">Loading/Unloading</span><span className="font-medium text-red-700">{formatCurrency(loadingUnloading)}</span></div>
-                  {repairCost > 0 && <div className="flex justify-between"><span className="text-slate-600">Repairs</span><span className="font-medium text-red-700">{formatCurrency(repairCost)}</span></div>}
+                  <div className="flex justify-between"><span className="text-slate-600">Fuel</span><span className="font-medium text-red-700">{formatCurrency(fuelCost)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-600">Expenses</span><span className="font-medium text-red-700">{formatCurrency(expenseCost)}</span></div>
                   <div className="flex justify-between border-t border-red-200 pt-1"><span className="font-semibold">Total Cost</span><span className="font-bold text-red-800">{formatCurrency(totalCost)}</span></div>
                 </div>
               </div>
