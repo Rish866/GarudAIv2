@@ -1,0 +1,92 @@
+name: Full ERP Test Suite
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  code-tests:
+    name: Build, Tests and Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Integration tests
+        run: npm run test:integration
+
+      - name: RLS tests
+        run: npm run test:rls
+
+      - name: Security checks
+        run: npm run security:check
+
+      - name: Migration checks
+        run: npm run migration:check
+
+  live-e2e:
+    name: Test Live ERP in Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      CI: true
+      E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+      E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+      E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+      E2E_MIGRATION_007: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verify secrets
+        run: |
+          test -n "$E2E_BASE_URL" || exit 1
+          test -n "$E2E_TEST_EMAIL" || exit 1
+          test -n "$E2E_TEST_PASSWORD" || exit 1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run all browser tests
+        run: npm run test:e2e
+
+      - name: Upload screenshots, traces and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
