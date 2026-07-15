@@ -82,6 +82,21 @@ export default function BillingModule() {
     const customer = customers.find((c) => c.id === invForm.customer_id);
     if (!customer) return;
 
+    // Idempotency: check if trip already invoiced via invoice_trips
+    if (invForm.trip_id) {
+      const { data: existingLink } = await supabase
+        .from('invoice_trips')
+        .select('invoice_id')
+        .eq('organization_id', organizationId)
+        .eq('trip_id', invForm.trip_id)
+        .limit(1);
+      if (existingLink && existingLink.length > 0) {
+        showToast('info', 'This trip already has an invoice.');
+        setShowInvoiceModal(false);
+        return;
+      }
+    }
+
     // Use transaction-safe RPC
     const { data: result, error } = await supabase.rpc('create_invoice_with_outstanding', {
       p_organization_id: organizationId,
@@ -107,6 +122,15 @@ export default function BillingModule() {
     }
 
     showToast('success', 'Invoice created');
+    // Create invoice_trips link for idempotency protection
+    if (invForm.trip_id && result?.invoice_id) {
+      await supabase.from('invoice_trips').insert({
+        organization_id: organizationId,
+        invoice_id: result.invoice_id,
+        trip_id: invForm.trip_id,
+        billed_amount: invForm.freight_total + invForm.detention_total + invForm.other_charges,
+      }); // Best-effort — RPC already created the invoice
+    }
     setShowInvoiceModal(false);
     setInvForm({ customer_id: '', trip_id: '', freight_total: 0, detention_total: 0, other_charges: 0, gst_percent: 5 });
     // Refresh data to reflect the RPC changes
