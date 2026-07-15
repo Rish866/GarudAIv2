@@ -5,15 +5,19 @@
 
 -- 1. Check parent tables exist
 SELECT 'REQUIRED PARENT TABLES' AS section;
-SELECT table_name, CASE WHEN table_name IS NOT NULL THEN 'EXISTS' ELSE 'MISSING' END
-FROM (SELECT unnest(ARRAY['trips','indents','quotations','enquiries','invoices','drivers','vehicles','customers']) AS table_name) req
-LEFT JOIN information_schema.tables ist ON ist.table_name = req.table_name AND ist.table_schema = 'public';
+SELECT req.required_table,
+  CASE WHEN ist.table_name IS NOT NULL THEN 'EXISTS' ELSE 'MISSING' END AS status
+FROM (SELECT unnest(ARRAY['trips','indents','quotations','enquiries','invoices','drivers','vehicles','customers']) AS required_table) req
+LEFT JOIN information_schema.tables ist ON ist.table_name = req.required_table AND ist.table_schema = 'public'
+ORDER BY req.required_table;
 
 -- 2. Check new tables don't already exist (idempotent creation)
 SELECT 'NEW TABLES STATUS' AS section;
-SELECT table_name, CASE WHEN table_name IS NOT NULL THEN 'ALREADY EXISTS' ELSE 'WILL CREATE' END
-FROM (SELECT unnest(ARRAY['lrs','pods','driver_settlements','invoice_trips']) AS table_name) req
-LEFT JOIN information_schema.tables ist ON ist.table_name = req.table_name AND ist.table_schema = 'public';
+SELECT req.required_table,
+  CASE WHEN ist.table_name IS NOT NULL THEN 'ALREADY EXISTS' ELSE 'WILL CREATE' END AS status
+FROM (SELECT unnest(ARRAY['lrs','pods','driver_settlements','invoice_trips','document_sequences']) AS required_table) req
+LEFT JOIN information_schema.tables ist ON ist.table_name = req.required_table AND ist.table_schema = 'public'
+ORDER BY req.required_table;
 
 -- 3. Check existing linkage columns
 SELECT 'EXISTING LINKAGE COLUMNS' AS section;
