@@ -21,7 +21,9 @@ import type { ModuleName } from '../../types';
 import HelpButton from '../ui/HelpButton';
 import { MODULE_HELP } from '../../lib/helpContent';
 import BranchSelector from '../ui/BranchSelector';
-import { isPlatformAdmin } from '../../lib/auth';
+import { isPlatformAdmin, performLogout } from '../../lib/auth';
+import { useModuleData } from '../../hooks/useModuleData';
+import { useOrganization } from '../../contexts/OrganizationContext';
 
 const moduleLabels: Record<ModuleName, string> = {
   dashboard: 'Dashboard',
@@ -100,21 +102,17 @@ function timeAgo(dateStr: string): string {
 export default function Topbar() {
   const {
     activeModule,
-    notifications,
     user,
     theme,
-    vehicles,
-    trips,
-    customers,
-    drivers,
     toggleSidebar,
     toggleTheme,
-    login,
-    markNotificationRead,
-    markAllNotificationsRead,
     setActiveModule,
     logout,
   } = useStore();
+
+  // Notifications from Supabase (org-scoped)
+  const { data: notifications, update: updateNotification } = useModuleData<any>('notifications');
+  const { role: orgRole } = useOrganization();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
@@ -122,16 +120,21 @@ export default function Topbar() {
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unreadCount = notifications.filter((n: any) => !n.is_read).length;
   const recentNotifications = notifications.slice(0, 5);
 
-  // Search logic
-  const searchResults = searchQuery.length >= 2 ? [
-    ...vehicles.filter(v => v.reg_number.toLowerCase().includes(searchQuery.toLowerCase()) || v.driver_name?.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3).map(v => ({ type: 'Vehicle', title: v.reg_number, subtitle: `${v.make} ${v.model} • ${v.driver_name || 'No driver'}`, module: 'fleet' as ModuleName })),
-    ...trips.filter(t => t.trip_number.toLowerCase().includes(searchQuery.toLowerCase()) || t.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) || t.lr_number.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3).map(t => ({ type: 'Trip', title: t.trip_number, subtitle: `${t.origin} → ${t.destination} • ${t.customer_name}`, module: 'trips' as ModuleName })),
-    ...customers.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.contact_person.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3).map(c => ({ type: 'Customer', title: c.name, subtitle: `${c.contact_person} • ${c.phone}`, module: 'customers' as ModuleName })),
-    ...drivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.phone.includes(searchQuery)).slice(0, 3).map(d => ({ type: 'Driver', title: d.name, subtitle: `${d.phone} • ${d.assigned_vehicle_reg || 'Unassigned'}`, module: 'drivers' as ModuleName })),
-  ].slice(0, 8) : [];
+  const markNotificationRead = (id: string) => {
+    updateNotification(id, { is_read: true });
+  };
+  const markAllNotificationsRead = () => {
+    notifications.filter((n: any) => !n.is_read).forEach((n: any) => {
+      updateNotification(n.id, { is_read: true });
+    });
+  };
+
+  // Search — currently empty until Supabase full-text search is implemented.
+  // This prevents stale localStorage data from appearing as search results.
+  const searchResults: { type: string; title: string; subtitle: string; module: ModuleName }[] = [];
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -396,7 +399,7 @@ export default function Topbar() {
                         {user.email}
                       </p>
                       <p className="text-[10px] mt-0.5 font-medium" style={{ color: 'var(--accent)' }}>
-                        {user.role.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                        {(orgRole || 'member').replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                       </p>
                     </div>
                   </div>
@@ -432,7 +435,8 @@ export default function Topbar() {
                   <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
 
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      await performLogout();
                       logout();
                       setUserOpen(false);
                     }}

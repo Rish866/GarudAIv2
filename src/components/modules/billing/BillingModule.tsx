@@ -75,6 +75,10 @@ export default function BillingModule() {
   });
 
   const handleCreateInvoice = async () => {
+    if (!canCreateInvoice) {
+      showToast('error', 'Permission denied: you cannot create invoices.');
+      return;
+    }
     const customer = customers.find((c) => c.id === invForm.customer_id);
     if (!customer) return;
 
@@ -111,6 +115,10 @@ export default function BillingModule() {
 
 
   const handleRecordPayment = async () => {
+    if (!canCreatePayment) {
+      showToast('error', 'Permission denied: you cannot record payments.');
+      return;
+    }
     const customer = customers.find((c) => c.id === payForm.customer_id);
     if (!customer) return;
     if (payForm.amount <= 0) {

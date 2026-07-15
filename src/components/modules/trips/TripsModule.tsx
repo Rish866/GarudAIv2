@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -157,6 +157,11 @@ export default function TripsModule() {
     }
     setStatusDropdown(null);
 
+    if (!can('trips.update')) {
+      showToast('error', 'Permission denied: you cannot update trip status.');
+      return;
+    }
+
     const { error } = await tripRepository.transitionStatus(organizationId, tripId, newStatus);
     if (error) {
       showToast('error', `Status update failed: ${error}`);
@@ -181,8 +186,7 @@ export default function TripsModule() {
         const tds_amount = Math.round(subtotal * 0.02);
         const total_amount = subtotal + gst_amount - tds_amount;
 
-        const invoice: Invoice = {
-          id: generateId(),
+        const invoice: Partial<Invoice> = {
           invoice_number: generateInvoiceNumber(),
           customer_id: trip.customer_id,
           customer_name: trip.customer_name,
@@ -210,7 +214,6 @@ export default function TripsModule() {
 
         // Send notification
         addNotification({
-          id: generateId(),
           type: 'invoice_generated',
           title: 'Invoice Auto-Generated',
           message: `Invoice ${invoice.invoice_number} created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,
@@ -225,9 +228,8 @@ export default function TripsModule() {
 
 
   const handleDuplicateTrip = (trip: Trip) => {
-    const newTrip: Trip = {
+    const newTrip: Partial<Trip> = {
       ...trip,
-      id: generateId(),
       trip_number: generateTripNumber(),
       lr_number: generateLRNumber(),
       eway_bill: 'EWB-' + Date.now().toString().slice(-9),
@@ -251,6 +253,10 @@ export default function TripsModule() {
       showToast('error', 'No organization found');
       return;
     }
+    if (!can('trips.delete')) {
+      showToast('error', 'Permission denied: you cannot cancel trips.');
+      return;
+    }
     const { error } = await tripRepository.cancel(organizationId, tripId, reason);
     if (error) {
       showToast('error', `Cancel failed: ${error}`);
@@ -264,6 +270,10 @@ export default function TripsModule() {
   const handleReopenTrip = async (tripId: string, reason: string) => {
     if (!organizationId) {
       showToast('error', 'No organization found');
+      return;
+    }
+    if (!can('trips.update')) {
+      showToast('error', 'Permission denied: you cannot reopen trips.');
       return;
     }
     const { error } = await tripRepository.reopen(organizationId, tripId, reason);
@@ -1055,8 +1065,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
     const freight = Number(form.freight_amount) || 0;
     const advance = Number(form.advance_amount) || 0;
 
-    const trip: Trip = {
-      id: generateId(),
+    const trip: Partial<Trip> = {
       branch_id: form.branch_id || undefined,
       trip_number: generateTripNumber(),
       lr_number: generateLRNumber(),
@@ -1312,6 +1321,7 @@ function CancelTripModal({
 /** Modal for editing trip details (route, financial, vehicle, driver) */
 function EditTripModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   const { organizationId } = useOrganization();
+  const { can } = usePermissions();
   const { data: customers } = useModuleData<any>('customers');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
@@ -1382,6 +1392,10 @@ function EditTripModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
       remarks: form.remarks || null,
     };
 
+    if (!can('trips.update')) {
+      showToast('error', 'Permission denied: you cannot edit trip details.');
+      return;
+    }
     const { error } = await tripRepository.editDetails(organizationId, trip.id, updates);
     setSaving(false);
     if (error) {

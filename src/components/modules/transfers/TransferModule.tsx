@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { ArrowLeftRight, Plus, X, Truck, Package, Search, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 
@@ -69,8 +69,7 @@ export default function TransferModule() {
     }
     const fromBranch = branches.find(b => b.id === form.from_branch);
     const toBranch = branches.find(b => b.id === form.to_branch);
-    const newTransfer: Transfer = {
-      id: 'tf_' + generateId(),
+    const newTransfer: Partial<Transfer> = {
       transfer_number: `TF-2025-${String(transfers.length + 4).padStart(3, '0')}`,
       type: form.type,
       item_name: itemName,

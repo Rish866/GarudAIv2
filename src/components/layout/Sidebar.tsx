@@ -30,7 +30,9 @@ import {
   Globe,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { canAccessModule } from '../../lib/rbac';
+import { usePermission } from '../../hooks/usePermission';
+import { useBranch } from '../../contexts/BranchContext';
+import { MODULE_PERMISSIONS } from '../../lib/modulePermissions';
 import type { ModuleName } from '../../types';
 
 interface NavItem {
@@ -145,18 +147,26 @@ export default function Sidebar() {
     sidebarCollapsed,
     theme,
     user,
-    branches,
-    activeBranch,
     setActiveModule,
     toggleSidebar,
     toggleTheme,
-    setActiveBranch,
   } = useStore();
+
+  // Branch state from Supabase-backed BranchContext (not Zustand)
+  const { accessibleBranches, selectedBranchId, hasAllBranchAccess, selectBranch } = useBranch();
 
   const [branchOpen, setBranchOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(['overview', 'operations', 'admin']);
 
-  const userRole = user.role;
+  const { can } = usePermission();
+
+  // Permission-based module access using the central MODULE_PERMISSIONS registry.
+  // If a module is not in the registry, access is DENIED (deny-by-default).
+  const canAccessModule = (moduleId: ModuleName): boolean => {
+    const perms = MODULE_PERMISSIONS[moduleId];
+    if (!perms) return false; // Unknown module = denied
+    return can(perms.view);
+  };
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev =>
@@ -230,7 +240,7 @@ export default function Sidebar() {
               className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors hover:bg-[var(--bg-tertiary)]"
               style={{ color: 'var(--text-secondary)' }}
             >
-              <span className="truncate">{activeBranch === 'all' ? 'All Branches' : branches.find(b => b.id === activeBranch)?.name || 'Select Branch'}</span>
+              <span className="truncate">{selectedBranchId === null ? 'All Branches' : accessibleBranches.find(b => b.id === selectedBranchId)?.name || 'Select Branch'}</span>
               <ChevronDown
                 size={14}
                 className={`transition-transform ${branchOpen ? 'rotate-180' : ''}`}
@@ -244,35 +254,37 @@ export default function Sidebar() {
                   borderColor: 'var(--border-color)',
                 }}
               >
+                {hasAllBranchAccess && (
                 <button
                   key="all"
                   onClick={() => {
-                    setActiveBranch('all');
+                    selectBranch(null);
                     setBranchOpen(false);
                   }}
                   className={`w-full text-left px-3 py-2 text-xs transition-colors first:rounded-t-lg
-                    ${activeBranch === 'all' ? 'font-semibold' : ''}
+                    ${selectedBranchId === null ? 'font-semibold' : ''}
                   `}
                   style={{
-                    color: activeBranch === 'all' ? 'var(--accent)' : 'var(--text-secondary)',
-                    backgroundColor: activeBranch === 'all' ? 'var(--accent-light)' : 'transparent',
+                    color: selectedBranchId === null ? 'var(--accent)' : 'var(--text-secondary)',
+                    backgroundColor: selectedBranchId === null ? 'var(--accent-light)' : 'transparent',
                   }}
                 >
                   All Branches
                 </button>
-                {branches.map((branch) => (
+                )}
+                {accessibleBranches.map((branch) => (
                   <button
                     key={branch.id}
                     onClick={() => {
-                      setActiveBranch(branch.id);
+                      selectBranch(branch.id);
                       setBranchOpen(false);
                     }}
                     className={`w-full text-left px-3 py-2 text-xs transition-colors first:rounded-t-lg last:rounded-b-lg
-                      ${activeBranch === branch.id ? 'font-semibold' : ''}
+                      ${selectedBranchId === branch.id ? 'font-semibold' : ''}
                     `}
                     style={{
-                      color: activeBranch === branch.id ? 'var(--accent)' : 'var(--text-secondary)',
-                      backgroundColor: activeBranch === branch.id ? 'var(--accent-light)' : 'transparent',
+                      color: selectedBranchId === branch.id ? 'var(--accent)' : 'var(--text-secondary)',
+                      backgroundColor: selectedBranchId === branch.id ? 'var(--accent-light)' : 'transparent',
                     }}
                   >
                     {branch.name} ({branch.code})
@@ -291,7 +303,7 @@ export default function Sidebar() {
           {navSections.map((section) => {
             const SectionIcon = section.icon;
             const isExpanded = expandedSections.includes(section.id);
-            const sectionItems = section.items.filter(item => canAccessModule(userRole, item.id));
+            const sectionItems = section.items.filter(item => canAccessModule(item.id));
             if (sectionItems.length === 0) return null;
             const hasActiveItem = sectionItems.some(item => item.id === activeModule);
 
@@ -425,7 +437,7 @@ export default function Sidebar() {
                   {user.name}
                 </p>
                 <p className="text-[10px] truncate" style={{ color: 'var(--text-tertiary)' }}>
-                  {user.role.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                  {(can('settings.manage') ? 'Admin' : (can('trips.create') ? 'Operations' : 'Member')).replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                 </p>
               </div>
             )}

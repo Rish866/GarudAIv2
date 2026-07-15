@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -415,8 +415,7 @@ function AddEnquiryModal({ onClose }: { onClose: () => void }) {
     const customer = customers.find(c => c.id === form.customer_id);
     if (!customer) return;
 
-    const enquiry: Enquiry = {
-      id: generateId(),
+    const enquiry: Partial<Enquiry> = {
       
       customer_id: customer.id,
       customer_name: customer.name,
