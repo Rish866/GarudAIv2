@@ -222,6 +222,10 @@ export interface Trip {
   trip_number: string;
   lr_number: string;
   eway_bill?: string;
+  // Workflow linkage (immutable parent references)
+  enquiry_id?: string;
+  quotation_id?: string;
+  indent_id?: string;
   customer_id: string;
   customer_name: string;
   vehicle_id: string;

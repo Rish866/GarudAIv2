@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useStore } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
@@ -7,14 +7,17 @@ import Pagination from '../../ui/Pagination';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { tripRepository } from '../../../data/trips/tripRepository';
+import { validateStatusTransition, validateVehicleForTrip, validateDriverForTrip, validateCustomerCredit, canGenerateInvoice, getValidNextStatuses } from '../../../lib/workflowRules';
+import { createInvoiceForTrip } from '../../../lib/workflowService';
 import type { Trip, TripStatus, Invoice } from '../../../types';
-import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
+import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
 import { exportTrips } from '../../../lib/excel';
 import { estimateDistance } from '../../../lib/distance';
 import { showToast } from '../../ui/Toast';
 import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download, Eye, Upload, Calendar, Phone, CreditCard, CheckCircle, Circle, Clock, Ban, RotateCcw, Edit3 } from 'lucide-react';
 import DriverAdvanceTracker from './DriverAdvanceTracker';
+import DriverSettlementPanel from './DriverSettlementPanel';
 import SendNotificationModal from '../../ui/SendNotificationModal';
 import BranchField from '../../ui/BranchField';
 
@@ -73,7 +76,6 @@ export default function TripsModule() {
   const { data: customers } = useModuleData<any>('customers');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
-  const { create: addInvoice } = useModuleData<any>('invoices', { fetchOnMount: false });
   const { create: addNotification } = useModuleData<any>('notifications', { fetchOnMount: false });
   const { create: addTrip } = useModuleData<any>('trips', { fetchOnMount: false });
 
@@ -162,6 +164,24 @@ export default function TripsModule() {
       return;
     }
 
+    // Business rule validation before status transition
+    const trip = trips.find((t: any) => t.id === tripId);
+    if (trip) {
+      const validation = validateStatusTransition(trip, newStatus, {
+        canOverridePOD: can('approvals.action'),
+      });
+
+      if (!validation.allowed) {
+        showToast('error', validation.errors[0]);
+        return;
+      }
+
+      // Show warnings but allow transition
+      if (validation.warnings.length > 0) {
+        validation.warnings.forEach(w => showToast('warning', w));
+      }
+    }
+
     const { error } = await tripRepository.transitionStatus(organizationId, tripId, newStatus);
     if (error) {
       showToast('error', `Status update failed: ${error}`);
@@ -177,61 +197,69 @@ export default function TripsModule() {
       setNotifyTrip({ trip: foundTrip, status: newStatus.replace(/_/g, ' ') });
     }
 
-    // Auto-generate invoice when trip is completed
+    // Auto-generate invoice when trip is completed (idempotent via invoice_trips)
     if (newStatus === 'completed') {
       const trip = trips.find(t => t.id === tripId);
-      if (trip) {
-        const subtotal = trip.freight_amount + trip.detention_charges + trip.other_charges;
-        const gst_amount = Math.round(subtotal * 0.05);
-        const tds_amount = Math.round(subtotal * 0.02);
-        const total_amount = subtotal + gst_amount - tds_amount;
+      if (trip && organizationId) {
+        const invoiceCheck = canGenerateInvoice(trip);
+        if (!invoiceCheck.allowed) {
+          showToast('warning', `Trip completed but invoice not generated: ${invoiceCheck.errors[0]}`);
+        } else {
+          const subtotal = (trip.freight_amount || 0) + (trip.detention_charges || 0) + (trip.other_charges || 0);
+          const gst_amount = Math.round(subtotal * 0.05);
+          const tds_amount = Math.round(subtotal * 0.02);
+          const total_amount = subtotal + gst_amount - tds_amount;
 
-        const invoice: Partial<Invoice> = {
-          invoice_number: generateInvoiceNumber(),
-          customer_id: trip.customer_id,
-          customer_name: trip.customer_name,
-          invoice_date: new Date().toISOString().split('T')[0],
-          due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-          trip_ids: [trip.id],
-          freight_total: trip.freight_amount,
-          detention_total: trip.detention_charges,
-          other_charges: trip.other_charges,
-          subtotal,
-          gst_percent: 5,
-          gst_amount,
-          tds_amount,
-          total_amount,
-          paid_amount: 0,
-          balance_amount: total_amount,
-          status: 'sent',
-          created_at: new Date().toISOString(),
-        };
-        addInvoice(invoice);
+          const result = await createInvoiceForTrip(organizationId, tripId, {
+            invoice_number: generateInvoiceNumber(),
+            customer_id: trip.customer_id,
+            customer_name: trip.customer_name,
+            invoice_date: new Date().toISOString().split('T')[0],
+            due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+            freight_total: trip.freight_amount || 0,
+            detention_total: trip.detention_charges || 0,
+            other_charges: trip.other_charges || 0,
+            subtotal,
+            gst_percent: 5,
+            gst_amount,
+            tds_amount,
+            total_amount,
+            paid_amount: 0,
+            balance_amount: total_amount,
+            status: 'sent',
+          });
 
-        // Transition to billed via RPC
-        await tripRepository.transitionStatus(organizationId, tripId, 'billed');
-        await refreshTrips();
-
-        // Send notification
-        addNotification({
-          type: 'invoice_generated',
-          title: 'Invoice Auto-Generated',
-          message: `Invoice ${invoice.invoice_number} created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,
-          link_module: 'billing',
-          link_id: invoice.id,
-          is_read: false,
-          created_at: new Date().toISOString(),
-        });
+          if (result.success) {
+            if (result.isExisting) {
+              showToast('info', 'Invoice already exists for this trip.');
+            } else {
+              // Transition to billed
+              await tripRepository.transitionStatus(organizationId, tripId, 'billed');
+              await refreshTrips();
+              showToast('success', `Invoice generated (${formatCurrency(total_amount)})`);
+              addNotification({
+                type: 'invoice_generated',
+                title: 'Invoice Auto-Generated',
+                message: `Invoice created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,
+                link_module: 'billing',
+                is_read: false,
+                created_at: new Date().toISOString(),
+              });
+            }
+          } else {
+            showToast('error', `Invoice creation failed: ${result.error}`);
+          }
+        }
       }
     }
   };
 
 
-  const handleDuplicateTrip = (trip: Trip) => {
+  const handleDuplicateTrip = async (trip: Trip) => {
     const newTrip: Partial<Trip> = {
       ...trip,
       trip_number: generateTripNumber(),
-      lr_number: generateLRNumber(),
+      lr_number: '', // Set by database RPC after trip creation
       eway_bill: 'EWB-' + Date.now().toString().slice(-9),
       status: 'booked',
       booking_date: new Date().toISOString().split('T')[0],
@@ -245,7 +273,14 @@ export default function TripsModule() {
       remarks: `Duplicated from ${trip.trip_number}`,
       created_at: new Date().toISOString(),
     };
-    addTrip(newTrip);
+    const dupResult = await addTrip(newTrip);
+    if (dupResult.data?.id && organizationId) {
+      const { generateLR } = await import('../../../lib/tripEntities');
+      await generateLR(organizationId, dupResult.data.id, {
+        material: newTrip.material,
+        declared_weight: newTrip.weight_tons,
+      });
+    }
   };
 
   const handleCancelTrip = async (tripId: string, reason: string) => {
@@ -450,6 +485,54 @@ export default function TripsModule() {
                     Cancel
                   </button>
                 )}
+                {/* Close Trip — only for completed/billed trips */}
+                {(trip.status === 'completed' || trip.status === 'billed') && canEditTrips && (
+                  <button
+                    onClick={async () => {
+                      if (!organizationId) return;
+                      const { validateTripClosure, closeTrip } = await import('../../../lib/workflowService');
+                      const { getTripPODState } = await import('../../../lib/tripEntities');
+                      const podState = await getTripPODState(organizationId, trip.id);
+                      const validation = validateTripClosure(trip, {
+                        hasSettlement: true, // Will be checked server-side in closeTrip
+                        settlementStatus: 'approved',
+                        hasInvoice: trip.status === 'billed',
+                        podStatus: podState.status,
+                      });
+                      if (!validation.valid) {
+                        const msgs = validation.blockers.map(b => `• ${b.message}`).join('\n');
+                        const overridable = validation.blockers.every(b => b.overridable);
+                        if (overridable) {
+                          const reason = prompt(`Trip has blockers:\n${msgs}\n\nProvide override reason to close anyway:`);
+                          if (!reason) return;
+                          const overrides = validation.blockers.map(b => ({ code: b.code, reason }));
+                          const result = await closeTrip(organizationId, trip.id, overrides);
+                          if (result.success) {
+                            showToast('success', 'Trip closed with overrides');
+                            await refreshTrips();
+                          } else {
+                            showToast('error', result.error || 'Closure failed');
+                          }
+                        } else {
+                          showToast('error', `Cannot close trip:\n${validation.blockers[0].message}`);
+                        }
+                      } else {
+                        const result = await closeTrip(organizationId, trip.id);
+                        if (result.success) {
+                          showToast('success', 'Trip closed successfully');
+                          await refreshTrips();
+                        } else {
+                          showToast('error', result.error || 'Closure failed');
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors"
+                    title="Close Trip"
+                  >
+                    <CheckCircle size={14} />
+                    Close Trip
+                  </button>
+                )}
                 {/* Reopen — only for cancelled trips AND user has permission (owner/admin/ops_manager) */}
                 {trip.status === 'cancelled' && canDeleteTrips && (
                   <button
@@ -595,11 +678,13 @@ export default function TripsModule() {
 
 
 function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
+  const { organizationId } = useOrganization();
   const { update: updateTrip } = useModuleData<any>('trips');
   const [receivedBy, setReceivedBy] = useState('');
   const [condition, setCondition] = useState<'good' | 'damaged' | 'partial'>('good');
   const [remarks, setRemarks] = useState('');
   const [filename, setFilename] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -607,21 +692,32 @@ function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) 
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!organizationId || saving) return;
+    setSaving(true);
     const today = new Date().toISOString().split('T')[0];
-    updateTrip(trip.id, {
-      pod_url: filename || 'pod_uploaded.jpg',
-      pod_date: today,
-      pod_details: {
-        received_by: receivedBy,
-        condition,
-        remarks,
-        received_date: today,
-        image_url: filename || undefined,
-      },
-      status: 'completed',
+
+    // Use persistent POD service
+    const { uploadPOD } = await import('../../../lib/tripEntities');
+    const result = await uploadPOD(organizationId, trip.id, {
+      file_path: filename || 'pod_uploaded.jpg',
+      file_name: filename || 'pod_uploaded.jpg',
+      file_type: 'image',
+      delivery_at: today,
+      received_by: receivedBy,
+      remarks: `Condition: ${condition}. ${remarks}`.trim(),
     });
+
+    if (result.success) {
+      // Update trip status only — POD entity is the authoritative source
+      // The pods table record is the source of truth, not trip.pod_url
+      await updateTrip(trip.id, { status: 'pod_pending' });
+      showToast('success', 'POD uploaded successfully');
+    } else {
+      showToast('error', result.error || 'Failed to upload POD');
+    }
+    setSaving(false);
     onClose();
   };
 
@@ -697,6 +793,8 @@ function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) 
 
 function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   const { company } = useStore();
+  const { organizationId } = useOrganization();
+  const { update: updateTrip } = useModuleData<any>('trips', { fetchOnMount: false });
   const { data: expenses } = useModuleData<any>('expenses');
   const { data: fuelEntries } = useModuleData<any>('fuel_entries');
   const { data: invoices } = useModuleData<any>('invoices');
@@ -705,20 +803,22 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
   const { data: enquiries } = useModuleData<any>('enquiries');
   const currentIdx = STATUS_FLOW.indexOf(trip.status);
 
-  // P0.1 — Trip-Level Profitability Calculation
-  const tripExpenses = expenses.filter(e => e.trip_id === trip.id || e.vehicle_id === trip.vehicle_id);
-  const tripFuel = fuelEntries.filter(f => f.vehicle_id === trip.vehicle_id);
-  const fuelCostEstimate = trip.distance_km > 0 ? Math.round(trip.distance_km * 3.5 * 95 / 4.5) : 0; // ~3.5km/l at ₹95/l avg
-  const tollEstimate = Math.round(trip.distance_km * 2.8); // ~₹2.8/km average toll
-  const driverBata = tripExpenses.filter(e => e.category === 'driver_bata').reduce((s, e) => s + e.amount, 0) || Math.round(trip.distance_km * 1.5);
-  const loadingUnloading = tripExpenses.filter(e => e.category === 'loading' || e.category === 'unloading').reduce((s, e) => s + e.amount, 0) || 2000;
-  const repairCost = tripExpenses.filter(e => e.category === 'repair').reduce((s, e) => s + e.amount, 0);
-  const miscExpenses = tripExpenses.filter(e => e.category === 'misc' || e.category === 'office').reduce((s, e) => s + e.amount, 0);
-  
-  const totalCost = fuelCostEstimate + tollEstimate + driverBata + loadingUnloading + repairCost + trip.detention_charges + miscExpenses;
-  const totalRevenue = trip.freight_amount + trip.detention_charges + trip.other_charges;
-  const tripProfit = totalRevenue - totalCost;
-  const profitMargin = totalRevenue > 0 ? Math.round((tripProfit / totalRevenue) * 100) : 0;
+  // P0.1 — Trip-Level Profitability (authoritative service)
+  const [profitData, setProfitData] = useState<{ revenue: number; directCost: number; grossProfit: number; marginPercentage: number; completeness: string; missingInputs: string[] } | null>(null);
+  useEffect(() => {
+    if (!organizationId || !trip.id) return;
+    import('../../../lib/tripEntities').then(({ calculateTripProfitability }) => {
+      calculateTripProfitability(organizationId, trip.id).then(setProfitData);
+    });
+  }, [organizationId, trip.id]);
+
+  const totalRevenue = profitData?.revenue ?? ((trip.freight_amount || 0) + (trip.detention_charges || 0) + (trip.other_charges || 0));
+  const fuelCost = profitData ? profitData.directCost : 0;
+  const expenseCost = 0; // Included in directCost from service
+  const totalCost = profitData?.directCost ?? 0;
+  const tripProfit = profitData?.grossProfit ?? (totalRevenue - totalCost);
+  const profitMargin = profitData?.marginPercentage ?? (totalRevenue > 0 ? Math.round((tripProfit / totalRevenue) * 100) : 0);
+  const profitMissingData = profitData?.missingInputs ?? [];
 
   // P0.2 — Linked Document Chain
   const linkedInvoice = invoices.find(i => i.trip_ids.includes(trip.id));
@@ -884,6 +984,72 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
               {trip.pod_details.remarks && (
                 <p className="text-xs text-green-700 mt-2">Remarks: {trip.pod_details.remarks}</p>
               )}
+              {/* POD Verification Actions */}
+              {trip.status === 'pod_pending' && (
+                <div className="mt-3 pt-3 border-t border-green-200 flex gap-2">
+                  <button
+                    onClick={async () => {
+                      if (!organizationId) return;
+                      const { getPODForTrip, verifyPOD } = await import('../../../lib/tripEntities');
+                      const pod = await getPODForTrip(organizationId, trip.id);
+                      if (pod) {
+                        const result = await verifyPOD(organizationId, pod.id, 'current_user');
+                        if (result.success) {
+                          showToast('success', 'POD verified');
+                          updateTrip(trip.id, { status: 'completed' });
+                        } else {
+                          showToast('error', result.error || 'Verification failed');
+                        }
+                      } else {
+                        showToast('error', 'No POD record found. Upload POD first.');
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700"
+                  >
+                    ✓ Verify POD
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const reason = prompt('Rejection reason:');
+                      if (!reason || !organizationId) return;
+                      const { getPODForTrip, rejectPOD } = await import('../../../lib/tripEntities');
+                      const pod = await getPODForTrip(organizationId, trip.id);
+                      if (pod) {
+                        const result = await rejectPOD(organizationId, pod.id, reason);
+                        if (result.success) {
+                          showToast('warning', 'POD rejected. Driver must re-upload.');
+                        } else {
+                          showToast('error', result.error || 'Rejection failed');
+                        }
+                      }
+                    }}
+                    className="px-3 py-1.5 border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50"
+                  >
+                    ✗ Reject POD
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const reason = prompt('POD waiver reason (min 5 chars):');
+                      if (!reason || reason.length < 5 || !organizationId) {
+                        if (reason && reason.length < 5) showToast('error', 'Waiver reason must be at least 5 characters');
+                        return;
+                      }
+                      const { getPODForTrip, waivePOD } = await import('../../../lib/tripEntities');
+                      const pod = await getPODForTrip(organizationId, trip.id);
+                      const result = await waivePOD(organizationId, pod?.id || null, trip.id, reason, 'current_user');
+                      if (result.success) {
+                        showToast('success', 'POD requirement waived');
+                        updateTrip(trip.id, { status: 'completed' });
+                      } else {
+                        showToast('error', result.error || 'Waiver failed');
+                      }
+                    }}
+                    className="px-3 py-1.5 border border-orange-200 text-orange-600 text-xs font-medium rounded-lg hover:bg-orange-50"
+                  >
+                    ⚠ Waive POD
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -912,11 +1078,8 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
               <div>
                 <p className="text-xs font-semibold text-red-700 mb-2 uppercase">Costs</p>
                 <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between"><span className="text-slate-600">Fuel (est.)</span><span className="font-medium text-red-700">{formatCurrency(fuelCostEstimate)}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-600">Toll (est.)</span><span className="font-medium text-red-700">{formatCurrency(tollEstimate)}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-600">Driver Bata</span><span className="font-medium text-red-700">{formatCurrency(driverBata)}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-600">Loading/Unloading</span><span className="font-medium text-red-700">{formatCurrency(loadingUnloading)}</span></div>
-                  {repairCost > 0 && <div className="flex justify-between"><span className="text-slate-600">Repairs</span><span className="font-medium text-red-700">{formatCurrency(repairCost)}</span></div>}
+                  <div className="flex justify-between"><span className="text-slate-600">Fuel</span><span className="font-medium text-red-700">{formatCurrency(fuelCost)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-600">Expenses</span><span className="font-medium text-red-700">{formatCurrency(expenseCost)}</span></div>
                   <div className="flex justify-between border-t border-red-200 pt-1"><span className="font-semibold">Total Cost</span><span className="font-bold text-red-800">{formatCurrency(totalCost)}</span></div>
                 </div>
               </div>
@@ -928,6 +1091,12 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
                 {tripProfit >= 0 ? '' : '('}{formatCurrency(Math.abs(tripProfit))}{tripProfit < 0 ? ')' : ''}
               </span>
             </div>
+          </div>
+
+          {/* DRIVER SETTLEMENT */}
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+            <h3 className="text-sm font-semibold text-amber-900 mb-3">Driver Settlement</h3>
+            <DriverSettlementPanel tripId={trip.id} driverId={trip.driver_id} driverName={trip.driver_name} organizationId={organizationId || ''} />
           </div>
 
           {/* P0.2 — LINKED DOCUMENT CHAIN */}
@@ -1001,6 +1170,7 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
 
 
 function NewTripModal({ onClose }: { onClose: () => void }) {
+  const { organizationId } = useOrganization();
   const { data: customers } = useModuleData<any>('customers');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
@@ -1054,7 +1224,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const customer = customers.find((c) => c.id === form.customer_id);
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
@@ -1062,13 +1232,37 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
 
     if (!customer || !vehicle || !driver) return;
 
+    // Credit block enforcement
     const freight = Number(form.freight_amount) || 0;
+    const creditCheck = validateCustomerCredit(customer, freight);
+    if (!creditCheck.allowed) {
+      showToast('error', creditCheck.errors[0]);
+      return;
+    }
+    if (creditCheck.warnings.length > 0) {
+      creditCheck.warnings.forEach((w: string) => showToast('warning', w));
+    }
+
+    // Vehicle validation
+    const vehCheck = validateVehicleForTrip(vehicle);
+    if (!vehCheck.allowed) {
+      showToast('error', vehCheck.errors[0]);
+      return;
+    }
+
+    // Driver validation
+    const drvCheck = validateDriverForTrip(driver);
+    if (!drvCheck.allowed) {
+      showToast('error', drvCheck.errors[0]);
+      return;
+    }
+
     const advance = Number(form.advance_amount) || 0;
 
     const trip: Partial<Trip> = {
       branch_id: form.branch_id || undefined,
       trip_number: generateTripNumber(),
-      lr_number: generateLRNumber(),
+      lr_number: '', // Set by database RPC after trip creation
       eway_bill: form.eway_bill || ('EWB-' + Date.now().toString().slice(-9)),
       customer_id: customer.id,
       customer_name: customer.name,
@@ -1094,7 +1288,24 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
       created_at: new Date().toISOString(),
     };
 
-    addTrip(trip);
+    const result = await addTrip(trip);
+    if (result.data?.id && organizationId) {
+      // Generate persistent LR using database-safe numbering (RPC)
+      const { generateLR } = await import('../../../lib/tripEntities');
+      const lrResult = await generateLR(organizationId, result.data.id, {
+        branch_id: trip.branch_id || undefined,
+        consignor_name: customer?.name,
+        consignee_name: trip.customer_name,
+        material: trip.material,
+        package_count: Number(form.num_packages) || 0,
+        declared_weight: Number(form.weight_tons) || 0,
+        eway_bill_number: trip.eway_bill,
+      });
+      // LR number is now set by the database, not frontend
+      if (lrResult.success && lrResult.lr?.lr_number) {
+        showToast('success', `LR ${lrResult.lr.lr_number} generated`);
+      }
+    }
     onClose();
   };
 

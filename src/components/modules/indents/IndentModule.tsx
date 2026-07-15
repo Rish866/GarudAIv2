@@ -4,8 +4,10 @@ import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
 import { useStore } from '../../../store/useStore';
-import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
+import { formatCurrency, formatDate, classNames, generateTripNumber } from '../../../lib/utils';
+import { validateVehicleForTrip, validateDriverForTrip, validateCustomerCredit } from '../../../lib/workflowRules';
 import { Package, Plus, X, Search, Download, Truck, CheckCircle, Clock, ArrowRight } from 'lucide-react';
+import { showToast } from '../../ui/Toast';
 import BulkUpload from '../../ui/BulkUpload';
 
 type IndentStatus = 'pending' | 'allocated' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
@@ -13,6 +15,8 @@ type IndentStatus = 'pending' | 'allocated' | 'confirmed' | 'in_progress' | 'com
 interface Indent {
   id: string;
   indent_number: string;
+  quotation_id?: string;
+  enquiry_id?: string;
   customer_id: string;
   customer_name: string;
   origin: string;
@@ -144,6 +148,7 @@ export default function IndentModule() {
       loading_date: form.loading_date,
       rate: parseFloat(form.rate) || 0,
       remarks: form.remarks + (form.quotation_id ? ` [Ref: ${quotations.find(q => q.id === form.quotation_id)?.quotation_number || ''}]` : ''),
+      quotation_id: form.quotation_id || undefined,
       allocated_vehicles: [],
       status: 'pending',
       created_at: new Date().toISOString(),
@@ -160,6 +165,17 @@ export default function IndentModule() {
     if (!indent) return;
     const alreadyAllocated = indent.allocated_vehicles.some(v => v.id === vehicleId);
     if (alreadyAllocated) return;
+
+    // Validate vehicle availability and documents
+    const validation = validateVehicleForTrip(vehicle);
+    if (!validation.allowed) {
+      showToast('error', validation.errors[0]);
+      return;
+    }
+    if (validation.warnings.length > 0) {
+      validation.warnings.forEach(w => showToast('warning', w));
+    }
+
     const updated = [...indent.allocated_vehicles, { id: vehicleId, reg: vehicle.reg_number }];
     const allAllocated = updated.length >= indent.num_vehicles;
     updateIndent(indentId, { allocated_vehicles: updated, status: allAllocated ? 'allocated' : indent.status });
@@ -177,21 +193,65 @@ export default function IndentModule() {
     if (!driver) return;
     const indent = indents.find(i => i.id === indentId);
     if (!indent) return;
+
+    // Validate driver availability and documents
+    const validation = validateDriverForTrip(driver);
+    if (!validation.allowed) {
+      showToast('error', validation.errors[0]);
+      return;
+    }
+
     const updated = indent.allocated_vehicles.map(v => v.id === vehicleId ? { ...v, driver_id: driverId, driver_name: driver.name } : v);
     updateIndent(indentId, { allocated_vehicles: updated });
   };
 
   const convertToTrip = (indent: Indent) => {
     if (indent.allocated_vehicles.length === 0) return;
-    // Create one trip per allocated vehicle
+
+    // Credit block enforcement before creating trips
+    const customer = customers.find((c: any) => c.id === indent.customer_id);
+    if (customer) {
+      const creditCheck = validateCustomerCredit(customer, indent.rate);
+      if (!creditCheck.allowed) {
+        showToast('error', creditCheck.errors[0]);
+        return;
+      }
+    }
+
+    // Validate all allocated vehicles and drivers before creating any trips
+    for (const allocVeh of indent.allocated_vehicles) {
+      const vehicle = vehicles.find((v: any) => v.id === allocVeh.id);
+      if (vehicle) {
+        const vCheck = validateVehicleForTrip(vehicle);
+        if (!vCheck.allowed) {
+          showToast('error', `Vehicle ${allocVeh.reg}: ${vCheck.errors[0]}`);
+          return;
+        }
+      }
+      if (allocVeh.driver_id) {
+        const driver = drivers.find((d: any) => d.id === allocVeh.driver_id);
+        if (driver) {
+          const dCheck = validateDriverForTrip(driver);
+          if (!dCheck.allowed) {
+            showToast('error', `Driver ${allocVeh.driver_name || ''}: ${dCheck.errors[0]}`);
+            return;
+          }
+        }
+      }
+    }
+
+    // Create one trip per allocated vehicle with proper linkage
     indent.allocated_vehicles.forEach((allocVeh, idx) => {
-      const vehicle = vehicles.find(v => v.id === allocVeh.id);
-      const driver = allocVeh.driver_id ? drivers.find(d => d.id === allocVeh.driver_id) : null;
+      const vehicle = vehicles.find((v: any) => v.id === allocVeh.id);
+      const driver = allocVeh.driver_id ? drivers.find((d: any) => d.id === allocVeh.driver_id) : null;
       const trip = {
-        
-        
-        trip_number: `TRP-2025-${String(150 + Math.floor(Math.random() * 50) + idx).padStart(4, '0')}`,
-        lr_number: `LR-${7850 + Math.floor(Math.random() * 100) + idx}`,
+        // Workflow linkage — immutable parent references
+        indent_id: indent.id,
+        quotation_id: indent.quotation_id || undefined,
+        enquiry_id: indent.enquiry_id || undefined,
+        // Trip identifiers
+        trip_number: generateTripNumber(),
+        lr_number: '', // Set by database RPC after trip creation
         customer_id: indent.customer_id,
         customer_name: indent.customer_name,
         vehicle_id: allocVeh.id,
