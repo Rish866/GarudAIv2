@@ -254,7 +254,7 @@ export default function TripsModule() {
   };
 
 
-  const handleDuplicateTrip = (trip: Trip) => {
+  const handleDuplicateTrip = async (trip: Trip) => {
     const newTrip: Partial<Trip> = {
       ...trip,
       trip_number: generateTripNumber(),
@@ -272,7 +272,15 @@ export default function TripsModule() {
       remarks: `Duplicated from ${trip.trip_number}`,
       created_at: new Date().toISOString(),
     };
-    addTrip(newTrip);
+    const dupResult = await addTrip(newTrip);
+    if (dupResult.data?.id && organizationId) {
+      const { generateLR } = await import('../../../lib/tripEntities');
+      await generateLR(organizationId, dupResult.data.id, {
+        lr_number: newTrip.lr_number || `LR-${Date.now().toString(36).toUpperCase()}`,
+        material: newTrip.material,
+        declared_weight: newTrip.weight_tons,
+      });
+    }
   };
 
   const handleCancelTrip = async (tripId: string, reason: string) => {
@@ -1051,6 +1059,7 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
 
 
 function NewTripModal({ onClose }: { onClose: () => void }) {
+  const { organizationId } = useOrganization();
   const { data: customers } = useModuleData<any>('customers');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
@@ -1104,7 +1113,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const customer = customers.find((c) => c.id === form.customer_id);
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
@@ -1168,7 +1177,21 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
       created_at: new Date().toISOString(),
     };
 
-    addTrip(trip);
+    const result = await addTrip(trip);
+    if (result.data?.id && organizationId) {
+      // Generate persistent LR using the real trip UUID
+      const { generateLR } = await import('../../../lib/tripEntities');
+      await generateLR(organizationId, result.data.id, {
+        lr_number: trip.lr_number || `LR-${Date.now().toString(36).toUpperCase()}`,
+        branch_id: trip.branch_id || undefined,
+        consignor_name: customer?.name,
+        consignee_name: trip.customer_name,
+        material: trip.material,
+        package_count: Number(form.num_packages) || 0,
+        declared_weight: Number(form.weight_tons) || 0,
+        eway_bill_number: trip.eway_bill,
+      });
+    }
     onClose();
   };
 
