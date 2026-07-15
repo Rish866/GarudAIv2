@@ -30,13 +30,14 @@ export interface LRRecord {
 
 /**
  * Generate and persist an LR record for a trip.
+ * Uses database RPC for concurrency-safe number generation.
  * Idempotent: returns existing LR if one already exists for the trip.
  */
 export async function generateLR(
   organizationId: string,
   tripId: string,
   lrData: {
-    lr_number: string;
+    lr_number?: string; // Ignored when RPC is available — DB generates number
     branch_id?: string;
     consignor_name?: string;
     consignee_name?: string;
@@ -46,7 +47,29 @@ export async function generateLR(
     eway_bill_number?: string;
   }
 ): Promise<{ success: boolean; lr?: LRRecord; isExisting?: boolean; error?: string }> {
-  // Check if LR already exists for this trip
+  // Try database RPC first (concurrency-safe, generates number)
+  const { data: rpcResult, error: rpcError } = await supabase.rpc('generate_lr_for_trip', {
+    p_organization_id: organizationId,
+    p_branch_id: lrData.branch_id || null,
+    p_trip_id: tripId,
+    p_consignor_name: lrData.consignor_name || null,
+    p_consignee_name: lrData.consignee_name || null,
+    p_material: lrData.material || null,
+    p_package_count: lrData.package_count || 0,
+    p_declared_weight: lrData.declared_weight || 0,
+    p_eway_bill_number: lrData.eway_bill_number || null,
+  });
+
+  if (!rpcError && rpcResult && rpcResult.success) {
+    return {
+      success: true,
+      lr: { id: rpcResult.lr_id, lr_number: rpcResult.lr_number, organization_id: organizationId, trip_id: tripId, status: 'active' } as LRRecord,
+      isExisting: rpcResult.is_existing || false,
+    };
+  }
+
+  // Fallback: direct insert if RPC doesn't exist yet (pre-migration-007)
+  // This path uses the frontend-provided lr_number as a safe fallback
   const { data: existing } = await supabase
     .from('lrs')
     .select('*')
@@ -58,13 +81,20 @@ export async function generateLR(
     return { success: true, lr: existing[0] as LRRecord, isExisting: true };
   }
 
-  // Create new LR
+  const fallbackNumber = lrData.lr_number || `LR-${Date.now().toString(36).toUpperCase()}`;
   const { data: created, error } = await supabase
     .from('lrs')
     .insert({
       organization_id: organizationId,
       trip_id: tripId,
-      ...lrData,
+      lr_number: fallbackNumber,
+      branch_id: lrData.branch_id || null,
+      consignor_name: lrData.consignor_name,
+      consignee_name: lrData.consignee_name,
+      material: lrData.material,
+      package_count: lrData.package_count || 0,
+      declared_weight: lrData.declared_weight || 0,
+      eway_bill_number: lrData.eway_bill_number,
       status: 'active',
       generated_at: new Date().toISOString(),
     })
@@ -72,7 +102,6 @@ export async function generateLR(
     .single();
 
   if (error) {
-    // Unique constraint violation = concurrent creation
     if (error.code === '23505') {
       const { data: retry } = await supabase
         .from('lrs')
@@ -82,7 +111,8 @@ export async function generateLR(
         .single();
       return { success: true, lr: retry as LRRecord, isExisting: true };
     }
-    return { success: false, error: error.message };
+    // If lrs table doesn't exist yet (pre-migration), fail gracefully
+    return { success: false, error: `LR creation failed: ${error.message}` };
   }
 
   return { success: true, lr: created as LRRecord, isExisting: false };

@@ -10,7 +10,7 @@ import { tripRepository } from '../../../data/trips/tripRepository';
 import { validateStatusTransition, validateVehicleForTrip, validateDriverForTrip, validateCustomerCredit, canGenerateInvoice, getValidNextStatuses } from '../../../lib/workflowRules';
 import { createInvoiceForTrip } from '../../../lib/workflowService';
 import type { Trip, TripStatus, Invoice } from '../../../types';
-import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
+import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
 import { exportTrips } from '../../../lib/excel';
 import { estimateDistance } from '../../../lib/distance';
@@ -259,7 +259,7 @@ export default function TripsModule() {
     const newTrip: Partial<Trip> = {
       ...trip,
       trip_number: generateTripNumber(),
-      lr_number: generateLRNumber(),
+      lr_number: '', // Set by database RPC after trip creation
       eway_bill: 'EWB-' + Date.now().toString().slice(-9),
       status: 'booked',
       booking_date: new Date().toISOString().split('T')[0],
@@ -277,7 +277,6 @@ export default function TripsModule() {
     if (dupResult.data?.id && organizationId) {
       const { generateLR } = await import('../../../lib/tripEntities');
       await generateLR(organizationId, dupResult.data.id, {
-        lr_number: newTrip.lr_number || `LR-${Date.now().toString(36).toUpperCase()}`,
         material: newTrip.material,
         declared_weight: newTrip.weight_tons,
       });
@@ -1250,7 +1249,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
     const trip: Partial<Trip> = {
       branch_id: form.branch_id || undefined,
       trip_number: generateTripNumber(),
-      lr_number: generateLRNumber(),
+      lr_number: '', // Set by database RPC after trip creation
       eway_bill: form.eway_bill || ('EWB-' + Date.now().toString().slice(-9)),
       customer_id: customer.id,
       customer_name: customer.name,
@@ -1278,10 +1277,9 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
 
     const result = await addTrip(trip);
     if (result.data?.id && organizationId) {
-      // Generate persistent LR using the real trip UUID
+      // Generate persistent LR using database-safe numbering (RPC)
       const { generateLR } = await import('../../../lib/tripEntities');
-      await generateLR(organizationId, result.data.id, {
-        lr_number: trip.lr_number || `LR-${Date.now().toString(36).toUpperCase()}`,
+      const lrResult = await generateLR(organizationId, result.data.id, {
         branch_id: trip.branch_id || undefined,
         consignor_name: customer?.name,
         consignee_name: trip.customer_name,
@@ -1290,6 +1288,10 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
         declared_weight: Number(form.weight_tons) || 0,
         eway_bill_number: trip.eway_bill,
       });
+      // LR number is now set by the database, not frontend
+      if (lrResult.success && lrResult.lr?.lr_number) {
+        showToast('success', `LR ${lrResult.lr.lr_number} generated`);
+      }
     }
     onClose();
   };

@@ -238,3 +238,113 @@ CREATE TRIGGER trg_trips_validate_linkage
 -- WHERE column_name IN ('indent_id','quotation_id','enquiry_id','parent_quotation_id')
 -- AND table_schema = 'public' ORDER BY table_name;
 -- ============================================================
+
+
+
+-- ============================================================
+-- 9. DOCUMENT SEQUENCE TABLE (Concurrency-Safe Numbering)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS document_sequences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL,
+  branch_id UUID,
+  document_type TEXT NOT NULL, -- 'LR', 'INVOICE', 'TRIP', 'QUOTATION'
+  financial_year TEXT NOT NULL, -- '26-27'
+  prefix TEXT NOT NULL DEFAULT '',
+  last_number INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (organization_id, branch_id, document_type, financial_year)
+);
+
+ALTER TABLE document_sequences ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_read_sequences" ON document_sequences FOR SELECT USING (organization_id = get_user_organization_id());
+CREATE POLICY "org_write_sequences" ON document_sequences FOR INSERT WITH CHECK (organization_id = get_user_organization_id());
+CREATE POLICY "org_edit_sequences" ON document_sequences FOR UPDATE USING (organization_id = get_user_organization_id());
+
+-- ============================================================
+-- 10. GENERATE LR RPC (Transactional, Concurrency-Safe)
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION generate_lr_for_trip(
+  p_organization_id UUID,
+  p_branch_id UUID DEFAULT NULL,
+  p_trip_id UUID DEFAULT NULL,
+  p_consignor_name TEXT DEFAULT NULL,
+  p_consignee_name TEXT DEFAULT NULL,
+  p_material TEXT DEFAULT NULL,
+  p_package_count INTEGER DEFAULT 0,
+  p_declared_weight NUMERIC DEFAULT 0,
+  p_eway_bill_number TEXT DEFAULT NULL
+)
+RETURNS JSONB AS $$
+DECLARE
+  v_existing RECORD;
+  v_next_number INTEGER;
+  v_lr_number TEXT;
+  v_fy TEXT;
+  v_branch_code TEXT;
+  v_lr RECORD;
+BEGIN
+  -- Validate organization membership
+  IF p_organization_id != get_user_organization_id() THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization access denied');
+  END IF;
+
+  -- Check existing LR for this trip (idempotent)
+  SELECT * INTO v_existing FROM lrs
+  WHERE organization_id = p_organization_id AND trip_id = p_trip_id LIMIT 1;
+
+  IF FOUND THEN
+    RETURN jsonb_build_object('success', true, 'lr_id', v_existing.id, 'lr_number', v_existing.lr_number, 'is_existing', true);
+  END IF;
+
+  -- Determine financial year (April-March)
+  IF EXTRACT(MONTH FROM NOW()) >= 4 THEN
+    v_fy := TO_CHAR(NOW(), 'YY') || '-' || TO_CHAR(NOW() + INTERVAL '1 year', 'YY');
+  ELSE
+    v_fy := TO_CHAR(NOW() - INTERVAL '1 year', 'YY') || '-' || TO_CHAR(NOW(), 'YY');
+  END IF;
+
+  -- Get branch code
+  v_branch_code := '';
+  IF p_branch_id IS NOT NULL THEN
+    SELECT COALESCE(code, '') INTO v_branch_code FROM branches WHERE id = p_branch_id AND organization_id = p_organization_id;
+  END IF;
+
+  -- Get and increment sequence (with advisory lock for safety)
+  PERFORM pg_advisory_xact_lock(hashtext(p_organization_id::text || COALESCE(p_branch_id::text,'') || 'LR' || v_fy));
+
+  INSERT INTO document_sequences (organization_id, branch_id, document_type, financial_year, prefix, last_number)
+  VALUES (p_organization_id, p_branch_id, 'LR', v_fy, 'LR', 0)
+  ON CONFLICT (organization_id, branch_id, document_type, financial_year) DO NOTHING;
+
+  UPDATE document_sequences
+  SET last_number = last_number + 1, updated_at = NOW()
+  WHERE organization_id = p_organization_id
+    AND (branch_id = p_branch_id OR (branch_id IS NULL AND p_branch_id IS NULL))
+    AND document_type = 'LR'
+    AND financial_year = v_fy
+  RETURNING last_number INTO v_next_number;
+
+  -- Build LR number
+  IF v_branch_code != '' THEN
+    v_lr_number := 'LR-' || v_branch_code || '-' || v_fy || '-' || LPAD(v_next_number::text, 6, '0');
+  ELSE
+    v_lr_number := 'LR-' || v_fy || '-' || LPAD(v_next_number::text, 6, '0');
+  END IF;
+
+  -- Create LR record
+  INSERT INTO lrs (organization_id, branch_id, trip_id, lr_number, consignor_name, consignee_name, material, package_count, declared_weight, eway_bill_number, status, generated_at)
+  VALUES (p_organization_id, p_branch_id, p_trip_id, v_lr_number, p_consignor_name, p_consignee_name, p_material, p_package_count, p_declared_weight, p_eway_bill_number, 'active', NOW())
+  RETURNING * INTO v_lr;
+
+  -- Update trip compatibility field
+  IF p_trip_id IS NOT NULL THEN
+    UPDATE trips SET lr_number = v_lr_number WHERE id = p_trip_id AND organization_id = p_organization_id;
+  END IF;
+
+  RETURN jsonb_build_object('success', true, 'lr_id', v_lr.id, 'lr_number', v_lr_number, 'is_existing', false);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

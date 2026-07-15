@@ -4,7 +4,7 @@ import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
 import { useStore } from '../../../store/useStore';
-import { formatCurrency, formatDate, classNames, generateTripNumber, generateLRNumber } from '../../../lib/utils';
+import { formatCurrency, formatDate, classNames, generateTripNumber } from '../../../lib/utils';
 import { validateVehicleForTrip, validateDriverForTrip, validateCustomerCredit } from '../../../lib/workflowRules';
 import { Package, Plus, X, Search, Download, Truck, CheckCircle, Clock, ArrowRight } from 'lucide-react';
 import { showToast } from '../../ui/Toast';
@@ -251,7 +251,7 @@ export default function IndentModule() {
         enquiry_id: indent.enquiry_id || undefined,
         // Trip identifiers
         trip_number: generateTripNumber(),
-        lr_number: generateLRNumber(),
+        lr_number: '', // Set by database RPC after trip creation
         customer_id: indent.customer_id,
         customer_name: indent.customer_name,
         vehicle_id: allocVeh.id,
