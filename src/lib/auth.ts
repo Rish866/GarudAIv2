@@ -110,7 +110,7 @@ const KNOWN_ROLES = new Set([
 // Portal roles that require row-level isolation (customer_user_id, vendor_user_id, driver_user_id FKs).
 // Until those schema changes are deployed, these roles are BLOCKED from entering the internal ERP.
 // They can still authenticate but will see "Portal access not yet enabled" message.
-const PORTAL_ROLES_BLOCKED = new Set(['customer', 'vendor']);
+const PORTAL_ROLES_BLOCKED = new Set(['customer', 'vendor', 'driver']);
 
 export async function resolveUserRole(): Promise<{
   success: boolean;

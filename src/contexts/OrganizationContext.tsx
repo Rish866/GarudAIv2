@@ -76,7 +76,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
       const org = memRecord.organizations as unknown as Organization;
 
       // Block portal roles that require row-level isolation
-      const blockedPortalRoles = new Set(['customer', 'vendor']);
+      const blockedPortalRoles = new Set(['customer', 'vendor', 'driver']);
       if (blockedPortalRoles.has(memRecord.role)) {
         setError(new Error(
           `Portal access for ${memRecord.role} accounts is not yet enabled. ` +

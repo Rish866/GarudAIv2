@@ -157,6 +157,11 @@ export default function TripsModule() {
     }
     setStatusDropdown(null);
 
+    if (!can('trips.update')) {
+      showToast('error', 'Permission denied: you cannot update trip status.');
+      return;
+    }
+
     const { error } = await tripRepository.transitionStatus(organizationId, tripId, newStatus);
     if (error) {
       showToast('error', `Status update failed: ${error}`);
@@ -248,6 +253,10 @@ export default function TripsModule() {
       showToast('error', 'No organization found');
       return;
     }
+    if (!can('trips.delete')) {
+      showToast('error', 'Permission denied: you cannot cancel trips.');
+      return;
+    }
     const { error } = await tripRepository.cancel(organizationId, tripId, reason);
     if (error) {
       showToast('error', `Cancel failed: ${error}`);
@@ -261,6 +270,10 @@ export default function TripsModule() {
   const handleReopenTrip = async (tripId: string, reason: string) => {
     if (!organizationId) {
       showToast('error', 'No organization found');
+      return;
+    }
+    if (!can('trips.update')) {
+      showToast('error', 'Permission denied: you cannot reopen trips.');
       return;
     }
     const { error } = await tripRepository.reopen(organizationId, tripId, reason);
@@ -1308,6 +1321,7 @@ function CancelTripModal({
 /** Modal for editing trip details (route, financial, vehicle, driver) */
 function EditTripModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   const { organizationId } = useOrganization();
+  const { can } = usePermissions();
   const { data: customers } = useModuleData<any>('customers');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
@@ -1378,6 +1392,10 @@ function EditTripModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
       remarks: form.remarks || null,
     };
 
+    if (!can('trips.update')) {
+      showToast('error', 'Permission denied: you cannot edit trip details.');
+      return;
+    }
     const { error } = await tripRepository.editDetails(organizationId, trip.id, updates);
     setSaving(false);
     if (error) {

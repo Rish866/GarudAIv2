@@ -221,22 +221,10 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
         return;
       }
 
-      // Map org role to legacy UserRole type for store compatibility
-      const roleMapping: Record<string, any> = {
-        organization_owner: 'super_admin',
-        admin: 'admin',
-        operations_manager: 'operations',
-        dispatcher: 'operations',
-        fleet_manager: 'fleet_manager',
-        accountant: 'accounts',
-        maintenance_manager: 'operations',
-        hr_manager: 'operations',
-        driver: 'driver',
-        customer: 'driver', // Minimal access
-        viewer: 'driver', // Minimal access
-      };
-
-      const mappedRole = roleMapping[roleResult.role || ''] || 'operations';
+      // Store user.role is NOT used for security — only for backward-compatible display.
+      // All security is enforced by OrganizationContext role + useModuleData permissions.
+      // Map to the most restrictive legacy role that won't break type constraints.
+      const mappedRole = 'operations'; // Safe default — no security meaning
 
       login({
         id: result.user.id,
