@@ -13,6 +13,10 @@ import { supabase } from '../lib/supabase';
 import { useOrganization } from '../contexts/OrganizationContext';
 import { sanitizeForTableSafe, UUID_REGEX } from '../lib/sanitize';
 import { showToast } from '../components/ui/Toast';
+import { hasPermission } from '../lib/permissions';
+import { MODULE_PERMISSIONS } from '../lib/modulePermissions';
+import type { ModuleName } from '../types';
+import type { Permission } from '../lib/permissions';
 import {
   archiveStatusForTable,
   fromDatabaseRecord,
@@ -32,6 +36,51 @@ export interface ModuleDataResult<T> {
   create: (record: Partial<T>) => Promise<{ data: T | null; error: string | null }>;
   update: (id: string, updates: Partial<T>) => Promise<{ error: string | null }>;
   remove: (id: string) => Promise<{ error: string | null }>;
+}
+
+// Table → Module mapping for automatic permission enforcement.
+// When useModuleData is called with a table name, this resolves which
+// module's permissions should be enforced on write operations.
+const TABLE_TO_MODULE: Record<string, ModuleName> = {
+  vehicles: 'fleet',
+  drivers: 'drivers',
+  customers: 'customers',
+  vendors: 'vendors',
+  trips: 'trips',
+  enquiries: 'enquiries',
+  quotations: 'enquiries',
+  indents: 'indents',
+  invoices: 'billing',
+  payments: 'billing',
+  expenses: 'billing',
+  fuel_entries: 'fuel',
+  maintenance: 'maintenance',
+  maintenance_records: 'maintenance',
+  work_orders: 'workorders',
+  tyres: 'tyres',
+  documents: 'documents',
+  challans: 'challans',
+  claims: 'claims',
+  eway_bills: 'ewaybill',
+  routes: 'routes',
+  contracts: 'contracts',
+  market_hires: 'market',
+  attendance: 'attendance',
+  notifications: 'notifications',
+  activity_log: 'audittrail',
+  geofences: 'geofencing',
+  tracking_links: 'trackinglinks',
+  cash_entries: 'accounts',
+  bank_entries: 'accounts',
+  purchases: 'purchases',
+  sales: 'sales',
+  inventory: 'inventory',
+  ledger_accounts: 'accounts',
+  branches: 'settings',
+};
+
+function resolveModuleFromTable(tableName: string): ModuleName | null {
+  return TABLE_TO_MODULE[tableName] || TABLE_TO_MODULE[resolveTableName(tableName)] || null;
 }
 
 /**
@@ -55,7 +104,7 @@ export function useModuleData<T extends { id: string }>(
     fetchOnMount?: boolean;
   }
 ): ModuleDataResult<T> {
-  const { organizationId, loading: orgLoading } = useOrganization();
+  const { organizationId, loading: orgLoading, role } = useOrganization();
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +113,11 @@ export function useModuleData<T extends { id: string }>(
   const fetchOnMount = options?.fetchOnMount !== false;
   const isOrgReady = !orgLoading && !!organizationId;
   const databaseTableName = resolveTableName(tableName);
+
+  // Permission enforcement: resolve which module this table belongs to
+  // and check write permissions before allowing create/update/remove.
+  const resolvedModuleName = resolveModuleFromTable(tableName);
+  const modulePerms = resolvedModuleName ? MODULE_PERMISSIONS[resolvedModuleName] : null;
 
   const refresh = useCallback(async () => {
     if (!organizationId || !enabled) {
@@ -120,6 +174,13 @@ export function useModuleData<T extends { id: string }>(
   const create = useCallback(async (record: Partial<T>): Promise<{ data: T | null; error: string | null }> => {
     if (!organizationId) return { data: null, error: 'No organization' };
 
+    // Permission enforcement: check create permission before calling Supabase
+    if (modulePerms?.create && role && !hasPermission(role, modulePerms.create)) {
+      const msg = 'Permission denied: you cannot create records in this module.';
+      showToast('error', msg);
+      return { data: null, error: msg };
+    }
+
     const createPayload = toDatabaseRecord(tableName, {
       ...(record as Record<string, unknown>),
       organization_id: organizationId,
@@ -169,10 +230,17 @@ export function useModuleData<T extends { id: string }>(
       showToast('error', message);
       return { data: null, error: message };
     }
-  }, [organizationId, tableName, databaseTableName]);
+  }, [organizationId, tableName, databaseTableName, role, modulePerms]);
 
   const update = useCallback(async (id: string, updates: Partial<T>): Promise<{ error: string | null }> => {
     if (!organizationId) return { error: 'No organization' };
+
+    // Permission enforcement: check update permission before calling Supabase
+    if (modulePerms?.update && role && !hasPermission(role, modulePerms.update)) {
+      const msg = 'Permission denied: you cannot update records in this module.';
+      showToast('error', msg);
+      return { error: msg };
+    }
 
     // Primary keys and tenant ownership are immutable from client updates.
     const safeUpdates: Record<string, unknown> = {
@@ -209,10 +277,17 @@ export function useModuleData<T extends { id: string }>(
     }
 
     return { error: updateError?.message || null };
-  }, [organizationId, tableName, databaseTableName]);
+  }, [organizationId, tableName, databaseTableName, role, modulePerms]);
 
   const remove = useCallback(async (id: string): Promise<{ error: string | null }> => {
     if (!organizationId) return { error: 'No organization' };
+
+    // Permission enforcement: check archive/delete permission before calling Supabase
+    if (modulePerms?.archive && role && !hasPermission(role, modulePerms.archive)) {
+      const msg = 'Permission denied: you cannot delete or archive records in this module.';
+      showToast('error', msg);
+      return { error: msg };
+    }
 
     const immutableMessage = immutableDeleteMessage(tableName);
     if (immutableMessage) {
@@ -255,7 +330,7 @@ export function useModuleData<T extends { id: string }>(
     }
 
     return { error: deleteError?.message || null };
-  }, [organizationId, tableName, databaseTableName]);
+  }, [organizationId, tableName, databaseTableName, role, modulePerms]);
 
   return {
     data,
