@@ -10,92 +10,84 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { canWrite, canAccessFinancials, canManageSettings, canDelete, canApprove } from '../../src/lib/rbac';
-import type { UserRole } from '../../src/types';
+import { hasPermission } from '../../src/lib/permissions';
+import type { OrganizationRole } from '../../src/types/organization';
 
 // ============================================================
-// RBAC: canDelete and canApprove
+// RBAC: delete/archive permission (replaces legacy canDelete)
 // ============================================================
 
-describe('RBAC: canDelete', () => {
-  it('super_admin can delete', () => {
-    expect(canDelete('super_admin')).toBe(true);
+describe('RBAC: canDelete (via hasPermission)', () => {
+  it('organization_owner can delete', () => {
+    expect(hasPermission('organization_owner', 'vehicles.delete')).toBe(true);
   });
 
   it('admin can delete', () => {
-    expect(canDelete('admin')).toBe(true);
+    expect(hasPermission('admin', 'vehicles.delete')).toBe(true);
   });
 
-  it('operations cannot delete', () => {
-    expect(canDelete('operations')).toBe(false);
+  it('operations_manager cannot delete vehicles', () => {
+    expect(hasPermission('operations_manager', 'vehicles.delete')).toBe(false);
   });
 
-  it('fleet_manager cannot delete', () => {
-    expect(canDelete('fleet_manager')).toBe(false);
+  it('fleet_manager can delete vehicles', () => {
+    expect(hasPermission('fleet_manager', 'vehicles.delete')).toBe(true);
   });
 
-  it('accounts cannot delete', () => {
-    expect(canDelete('accounts')).toBe(false);
+  it('accountant cannot delete vehicles', () => {
+    expect(hasPermission('accountant', 'vehicles.delete')).toBe(false);
   });
 
   it('driver cannot delete', () => {
-    expect(canDelete('driver')).toBe(false);
+    expect(hasPermission('driver', 'vehicles.delete')).toBe(false);
   });
 });
 
-describe('RBAC: canApprove', () => {
-  it('super_admin can approve', () => {
-    expect(canApprove('super_admin')).toBe(true);
+describe('RBAC: canApprove (via hasPermission)', () => {
+  it('organization_owner can approve', () => {
+    expect(hasPermission('organization_owner', 'approvals.action')).toBe(true);
   });
 
   it('admin can approve', () => {
-    expect(canApprove('admin')).toBe(true);
+    expect(hasPermission('admin', 'approvals.action')).toBe(true);
   });
 
-  it('operations can approve', () => {
-    expect(canApprove('operations')).toBe(true);
+  it('accountant can approve', () => {
+    expect(hasPermission('accountant', 'approvals.action')).toBe(true);
   });
 
-  it('accounts can approve', () => {
-    expect(canApprove('accounts')).toBe(true);
-  });
-
-  it('fleet_manager cannot approve', () => {
-    expect(canApprove('fleet_manager')).toBe(false);
+  it('dispatcher cannot approve', () => {
+    expect(hasPermission('dispatcher', 'approvals.action')).toBe(false);
   });
 
   it('driver cannot approve', () => {
-    expect(canApprove('driver')).toBe(false);
+    expect(hasPermission('driver', 'approvals.action')).toBe(false);
   });
 });
 
-// ============================================================
-// RBAC: existing functions still work (regression)
-// ============================================================
-
 describe('RBAC: existing functions regression', () => {
-  it('canWrite allows appropriate roles', () => {
-    expect(canWrite('super_admin')).toBe(true);
-    expect(canWrite('admin')).toBe(true);
-    expect(canWrite('operations')).toBe(true);
-    expect(canWrite('fleet_manager')).toBe(true);
-    expect(canWrite('accounts')).toBe(false);
-    expect(canWrite('driver')).toBe(false);
+  it('admin has write access', () => {
+    expect(hasPermission('admin', 'vehicles.create')).toBe(true);
+    expect(hasPermission('admin', 'trips.create')).toBe(true);
   });
 
-  it('canAccessFinancials allows appropriate roles', () => {
-    expect(canAccessFinancials('super_admin')).toBe(true);
-    expect(canAccessFinancials('admin')).toBe(true);
-    expect(canAccessFinancials('accounts')).toBe(true);
-    expect(canAccessFinancials('operations')).toBe(false);
-    expect(canAccessFinancials('driver')).toBe(false);
+  it('accountant has financial access', () => {
+    expect(hasPermission('accountant', 'finance.read')).toBe(true);
+    expect(hasPermission('accountant', 'finance.manage')).toBe(true);
   });
 
-  it('canManageSettings allows only admin roles', () => {
-    expect(canManageSettings('super_admin')).toBe(true);
-    expect(canManageSettings('admin')).toBe(true);
-    expect(canManageSettings('operations')).toBe(false);
-    expect(canManageSettings('driver')).toBe(false);
+  it('driver has minimal access', () => {
+    expect(hasPermission('driver', 'trips.read')).toBe(true);
+    expect(hasPermission('driver', 'vehicles.create')).toBe(false);
+    expect(hasPermission('driver', 'finance.read')).toBe(false);
+  });
+
+  it('admin can manage settings', () => {
+    expect(hasPermission('admin', 'settings.manage')).toBe(true);
+  });
+
+  it('fleet_manager cannot manage settings', () => {
+    expect(hasPermission('fleet_manager', 'settings.manage')).toBe(false);
   });
 });
 

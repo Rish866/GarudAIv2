@@ -175,7 +175,8 @@ export function useModuleData<T extends { id: string }>(
     if (!organizationId) return { data: null, error: 'No organization' };
 
     // Permission enforcement: check create permission before calling Supabase
-    if (modulePerms?.create && role && !hasPermission(role, modulePerms.create)) {
+    // Deny-by-default: if role is null or lacks permission, deny the operation.
+    if (modulePerms?.create && !hasPermission(role, modulePerms.create)) {
       const msg = 'Permission denied: you cannot create records in this module.';
       showToast('error', msg);
       return { data: null, error: msg };
@@ -236,7 +237,8 @@ export function useModuleData<T extends { id: string }>(
     if (!organizationId) return { error: 'No organization' };
 
     // Permission enforcement: check update permission before calling Supabase
-    if (modulePerms?.update && role && !hasPermission(role, modulePerms.update)) {
+    // Deny-by-default: if role is null or lacks permission, deny the operation.
+    if (modulePerms?.update && !hasPermission(role, modulePerms.update)) {
       const msg = 'Permission denied: you cannot update records in this module.';
       showToast('error', msg);
       return { error: msg };
@@ -283,7 +285,8 @@ export function useModuleData<T extends { id: string }>(
     if (!organizationId) return { error: 'No organization' };
 
     // Permission enforcement: check archive/delete permission before calling Supabase
-    if (modulePerms?.archive && role && !hasPermission(role, modulePerms.archive)) {
+    // Deny-by-default: if role is null or lacks permission, deny the operation.
+    if (modulePerms?.archive && !hasPermission(role, modulePerms.archive)) {
       const msg = 'Permission denied: you cannot delete or archive records in this module.';
       showToast('error', msg);
       return { error: msg };

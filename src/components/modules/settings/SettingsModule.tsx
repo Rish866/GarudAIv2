@@ -1,8 +1,36 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../../store/useStore';
 import { testSupabaseConnection } from '../../../lib/supabase';
-import { canAccessModule, getRoleLabel } from '../../../lib/rbac';
-import type { UserRole, ModuleName } from '../../../types';
+import { MODULE_PERMISSIONS, getModuleViewPermission } from '../../../lib/modulePermissions';
+import { hasPermission, getPermissionsForRole } from '../../../lib/permissions';
+import type { OrganizationRole } from '../../../types/organization';
+
+// Role label utility (replaces legacy rbac.ts getRoleLabel)
+function getRoleLabel(role: string): string {
+  const labels: Record<string, string> = {
+    organization_owner: 'Organization Owner',
+    admin: 'Admin',
+    operations_manager: 'Operations Manager',
+    dispatcher: 'Dispatcher',
+    fleet_manager: 'Fleet Manager',
+    accountant: 'Accountant',
+    maintenance_manager: 'Maintenance Manager',
+    hr_manager: 'HR Manager',
+    driver: 'Driver',
+    customer: 'Customer (Disabled)',
+    vendor: 'Vendor (Disabled)',
+    viewer: 'Read-Only Auditor',
+  };
+  return labels[role] || role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Module access check using canonical permission registry
+function canAccessModuleByRole(role: string, moduleId: string): boolean {
+  const perm = getModuleViewPermission(moduleId as any);
+  if (!perm) return false;
+  return hasPermission(role as OrganizationRole, perm);
+}
+import type { ModuleName } from '../../../types';
 import { Plus, X, Trash2, Edit, Users, Shield, CheckCircle } from 'lucide-react';
 import InvitationManagement from './InvitationManagement';
 import { useOrganization } from '../../../hooks/useOrganization';
@@ -12,11 +40,11 @@ interface ManagedUser {
   name: string;
   email: string;
   phone: string;
-  role: UserRole;
+  role: string;
   status: 'active' | 'inactive';
 }
 
-const ALL_ROLES: UserRole[] = ['super_admin', 'admin', 'operations', 'fleet_manager', 'accounts', 'driver'];
+const ALL_ROLES: OrganizationRole[] = ['organization_owner', 'admin', 'operations_manager', 'dispatcher', 'fleet_manager', 'accountant', 'maintenance_manager', 'hr_manager', 'driver', 'viewer'];
 
 const ALL_MODULES: { id: ModuleName; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' }, { id: 'fleet', label: 'Fleet' }, { id: 'trips', label: 'Trips' },
@@ -41,8 +69,8 @@ export default function SettingsModule() {
   // User management state — loaded from organization members
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [showUserModal, setShowUserModal] = useState(false);
-  const [userForm, setUserForm] = useState({ name: '', email: '', phone: '', role: 'operations' as UserRole });
-  const [selectedRole, setSelectedRole] = useState<UserRole>('super_admin');
+  const [userForm, setUserForm] = useState({ name: '', email: '', phone: '', role: 'operations' as OrganizationRole });
+  const [selectedRole, setSelectedRole] = useState<OrganizationRole>('super_admin');
 
   useEffect(() => {
     testSupabaseConnection().then(setDbStatus);
@@ -82,7 +110,7 @@ export default function SettingsModule() {
     setUsers(users.filter(u => u.id !== id));
   };
 
-  const handleChangeRole = (id: string, role: UserRole) => {
+  const handleChangeRole = (id: string, role: string) => {
     setUsers(users.map(u => u.id === id ? { ...u, role } : u));
   };
 
@@ -91,13 +119,17 @@ export default function SettingsModule() {
     setUsers(users.map(u => u.id === id ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' } : u));
   };
 
-  const roleColors: Record<UserRole, string> = {
-    super_admin: 'bg-red-100 text-red-800',
+  const roleColors: Record<string, string> = {
+    organization_owner: 'bg-purple-100 text-purple-800',
     admin: 'bg-blue-100 text-blue-800',
-    operations: 'bg-purple-100 text-purple-800',
-    fleet_manager: 'bg-teal-100 text-teal-800',
-    accounts: 'bg-green-100 text-green-800',
-    driver: 'bg-gray-100 text-gray-800',
+    operations_manager: 'bg-green-100 text-green-800',
+    dispatcher: 'bg-teal-100 text-teal-800',
+    fleet_manager: 'bg-orange-100 text-orange-800',
+    accountant: 'bg-yellow-100 text-yellow-800',
+    maintenance_manager: 'bg-amber-100 text-amber-800',
+    hr_manager: 'bg-pink-100 text-pink-800',
+    driver: 'bg-slate-100 text-slate-800',
+    viewer: 'bg-gray-100 text-gray-800',
   };
 
   return (
@@ -238,7 +270,7 @@ export default function SettingsModule() {
                     <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
                     <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-secondary)' }}>{u.phone}</td>
                     <td className="px-4 py-3">
-                      <select value={u.role} onChange={(e) => handleChangeRole(u.id, e.target.value as UserRole)} disabled={u.id === user.id} className="px-2 py-1 border rounded text-xs" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                      <select value={u.role} onChange={(e) => handleChangeRole(u.id, e.target.value as OrganizationRole)} disabled={u.id === user.id} className="px-2 py-1 border rounded text-xs" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
                         {ALL_ROLES.map(r => <option key={r} value={r}>{getRoleLabel(r)}</option>)}
                       </select>
                     </td>
@@ -278,7 +310,7 @@ export default function SettingsModule() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Role *</label>
-                    <select value={userForm.role} onChange={(e) => setUserForm({...userForm, role: e.target.value as UserRole})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                    <select value={userForm.role} onChange={(e) => setUserForm({...userForm, role: e.target.value as OrganizationRole})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
                       {ALL_ROLES.map(r => <option key={r} value={r}>{getRoleLabel(r)}</option>)}
                     </select>
                   </div>
@@ -312,13 +344,13 @@ export default function SettingsModule() {
               <div>
                 <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{getRoleLabel(selectedRole)}</h3>
                 <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  {canAccessModule(selectedRole, 'settings') ? 'Full admin access' : `Access to ${ALL_MODULES.filter(m => canAccessModule(selectedRole, m.id)).length} of ${ALL_MODULES.length} modules`}
+                  {canAccessModuleByRole(selectedRole, 'settings') ? 'Full admin access' : `Access to ${ALL_MODULES.filter(m => canAccessModuleByRole(selectedRole, m.id)).length} of ${ALL_MODULES.length} modules`}
                 </p>
               </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
               {ALL_MODULES.map(mod => {
-                const hasAccess = canAccessModule(selectedRole, mod.id);
+                const hasAccess = canAccessModuleByRole(selectedRole, mod.id);
                 return (
                   <div key={mod.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${hasAccess ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-400'}`}>
                     {hasAccess ? <CheckCircle className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
@@ -342,7 +374,7 @@ export default function SettingsModule() {
                 { role: 'driver', desc: 'Minimal access — can only view their own trips and notifications.' },
               ].map(item => (
                 <div key={item.role} className="flex items-start gap-3 py-2 border-b" style={{ borderColor: 'var(--border-color)' }}>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium shrink-0 ${roleColors[item.role as UserRole]}`}>{getRoleLabel(item.role as UserRole)}</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium shrink-0 ${roleColors[item.role as OrganizationRole]}`}>{getRoleLabel(item.role as OrganizationRole)}</span>
                   <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{item.desc}</p>
                 </div>
               ))}

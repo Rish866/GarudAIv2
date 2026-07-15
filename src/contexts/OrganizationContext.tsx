@@ -74,6 +74,20 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
       // Exactly one membership — use it
       const memRecord = memberships[0];
       const org = memRecord.organizations as unknown as Organization;
+
+      // Block portal roles that require row-level isolation
+      const blockedPortalRoles = new Set(['customer', 'vendor']);
+      if (blockedPortalRoles.has(memRecord.role)) {
+        setError(new Error(
+          `Portal access for ${memRecord.role} accounts is not yet enabled. ` +
+          `Row-level data isolation is being deployed. Please contact your administrator.`
+        ));
+        setOrganization(null);
+        setMembership(null);
+        setLoading(false);
+        return;
+      }
+
       const mem: OrganizationMembership = {
         id: memRecord.id,
         organization_id: memRecord.organization_id,

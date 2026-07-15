@@ -107,6 +107,11 @@ const KNOWN_ROLES = new Set([
   'driver', 'customer', 'vendor', 'viewer',
 ]);
 
+// Portal roles that require row-level isolation (customer_user_id, vendor_user_id, driver_user_id FKs).
+// Until those schema changes are deployed, these roles are BLOCKED from entering the internal ERP.
+// They can still authenticate but will see "Portal access not yet enabled" message.
+const PORTAL_ROLES_BLOCKED = new Set(['customer', 'vendor']);
+
 export async function resolveUserRole(): Promise<{
   success: boolean;
   role?: string;
@@ -158,6 +163,15 @@ export async function resolveUserRole(): Promise<{
       return {
         success: false,
         error: `Unknown role "${membership.role || 'null'}". Access denied. Contact your administrator.`,
+      };
+    }
+
+    // Block portal roles until row-level RLS is deployed.
+    // These users can authenticate but cannot access the internal ERP.
+    if (PORTAL_ROLES_BLOCKED.has(membership.role)) {
+      return {
+        success: false,
+        error: `Portal access for ${membership.role} accounts is not yet enabled. Please contact your administrator.`,
       };
     }
 
