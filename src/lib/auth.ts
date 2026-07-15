@@ -87,9 +87,26 @@ export async function performLogout(): Promise<{ success: boolean; error?: strin
 
 /**
  * Resolve user's organization role after successful authentication.
- * Returns the role from organization_members table, or an error if
- * the user has no active membership.
+ * 
+ * SECURITY MODEL — Deny-by-default:
+ * - If no session: deny
+ * - If no active membership: deny
+ * - If organization is not active: deny
+ * - If role is not in the known role list: deny
+ * - If multiple memberships exist: use the first active one (deterministic by created_at)
+ * - User CANNOT alter their role from the client — this reads from the DB only
+ * - Branch assignments are NOT loaded here (handled by BranchContext separately)
+ * 
+ * Returns the role from organization_members table, or an error.
  */
+
+// Known valid roles — any role not in this list is treated as deny
+const KNOWN_ROLES = new Set([
+  'organization_owner', 'admin', 'operations_manager', 'dispatcher',
+  'fleet_manager', 'accountant', 'maintenance_manager', 'hr_manager',
+  'driver', 'customer', 'vendor', 'viewer',
+]);
+
 export async function resolveUserRole(): Promise<{
   success: boolean;
   role?: string;
@@ -103,12 +120,15 @@ export async function resolveUserRole(): Promise<{
       return { success: false, error: 'No authenticated session' };
     }
 
+    // Query active memberships with their organization status
+    // Order by created_at to ensure deterministic selection for multi-org users
     const { data: memberships, error: memError } = await supabase
       .from('organization_members')
-      .select('role, status, organization_id, organizations(name)')
+      .select('role, status, organization_id, organizations(name, status)')
       .eq('user_id', session.user.id)
       .eq('status', 'active')
-      .limit(1);
+      .order('created_at', { ascending: true })
+      .limit(5); // Fetch a few to detect multi-org scenario
 
     if (memError) {
       return { success: false, error: `Failed to resolve role: ${memError.message}` };
@@ -118,8 +138,28 @@ export async function resolveUserRole(): Promise<{
       return { success: false, error: 'No active organization membership found. Please contact your administrator.' };
     }
 
-    const membership = memberships[0];
-    const orgName = (membership.organizations as any)?.name || 'Unknown';
+    // Filter for memberships where the organization is also active
+    const validMemberships = memberships.filter((m) => {
+      const org = m.organizations as { name?: string; status?: string } | null;
+      return org && (org.status === 'active' || org.status === undefined);
+    });
+
+    if (validMemberships.length === 0) {
+      return { success: false, error: 'Your organization is inactive or suspended. Please contact support.' };
+    }
+
+    // Use first valid membership (deterministic by created_at ordering)
+    const membership = validMemberships[0];
+    const orgData = membership.organizations as { name?: string; status?: string } | null;
+    const orgName = orgData?.name || 'Unknown';
+
+    // Deny-by-default: reject unknown roles
+    if (!membership.role || !KNOWN_ROLES.has(membership.role)) {
+      return {
+        success: false,
+        error: `Unknown role "${membership.role || 'null'}". Access denied. Contact your administrator.`,
+      };
+    }
 
     return {
       success: true,
@@ -127,8 +167,9 @@ export async function resolveUserRole(): Promise<{
       organizationId: membership.organization_id,
       organizationName: orgName,
     };
-  } catch (e: any) {
-    return { success: false, error: e.message || 'Failed to resolve user role' };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Failed to resolve user role';
+    return { success: false, error: message };
   }
 }
 

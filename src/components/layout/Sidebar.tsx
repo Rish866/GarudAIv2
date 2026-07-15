@@ -31,7 +31,8 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { usePermission } from '../../hooks/usePermission';
-import type { Permission } from '../../lib/permissions';
+import { useBranch } from '../../contexts/BranchContext';
+import { MODULE_PERMISSIONS } from '../../lib/modulePermissions';
 import type { ModuleName } from '../../types';
 
 interface NavItem {
@@ -46,57 +47,6 @@ interface NavSection {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   items: NavItem[];
 }
-
-// Maps each module to the permission required to view it.
-// If a module is not listed, it's accessible to all authenticated users.
-const MODULE_REQUIRED_PERMISSION: Partial<Record<ModuleName, Permission>> = {
-  fleet: 'vehicles.read',
-  trips: 'trips.read',
-  drivers: 'drivers.read',
-  customers: 'customers.read',
-  vendors: 'vendors.read',
-  enquiries: 'enquiries.read',
-  indents: 'indents.read',
-  contracts: 'customers.read',
-  market: 'vendors.read',
-  routes: 'trips.read',
-  transfers: 'vehicles.read',
-  billing: 'invoices.read',
-  accounts: 'finance.read',
-  purchases: 'finance.read',
-  sales: 'invoices.read',
-  pnl: 'finance.read',
-  gstreports: 'gst.read',
-  profitability: 'reports.read',
-  creditblock: 'customers.read',
-  payroll: 'payroll.read',
-  attendance: 'attendance.read',
-  inventory: 'finance.read',
-  fuel: 'fuel.read',
-  tyres: 'tyres.read',
-  maintenance: 'maintenance.read',
-  workorders: 'maintenance.read',
-  challans: 'vehicles.read',
-  documents: 'documents.read',
-  ewaybill: 'trips.read',
-  expiry: 'documents.read',
-  claims: 'claims.read',
-  gps: 'tracking.read',
-  geofencing: 'geofencing.read',
-  sla: 'tracking.read',
-  dashcam: 'tracking.read',
-  fueltheft: 'fuel.read',
-  predictive: 'reports.read',
-  trackinglinks: 'tracking.read',
-  reports: 'reports.read',
-  approvals: 'approvals.read',
-  audittrail: 'settings.read',
-  portal: 'customers.read',
-  vendorportal: 'vendors.read',
-  restapi: 'api.read',
-  mobileapp: 'settings.read',
-  settings: 'settings.read',
-};
 
 const navSections: NavSection[] = [
   {
@@ -197,25 +147,25 @@ export default function Sidebar() {
     sidebarCollapsed,
     theme,
     user,
-    branches,
-    activeBranch,
     setActiveModule,
     toggleSidebar,
     toggleTheme,
-    setActiveBranch,
   } = useStore();
+
+  // Branch state from Supabase-backed BranchContext (not Zustand)
+  const { accessibleBranches, selectedBranchId, hasAllBranchAccess, selectBranch } = useBranch();
 
   const [branchOpen, setBranchOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(['overview', 'operations', 'admin']);
 
   const { can } = usePermission();
 
-  // Permission-based module access: if a module has a required permission, check it.
-  // Dashboard and notifications are always accessible to authenticated users.
+  // Permission-based module access using the central MODULE_PERMISSIONS registry.
+  // If a module is not in the registry, access is DENIED (deny-by-default).
   const canAccessModule = (moduleId: ModuleName): boolean => {
-    const requiredPerm = MODULE_REQUIRED_PERMISSION[moduleId];
-    if (!requiredPerm) return true; // No restriction = accessible (dashboard, notifications)
-    return can(requiredPerm);
+    const perms = MODULE_PERMISSIONS[moduleId];
+    if (!perms) return false; // Unknown module = denied
+    return can(perms.view);
   };
 
   const toggleSection = (sectionId: string) => {
@@ -290,7 +240,7 @@ export default function Sidebar() {
               className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors hover:bg-[var(--bg-tertiary)]"
               style={{ color: 'var(--text-secondary)' }}
             >
-              <span className="truncate">{activeBranch === 'all' ? 'All Branches' : branches.find(b => b.id === activeBranch)?.name || 'Select Branch'}</span>
+              <span className="truncate">{selectedBranchId === null ? 'All Branches' : accessibleBranches.find(b => b.id === selectedBranchId)?.name || 'Select Branch'}</span>
               <ChevronDown
                 size={14}
                 className={`transition-transform ${branchOpen ? 'rotate-180' : ''}`}
@@ -304,35 +254,37 @@ export default function Sidebar() {
                   borderColor: 'var(--border-color)',
                 }}
               >
+                {hasAllBranchAccess && (
                 <button
                   key="all"
                   onClick={() => {
-                    setActiveBranch('all');
+                    selectBranch(null);
                     setBranchOpen(false);
                   }}
                   className={`w-full text-left px-3 py-2 text-xs transition-colors first:rounded-t-lg
-                    ${activeBranch === 'all' ? 'font-semibold' : ''}
+                    ${selectedBranchId === null ? 'font-semibold' : ''}
                   `}
                   style={{
-                    color: activeBranch === 'all' ? 'var(--accent)' : 'var(--text-secondary)',
-                    backgroundColor: activeBranch === 'all' ? 'var(--accent-light)' : 'transparent',
+                    color: selectedBranchId === null ? 'var(--accent)' : 'var(--text-secondary)',
+                    backgroundColor: selectedBranchId === null ? 'var(--accent-light)' : 'transparent',
                   }}
                 >
                   All Branches
                 </button>
-                {branches.map((branch) => (
+                )}
+                {accessibleBranches.map((branch) => (
                   <button
                     key={branch.id}
                     onClick={() => {
-                      setActiveBranch(branch.id);
+                      selectBranch(branch.id);
                       setBranchOpen(false);
                     }}
                     className={`w-full text-left px-3 py-2 text-xs transition-colors first:rounded-t-lg last:rounded-b-lg
-                      ${activeBranch === branch.id ? 'font-semibold' : ''}
+                      ${selectedBranchId === branch.id ? 'font-semibold' : ''}
                     `}
                     style={{
-                      color: activeBranch === branch.id ? 'var(--accent)' : 'var(--text-secondary)',
-                      backgroundColor: activeBranch === branch.id ? 'var(--accent-light)' : 'transparent',
+                      color: selectedBranchId === branch.id ? 'var(--accent)' : 'var(--text-secondary)',
+                      backgroundColor: selectedBranchId === branch.id ? 'var(--accent-light)' : 'transparent',
                     }}
                   >
                     {branch.name} ({branch.code})
