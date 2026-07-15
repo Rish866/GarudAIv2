@@ -7,6 +7,7 @@ import Pagination from '../../ui/Pagination';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { tripRepository } from '../../../data/trips/tripRepository';
+import { validateStatusTransition, validateVehicleForTrip, validateDriverForTrip, canGenerateInvoice, getValidNextStatuses } from '../../../lib/workflowRules';
 import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
@@ -162,6 +163,24 @@ export default function TripsModule() {
       return;
     }
 
+    // Business rule validation before status transition
+    const trip = trips.find((t: any) => t.id === tripId);
+    if (trip) {
+      const validation = validateStatusTransition(trip, newStatus, {
+        canOverridePOD: can('approvals.action'),
+      });
+
+      if (!validation.allowed) {
+        showToast('error', validation.errors[0]);
+        return;
+      }
+
+      // Show warnings but allow transition
+      if (validation.warnings.length > 0) {
+        validation.warnings.forEach(w => showToast('warning', w));
+      }
+    }
+
     const { error } = await tripRepository.transitionStatus(organizationId, tripId, newStatus);
     if (error) {
       showToast('error', `Status update failed: ${error}`);
@@ -181,10 +200,15 @@ export default function TripsModule() {
     if (newStatus === 'completed') {
       const trip = trips.find(t => t.id === tripId);
       if (trip) {
-        const subtotal = trip.freight_amount + trip.detention_charges + trip.other_charges;
-        const gst_amount = Math.round(subtotal * 0.05);
-        const tds_amount = Math.round(subtotal * 0.02);
-        const total_amount = subtotal + gst_amount - tds_amount;
+        // Validate invoice generation rules
+        const invoiceCheck = canGenerateInvoice(trip);
+        if (!invoiceCheck.allowed) {
+          showToast('warning', `Trip completed but invoice not generated: ${invoiceCheck.errors[0]}`);
+        } else {
+          const subtotal = trip.freight_amount + trip.detention_charges + trip.other_charges;
+          const gst_amount = Math.round(subtotal * 0.05);
+          const tds_amount = Math.round(subtotal * 0.02);
+          const total_amount = subtotal + gst_amount - tds_amount;
 
         const invoice: Partial<Invoice> = {
           invoice_number: generateInvoiceNumber(),
@@ -222,6 +246,7 @@ export default function TripsModule() {
           is_read: false,
           created_at: new Date().toISOString(),
         });
+        } // end else (invoice validation passed)
       }
     }
   };
