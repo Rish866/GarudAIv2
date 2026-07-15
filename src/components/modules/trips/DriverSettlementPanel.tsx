@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '../../../lib/utils';
 import { showToast } from '../../ui/Toast';
-import { getOrCreateSettlement, updateSettlement, submitSettlement, approveSettlement } from '../../../lib/tripEntities';
+import { getOrCreateSettlement, updateSettlement, submitSettlement, approveSettlement, settleSettlement, reverseSettlement, waiveSettlement } from '../../../lib/tripEntities';
 import type { DriverSettlementRecord } from '../../../lib/tripEntities';
 
 interface Props {
@@ -94,6 +94,49 @@ export default function DriverSettlementPanel({ tripId, driverId, driverName, or
     }
   };
 
+  const handleSettle = async () => {
+    if (!settlement) return;
+    const result = await settleSettlement(organizationId, settlement.id);
+    if (result.success) {
+      showToast('success', 'Settlement marked as paid/settled');
+      await loadSettlement();
+    } else {
+      showToast('error', result.error || 'Failed to settle');
+    }
+  };
+
+  const handleReverse = async () => {
+    if (!settlement) return;
+    const reason = prompt('Reversal reason (min 5 chars):');
+    if (!reason || reason.length < 5) {
+      if (reason) showToast('error', 'Reason must be at least 5 characters');
+      return;
+    }
+    const result = await reverseSettlement(organizationId, settlement.id, reason, 'current_user');
+    if (result.success) {
+      showToast('warning', 'Settlement reversed');
+      await loadSettlement();
+    } else {
+      showToast('error', result.error || 'Reversal failed');
+    }
+  };
+
+  const handleWaive = async () => {
+    if (!settlement) return;
+    const reason = prompt('Waiver reason (min 5 chars):');
+    if (!reason || reason.length < 5) {
+      if (reason) showToast('error', 'Reason must be at least 5 characters');
+      return;
+    }
+    const result = await waiveSettlement(organizationId, settlement.id, reason, 'current_user');
+    if (result.success) {
+      showToast('success', 'Settlement waived');
+      await loadSettlement();
+    } else {
+      showToast('error', result.error || 'Waiver failed');
+    }
+  };
+
   if (loading) return <p className="text-xs text-amber-700">Loading settlement...</p>;
   if (!driverId) return <p className="text-xs text-amber-700">No driver assigned</p>;
 
@@ -173,6 +216,21 @@ export default function DriverSettlementPanel({ tripId, driverId, driverName, or
         {settlement?.status === 'submitted' && (
           <button onClick={handleApprove} className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700">
             Approve
+          </button>
+        )}
+        {settlement?.status === 'approved' && (
+          <button onClick={handleSettle} className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700">
+            Mark Settled
+          </button>
+        )}
+        {(settlement?.status === 'approved' || settlement?.status === 'settled') && (
+          <button onClick={handleReverse} className="px-3 py-1.5 border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50">
+            Reverse
+          </button>
+        )}
+        {(settlement?.status === 'draft' || settlement?.status === 'submitted') && (
+          <button onClick={handleWaive} className="px-3 py-1.5 border border-orange-200 text-orange-600 text-xs font-medium rounded-lg hover:bg-orange-50">
+            Waive
           </button>
         )}
       </div>

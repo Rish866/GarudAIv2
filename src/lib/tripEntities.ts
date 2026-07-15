@@ -521,6 +521,75 @@ export async function getSettlementForTrip(
   return data as DriverSettlementRecord | null;
 }
 
+/**
+ * Mark settlement as settled (final payment made).
+ */
+export async function settleSettlement(
+  organizationId: string,
+  settlementId: string
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase
+    .from('driver_settlements')
+    .update({ status: 'settled', settled_at: new Date().toISOString() })
+    .eq('id', settlementId)
+    .eq('organization_id', organizationId)
+    .eq('status', 'approved');
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+/**
+ * Reverse a settlement (requires permission and reason).
+ */
+export async function reverseSettlement(
+  organizationId: string,
+  settlementId: string,
+  reason: string,
+  reversedBy: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!reason || reason.trim().length < 5) {
+    return { success: false, error: 'Reversal reason must be at least 5 characters' };
+  }
+  const { error } = await supabase
+    .from('driver_settlements')
+    .update({
+      status: 'reversed',
+      reversal_reason: reason,
+      reversed_by: reversedBy,
+      reversed_at: new Date().toISOString(),
+    })
+    .eq('id', settlementId)
+    .eq('organization_id', organizationId)
+    .in('status', ['approved', 'settled']);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+/**
+ * Waive a settlement (no payment needed, trip can close).
+ */
+export async function waiveSettlement(
+  organizationId: string,
+  settlementId: string,
+  reason: string,
+  waivedBy: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!reason || reason.trim().length < 5) {
+    return { success: false, error: 'Waiver reason must be at least 5 characters' };
+  }
+  const { error } = await supabase
+    .from('driver_settlements')
+    .update({ status: 'waived', reversal_reason: reason, reversed_by: waivedBy, reversed_at: new Date().toISOString() })
+    .eq('id', settlementId)
+    .eq('organization_id', organizationId)
+    .in('status', ['draft', 'submitted']);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 // ============================================================
 // PROFITABILITY CALCULATION
 // ============================================================
