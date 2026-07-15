@@ -2,12 +2,12 @@
  * E2E Test: Trip Operations (Cancel / Edit / Reopen / Transition)
  *
  * Prerequisites:
- * - Supabase project running with migrations 000-008 applied
- * - .env configured with valid VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+ * - Supabase project with migrations 000-008 applied
+ * - Migration 007 deployed (workflow entities)
+ * - .env.e2e configured with valid credentials
  * - Test users created:
  *   - owner@test.com (organization_owner role)
  *   - viewer@test.com (viewer role)
- *   - other@test.com (owner of a different org)
  * - At least one vehicle, driver, and customer in the test org
  *
  * Run: npx playwright test tests/e2e/trip-operations.spec.ts
@@ -16,10 +16,15 @@
 import { test, expect } from '@playwright/test';
 
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:5173';
-const OWNER_EMAIL = process.env.E2E_OWNER_EMAIL || 'owner@test.com';
-const OWNER_PASSWORD = process.env.E2E_OWNER_PASSWORD || 'testpass123';
-const VIEWER_EMAIL = process.env.E2E_VIEWER_EMAIL || 'viewer@test.com';
-const VIEWER_PASSWORD = process.env.E2E_VIEWER_PASSWORD || 'testpass123';
+const OWNER_EMAIL = process.env.E2E_OWNER_EMAIL || '';
+const OWNER_PASSWORD = process.env.E2E_OWNER_PASSWORD || '';
+const VIEWER_EMAIL = process.env.E2E_VIEWER_EMAIL || '';
+const VIEWER_PASSWORD = process.env.E2E_VIEWER_PASSWORD || '';
+
+// All tests in this file require dedicated E2E test accounts
+const HAS_OWNER_CREDS = Boolean(OWNER_EMAIL && OWNER_PASSWORD);
+const HAS_VIEWER_CREDS = Boolean(VIEWER_EMAIL && VIEWER_PASSWORD);
+const MIGRATION_DEPLOYED = process.env.E2E_MIGRATION_007 === 'true';
 
 async function login(page: any, email: string, password: string) {
   await page.goto(BASE_URL);
@@ -36,6 +41,9 @@ async function navigateToTrips(page: any) {
 
 test.describe('Trip Operations E2E', () => {
   test.describe('Owner user workflows', () => {
+    test.skip(!HAS_OWNER_CREDS, 'E2E_OWNER_EMAIL and E2E_OWNER_PASSWORD not configured');
+    test.skip(!MIGRATION_DEPLOYED, 'Migration 007 not deployed (E2E_MIGRATION_007 != true)');
+
     test.beforeEach(async ({ page }) => {
       await login(page, OWNER_EMAIL, OWNER_PASSWORD);
       await navigateToTrips(page);
@@ -155,6 +163,9 @@ test.describe('Trip Operations E2E', () => {
   });
 
   test.describe('Viewer user restrictions', () => {
+    test.skip(!HAS_VIEWER_CREDS, 'E2E_VIEWER_EMAIL and E2E_VIEWER_PASSWORD not configured');
+    test.skip(!MIGRATION_DEPLOYED, 'Migration 007 not deployed (E2E_MIGRATION_007 != true)');
+
     test.beforeEach(async ({ page }) => {
       await login(page, VIEWER_EMAIL, VIEWER_PASSWORD);
       await navigateToTrips(page);
