@@ -710,19 +710,9 @@ function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) 
     });
 
     if (result.success) {
-      // Also update trip for backward compatibility display
-      await updateTrip(trip.id, {
-        pod_url: filename || 'pod_uploaded.jpg',
-        pod_date: today,
-        pod_details: {
-          received_by: receivedBy,
-          condition,
-          remarks,
-          received_date: today,
-          image_url: filename || undefined,
-      },
-      status: 'pod_pending', // Move to pod_pending (not completed — needs verification)
-    });
+      // Update trip status only — POD entity is the authoritative source
+      // The pods table record is the source of truth, not trip.pod_url
+      await updateTrip(trip.id, { status: 'pod_pending' });
       showToast('success', 'POD uploaded successfully');
     } else {
       showToast('error', result.error || 'Failed to upload POD');
