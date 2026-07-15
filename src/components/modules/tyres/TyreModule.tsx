@@ -3,7 +3,7 @@ import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Circle, Plus, X, RotateCcw, Trash2, Truck, Search } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
@@ -114,8 +114,8 @@ export default function TyreModule() {
     const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
     if (!vehicle || !form.serial_number || !form.cost || !form.purchase_date) return;
 
-    const newTyre: TyreRecord = {
-      id: 'tyr_' + generateId(),
+    const newTyre: Partial<TyreRecord> = {
+      
       serial_number: form.serial_number,
       vehicle_id: form.vehicle_id,
       vehicle_reg: vehicle.reg_number,
@@ -302,7 +302,7 @@ export default function TyreModule() {
             data.forEach(row => {
               const vehicle = vehicles.find(v => v.reg_number === row.vehicle_reg);
               createTyre({
-                id: 'tyr_' + generateId(),
+                
                 serial_number: row.serial_number || '',
                 vehicle_id: vehicle?.id || '',
                 vehicle_reg: row.vehicle_reg || '',

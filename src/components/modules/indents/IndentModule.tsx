@@ -3,7 +3,7 @@ import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Package, Plus, X, Search, Download, Truck, CheckCircle, Clock, ArrowRight } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
@@ -188,7 +188,7 @@ export default function IndentModule() {
       const vehicle = vehicles.find(v => v.id === allocVeh.id);
       const driver = allocVeh.driver_id ? drivers.find(d => d.id === allocVeh.driver_id) : null;
       const trip = {
-        id: 'trip_' + generateId(),
+        
         
         trip_number: `TRP-2025-${String(150 + Math.floor(Math.random() * 50) + idx).padStart(4, '0')}`,
         lr_number: `LR-${7850 + Math.floor(Math.random() * 100) + idx}`,

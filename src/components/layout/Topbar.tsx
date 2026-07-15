@@ -21,7 +21,7 @@ import type { ModuleName } from '../../types';
 import HelpButton from '../ui/HelpButton';
 import { MODULE_HELP } from '../../lib/helpContent';
 import BranchSelector from '../ui/BranchSelector';
-import { isPlatformAdmin } from '../../lib/auth';
+import { isPlatformAdmin, performLogout } from '../../lib/auth';
 
 const moduleLabels: Record<ModuleName, string> = {
   dashboard: 'Dashboard',
@@ -432,7 +432,8 @@ export default function Topbar() {
                   <div className="my-1 h-px" style={{ backgroundColor: 'var(--border-color)' }} />
 
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      await performLogout();
                       logout();
                       setUserOpen(false);
                     }}

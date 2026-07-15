@@ -12,7 +12,7 @@ import { OrganizationProvider, useOrganization } from './contexts/OrganizationCo
 import { BranchProvider } from './contexts/BranchContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
-import { signIn, requestPasswordReset } from './lib/auth';
+import { signIn, requestPasswordReset, performLogout, resolveUserRole } from './lib/auth';
 import { supabase, supabaseConfigurationError } from './lib/supabase';
 import InviteAcceptPage from './components/InviteAcceptPage';
 
@@ -191,29 +191,66 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    signIn(email, password).then(result => {
-      setLoading(false);
-      if (result.success && result.user) {
+    try {
+      const result = await signIn(email, password);
+      if (!result.success || !result.user) {
+        setLoading(false);
+        setError(result.error || 'Login failed. If you just deployed, make sure Supabase Auth is enabled in your dashboard.');
+        return;
+      }
+
+      // Resolve real organization role from database
+      const roleResult = await resolveUserRole();
+      if (!roleResult.success) {
+        setLoading(false);
+        // User authenticated but has no active org membership
+        // Keep session alive so they can accept invites or create org
         login({
           id: result.user.id,
           name: result.user.name,
           email: result.user.email,
-          role: 'admin', // Display role — real permissions come from OrganizationContext
+          role: 'operations', // Fallback — OrganizationContext will show "no org" state
           phone: '',
           status: 'active',
         });
-      } else {
-        setError(result.error || 'Login failed. If you just deployed, make sure Supabase Auth is enabled in your dashboard.');
+        return;
       }
-    }).catch(() => {
+
+      // Map org role to legacy UserRole type for store compatibility
+      const roleMapping: Record<string, any> = {
+        organization_owner: 'super_admin',
+        admin: 'admin',
+        operations_manager: 'operations',
+        dispatcher: 'operations',
+        fleet_manager: 'fleet_manager',
+        accountant: 'accounts',
+        maintenance_manager: 'operations',
+        hr_manager: 'operations',
+        driver: 'driver',
+        customer: 'driver', // Minimal access
+        viewer: 'driver', // Minimal access
+      };
+
+      const mappedRole = roleMapping[roleResult.role || ''] || 'operations';
+
+      login({
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        role: mappedRole,
+        phone: '',
+        status: 'active',
+      });
+      setLoading(false);
+    } catch {
       setLoading(false);
       setError('Cannot connect to authentication server. Please try again.');
-    });
+    }
   };
 
   const handleRegister = (e: React.FormEvent) => {
@@ -780,25 +817,52 @@ export default function App() {
   }
 
   // Auth bootstrap: verify Supabase session on mount.
-  // If Zustand says logged in but Supabase session is gone, log out.
+  // Supabase session is the source of truth, NOT Zustand isLoggedIn.
+  // If Supabase has a valid session, restore user. If not, force logout.
   useEffect(() => {
     if (supabaseConfigurationError) {
       setAuthChecking(false);
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session && isLoggedIn) {
-        // Supabase session expired/missing — force logout
-        logout();
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        // No Supabase session — ensure local state reflects this
+        if (isLoggedIn) logout();
+        setAuthChecking(false);
+        return;
+      }
+
+      // Session exists — restore user identity if not already logged in
+      if (!isLoggedIn) {
+        const user = session.user;
+        login({
+          id: user.id,
+          name: user.user_metadata?.name || user.email?.split('@')[0] || '',
+          email: user.email || '',
+          role: 'operations', // Will be resolved by OrganizationContext
+          phone: '',
+          status: 'active',
+        });
       }
       setAuthChecking(false);
     });
 
     // Listen for auth state changes (e.g. token refresh, sign out from another tab)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' && isLoggedIn) {
+      if (event === 'SIGNED_OUT') {
         logout();
+      }
+      if (event === 'TOKEN_REFRESHED' && session && !isLoggedIn) {
+        // Session restored (e.g. after tab regains focus)
+        login({
+          id: session.user.id,
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
+          email: session.user.email || '',
+          role: 'operations',
+          phone: '',
+          status: 'active',
+        });
       }
       if (event === 'PASSWORD_RECOVERY') {
         setShowPasswordReset(true);

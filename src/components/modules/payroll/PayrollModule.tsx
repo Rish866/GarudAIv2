@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { formatCurrency, classNames } from '../../../lib/utils';
 import { DollarSign, Users, CheckCircle, Clock, CreditCard } from 'lucide-react';
 

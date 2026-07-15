@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { FileText, Plus, X, Download, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
@@ -81,8 +81,7 @@ export default function EWayBillModule() {
     const validDate = new Date();
     validDate.setDate(validDate.getDate() + validDays);
 
-    const newBill: EWayBillRecord = {
-      id: 'ewb_' + generateId(),
+    const newBill: Partial<EWayBillRecord> = {
       ewb_number: `3714 ${Math.floor(1000+Math.random()*9000)} ${Math.floor(1000+Math.random()*9000)}`,
       trip_id: trip.id,
       trip_number: trip.trip_number,
@@ -263,7 +262,6 @@ export default function EWayBillModule() {
           onUpload={(data) => {
             data.forEach(row => {
               createBill({
-                id: 'ewb_' + generateId(),
                 ewb_number: row.ewb_number || '',
                 trip_id: '',
                 trip_number: row.trip_number || '',

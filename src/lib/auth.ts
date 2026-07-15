@@ -59,6 +59,80 @@ export async function signOut(): Promise<void> {
 }
 
 /**
+ * Central logout service — call this for ALL logout scenarios.
+ * 
+ * 1. Calls supabase.auth.signOut()
+ * 2. Clears localStorage branch selection
+ * 3. Returns success/failure (caller handles store cleanup & redirect)
+ * 
+ * Even if sign-out API fails (network error), we still invalidate local state
+ * to prevent the user from accessing protected content.
+ */
+export async function performLogout(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.auth.signOut();
+    // Clear branch selection cache
+    localStorage.removeItem('garud_selected_branch');
+    if (error) {
+      // Sign-out API failed but we still clear local state
+      return { success: true, error: `Sign-out API error (local session cleared): ${error.message}` };
+    }
+    return { success: true };
+  } catch (e: any) {
+    // Network failure — still clear local state for security
+    localStorage.removeItem('garud_selected_branch');
+    return { success: true, error: 'Network error during sign-out (local session cleared)' };
+  }
+}
+
+/**
+ * Resolve user's organization role after successful authentication.
+ * Returns the role from organization_members table, or an error if
+ * the user has no active membership.
+ */
+export async function resolveUserRole(): Promise<{
+  success: boolean;
+  role?: string;
+  organizationId?: string;
+  organizationName?: string;
+  error?: string;
+}> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      return { success: false, error: 'No authenticated session' };
+    }
+
+    const { data: memberships, error: memError } = await supabase
+      .from('organization_members')
+      .select('role, status, organization_id, organizations(name)')
+      .eq('user_id', session.user.id)
+      .eq('status', 'active')
+      .limit(1);
+
+    if (memError) {
+      return { success: false, error: `Failed to resolve role: ${memError.message}` };
+    }
+
+    if (!memberships || memberships.length === 0) {
+      return { success: false, error: 'No active organization membership found. Please contact your administrator.' };
+    }
+
+    const membership = memberships[0];
+    const orgName = (membership.organizations as any)?.name || 'Unknown';
+
+    return {
+      success: true,
+      role: membership.role,
+      organizationId: membership.organization_id,
+      organizationName: orgName,
+    };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Failed to resolve user role' };
+  }
+}
+
+/**
  * Get current authenticated user from Supabase session.
  * Does NOT determine organization or role — that's OrganizationContext's job.
  */

@@ -30,7 +30,8 @@ import {
   Globe,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { canAccessModule } from '../../lib/rbac';
+import { usePermission } from '../../hooks/usePermission';
+import type { Permission } from '../../lib/permissions';
 import type { ModuleName } from '../../types';
 
 interface NavItem {
@@ -45,6 +46,57 @@ interface NavSection {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   items: NavItem[];
 }
+
+// Maps each module to the permission required to view it.
+// If a module is not listed, it's accessible to all authenticated users.
+const MODULE_REQUIRED_PERMISSION: Partial<Record<ModuleName, Permission>> = {
+  fleet: 'vehicles.read',
+  trips: 'trips.read',
+  drivers: 'drivers.read',
+  customers: 'customers.read',
+  vendors: 'vendors.read',
+  enquiries: 'enquiries.read',
+  indents: 'indents.read',
+  contracts: 'customers.read',
+  market: 'vendors.read',
+  routes: 'trips.read',
+  transfers: 'vehicles.read',
+  billing: 'invoices.read',
+  accounts: 'finance.read',
+  purchases: 'finance.read',
+  sales: 'invoices.read',
+  pnl: 'finance.read',
+  gstreports: 'gst.read',
+  profitability: 'reports.read',
+  creditblock: 'customers.read',
+  payroll: 'payroll.read',
+  attendance: 'attendance.read',
+  inventory: 'finance.read',
+  fuel: 'fuel.read',
+  tyres: 'tyres.read',
+  maintenance: 'maintenance.read',
+  workorders: 'maintenance.read',
+  challans: 'vehicles.read',
+  documents: 'documents.read',
+  ewaybill: 'trips.read',
+  expiry: 'documents.read',
+  claims: 'claims.read',
+  gps: 'tracking.read',
+  geofencing: 'geofencing.read',
+  sla: 'tracking.read',
+  dashcam: 'tracking.read',
+  fueltheft: 'fuel.read',
+  predictive: 'reports.read',
+  trackinglinks: 'tracking.read',
+  reports: 'reports.read',
+  approvals: 'approvals.read',
+  audittrail: 'settings.read',
+  portal: 'customers.read',
+  vendorportal: 'vendors.read',
+  restapi: 'api.read',
+  mobileapp: 'settings.read',
+  settings: 'settings.read',
+};
 
 const navSections: NavSection[] = [
   {
@@ -156,7 +208,15 @@ export default function Sidebar() {
   const [branchOpen, setBranchOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(['overview', 'operations', 'admin']);
 
-  const userRole = user.role;
+  const { can } = usePermission();
+
+  // Permission-based module access: if a module has a required permission, check it.
+  // Dashboard and notifications are always accessible to authenticated users.
+  const canAccessModule = (moduleId: ModuleName): boolean => {
+    const requiredPerm = MODULE_REQUIRED_PERMISSION[moduleId];
+    if (!requiredPerm) return true; // No restriction = accessible (dashboard, notifications)
+    return can(requiredPerm);
+  };
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev =>
@@ -291,7 +351,7 @@ export default function Sidebar() {
           {navSections.map((section) => {
             const SectionIcon = section.icon;
             const isExpanded = expandedSections.includes(section.id);
-            const sectionItems = section.items.filter(item => canAccessModule(userRole, item.id));
+            const sectionItems = section.items.filter(item => canAccessModule(item.id));
             if (sectionItems.length === 0) return null;
             const hasActiveItem = sectionItems.some(item => item.id === activeModule);
 
@@ -425,7 +485,7 @@ export default function Sidebar() {
                   {user.name}
                 </p>
                 <p className="text-[10px] truncate" style={{ color: 'var(--text-tertiary)' }}>
-                  {user.role.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                  {(can('settings.manage') ? 'Admin' : (can('trips.create') ? 'Operations' : 'Member')).replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                 </p>
               </div>
             )}

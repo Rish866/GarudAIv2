@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Truck, Plus, X, TrendingUp, IndianRupee, CreditCard } from 'lucide-react';
 
@@ -43,8 +43,7 @@ export default function MarketHireModule() {
     const advancePaid = parseFloat(form.advance_paid) || 0;
     const freightCharged = parseFloat(form.freight_charged);
 
-    const newHire: MarketHireRecord = {
-      id: 'mh_' + generateId(),
+    const newHire: Partial<MarketHireRecord> = {
       trip_number: form.trip_number,
       market_vehicle_reg: form.market_vehicle_reg,
       owner_name: form.owner_name,

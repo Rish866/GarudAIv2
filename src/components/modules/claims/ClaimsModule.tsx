@@ -3,7 +3,7 @@ import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { AlertTriangle, Plus, X, Search, Download, FileText, Shield, Clock, CheckCircle, Camera } from 'lucide-react';
 
@@ -94,8 +94,7 @@ export default function ClaimsModule() {
   const handleAdd = () => {
     const trip = trips.find(t => t.id === form.trip_id);
     if (!form.description || !form.claim_amount) return;
-    const newClaim: Claim = {
-      id: 'clm_' + generateId(), claim_number: `CLM-2025-${String(claims.length + 13).padStart(4, '0')}`,
+    const newClaim: Partial<Claim> = {
       type: form.type, trip_id: form.trip_id, trip_number: trip?.trip_number || '', customer_name: trip?.customer_name || '',
       vehicle_reg: trip?.vehicle_reg || '', driver_name: trip?.driver_name || '',
       incident_date: form.incident_date || new Date().toISOString().split('T')[0], location: form.location,

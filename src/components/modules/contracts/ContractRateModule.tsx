@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { FileText, Plus, X, AlertTriangle } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
@@ -63,8 +63,7 @@ export default function ContractRateModule() {
     const today = new Date().toISOString().split('T')[0];
     const isExpired = form.effective_to < today;
 
-    const newContract: ContractRate = {
-      id: 'ctr_' + generateId(),
+    const newContract: Partial<ContractRate> = {
       customer_id: form.customer_id,
       customer_name: customer.name,
       origin: form.origin,
@@ -202,7 +201,6 @@ export default function ContractRateModule() {
               const today = new Date().toISOString().split('T')[0];
               const isExpired = (row.effective_to || '') < today;
               createContract({
-                id: 'ctr_' + generateId(),
                 customer_id: '',
                 customer_name: row.customer_name || '',
                 origin: row.origin || '',

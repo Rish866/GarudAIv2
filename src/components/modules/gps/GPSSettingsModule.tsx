@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
 import { Satellite, Wifi, WifiOff, Check, Settings, RefreshCw, Info, Truck } from 'lucide-react';
 

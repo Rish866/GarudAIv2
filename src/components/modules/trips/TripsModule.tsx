@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -181,8 +181,7 @@ export default function TripsModule() {
         const tds_amount = Math.round(subtotal * 0.02);
         const total_amount = subtotal + gst_amount - tds_amount;
 
-        const invoice: Invoice = {
-          id: generateId(),
+        const invoice: Partial<Invoice> = {
           invoice_number: generateInvoiceNumber(),
           customer_id: trip.customer_id,
           customer_name: trip.customer_name,
@@ -210,7 +209,6 @@ export default function TripsModule() {
 
         // Send notification
         addNotification({
-          id: generateId(),
           type: 'invoice_generated',
           title: 'Invoice Auto-Generated',
           message: `Invoice ${invoice.invoice_number} created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,
@@ -225,9 +223,8 @@ export default function TripsModule() {
 
 
   const handleDuplicateTrip = (trip: Trip) => {
-    const newTrip: Trip = {
+    const newTrip: Partial<Trip> = {
       ...trip,
-      id: generateId(),
       trip_number: generateTripNumber(),
       lr_number: generateLRNumber(),
       eway_bill: 'EWB-' + Date.now().toString().slice(-9),
@@ -1055,8 +1052,7 @@ function NewTripModal({ onClose }: { onClose: () => void }) {
     const freight = Number(form.freight_amount) || 0;
     const advance = Number(form.advance_amount) || 0;
 
-    const trip: Trip = {
-      id: generateId(),
+    const trip: Partial<Trip> = {
       branch_id: form.branch_id || undefined,
       trip_number: generateTripNumber(),
       lr_number: generateLRNumber(),

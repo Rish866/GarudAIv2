@@ -3,7 +3,7 @@ import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
-import { useStore, generateId } from '../../../store/useStore';
+import { useStore } from '../../../store/useStore';
 import type { Customer } from '../../../types';
 import { formatCurrency, getStatusColor, classNames } from '../../../lib/utils';
 import { exportCustomers } from '../../../lib/excel';
@@ -287,7 +287,6 @@ export default function CustomersModule() {
           onUpload={(data) => {
             data.forEach(row => {
               addCustomer({
-                id: generateId(),
                 
                 name: row.name || '',
                 contact_person: row.contact_person || '',
@@ -333,8 +332,7 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const customer: Customer = {
-      id: generateId(),
+    const customer: Partial<Customer> = {
       branch_id: form.branch_id || undefined,
       name: form.name,
       contact_person: form.contact_person,

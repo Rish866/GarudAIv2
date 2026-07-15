@@ -1,4 +1,7 @@
-import { generateId } from '../store/useStore';
+// Generate a simple unique ID for audit entries (client-side only, not a DB key)
+function generateAuditId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+}
 
 export interface AuditEntry {
   id: string;
@@ -40,7 +43,7 @@ export function logAudit(
   new_value?: string
 ) {
   const entry: AuditEntry = {
-    id: generateId(),
+    id: generateAuditId(),
     timestamp: new Date().toISOString(),
     user_name,
     action,
