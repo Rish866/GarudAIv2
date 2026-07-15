@@ -17,6 +17,7 @@ import { estimateDistance } from '../../../lib/distance';
 import { showToast } from '../../ui/Toast';
 import { Plus, Search, MapPin, Truck, User, Package, ChevronDown, X, FileText, Download, Eye, Upload, Calendar, Phone, CreditCard, CheckCircle, Circle, Clock, Ban, RotateCcw, Edit3 } from 'lucide-react';
 import DriverAdvanceTracker from './DriverAdvanceTracker';
+import DriverSettlementPanel from './DriverSettlementPanel';
 import SendNotificationModal from '../../ui/SendNotificationModal';
 import BranchField from '../../ui/BranchField';
 
@@ -1033,6 +1034,12 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
                 {tripProfit >= 0 ? '' : '('}{formatCurrency(Math.abs(tripProfit))}{tripProfit < 0 ? ')' : ''}
               </span>
             </div>
+          </div>
+
+          {/* DRIVER SETTLEMENT */}
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+            <h3 className="text-sm font-semibold text-amber-900 mb-3">Driver Settlement</h3>
+            <DriverSettlementPanel tripId={trip.id} driverId={trip.driver_id} driverName={trip.driver_name} organizationId={organizationId || ''} />
           </div>
 
           {/* P0.2 — LINKED DOCUMENT CHAIN */}
