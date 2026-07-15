@@ -486,6 +486,52 @@ export default function TripsModule() {
                     Cancel
                   </button>
                 )}
+                {/* Close Trip — only for completed/billed trips */}
+                {(trip.status === 'completed' || trip.status === 'billed') && canEditTrips && (
+                  <button
+                    onClick={async () => {
+                      if (!organizationId) return;
+                      const { validateTripClosure, closeTrip } = await import('../../../lib/workflowService');
+                      const validation = validateTripClosure(trip, {
+                        hasSettlement: true, // Will be checked server-side in closeTrip
+                        settlementStatus: 'approved',
+                        hasInvoice: trip.status === 'billed',
+                        podStatus: trip.pod_url ? 'verified' : 'pending',
+                      });
+                      if (!validation.valid) {
+                        const msgs = validation.blockers.map(b => `• ${b.message}`).join('\n');
+                        const overridable = validation.blockers.every(b => b.overridable);
+                        if (overridable) {
+                          const reason = prompt(`Trip has blockers:\n${msgs}\n\nProvide override reason to close anyway:`);
+                          if (!reason) return;
+                          const overrides = validation.blockers.map(b => ({ code: b.code, reason }));
+                          const result = await closeTrip(organizationId, trip.id, overrides);
+                          if (result.success) {
+                            showToast('success', 'Trip closed with overrides');
+                            await refreshTrips();
+                          } else {
+                            showToast('error', result.error || 'Closure failed');
+                          }
+                        } else {
+                          showToast('error', `Cannot close trip:\n${validation.blockers[0].message}`);
+                        }
+                      } else {
+                        const result = await closeTrip(organizationId, trip.id);
+                        if (result.success) {
+                          showToast('success', 'Trip closed successfully');
+                          await refreshTrips();
+                        } else {
+                          showToast('error', result.error || 'Closure failed');
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors"
+                    title="Close Trip"
+                  >
+                    <CheckCircle size={14} />
+                    Close Trip
+                  </button>
+                )}
                 {/* Reopen — only for cancelled trips AND user has permission (owner/admin/ops_manager) */}
                 {trip.status === 'cancelled' && canDeleteTrips && (
                   <button
