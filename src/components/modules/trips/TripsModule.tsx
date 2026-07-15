@@ -622,11 +622,13 @@ export default function TripsModule() {
 
 
 function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
+  const { organizationId } = useOrganization();
   const { update: updateTrip } = useModuleData<any>('trips');
   const [receivedBy, setReceivedBy] = useState('');
   const [condition, setCondition] = useState<'good' | 'damaged' | 'partial'>('good');
   const [remarks, setRemarks] = useState('');
   const [filename, setFilename] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -634,21 +636,42 @@ function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) 
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!organizationId || saving) return;
+    setSaving(true);
     const today = new Date().toISOString().split('T')[0];
-    updateTrip(trip.id, {
-      pod_url: filename || 'pod_uploaded.jpg',
-      pod_date: today,
-      pod_details: {
-        received_by: receivedBy,
-        condition,
-        remarks,
-        received_date: today,
-        image_url: filename || undefined,
-      },
-      status: 'completed',
+
+    // Use persistent POD service
+    const { uploadPOD } = await import('../../../lib/tripEntities');
+    const result = await uploadPOD(organizationId, trip.id, {
+      file_path: filename || 'pod_uploaded.jpg',
+      file_name: filename || 'pod_uploaded.jpg',
+      file_type: 'image',
+      delivery_at: today,
+      received_by: receivedBy,
+      remarks: `Condition: ${condition}. ${remarks}`.trim(),
     });
+
+    if (result.success) {
+      // Also update trip for backward compatibility display
+      await updateTrip(trip.id, {
+        pod_url: filename || 'pod_uploaded.jpg',
+        pod_date: today,
+        pod_details: {
+          received_by: receivedBy,
+          condition,
+          remarks,
+          received_date: today,
+          image_url: filename || undefined,
+      },
+      status: 'pod_pending', // Move to pod_pending (not completed — needs verification)
+    });
+      showToast('success', 'POD uploaded successfully');
+    } else {
+      showToast('error', result.error || 'Failed to upload POD');
+    }
+    setSaving(false);
     onClose();
   };
 
