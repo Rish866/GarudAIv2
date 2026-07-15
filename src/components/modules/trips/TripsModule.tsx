@@ -755,6 +755,8 @@ function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) 
 
 function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   const { company } = useStore();
+  const { organizationId } = useOrganization();
+  const { update: updateTrip } = useModuleData<any>('trips', { fetchOnMount: false });
   const { data: expenses } = useModuleData<any>('expenses');
   const { data: fuelEntries } = useModuleData<any>('fuel_entries');
   const { data: invoices } = useModuleData<any>('invoices');
@@ -941,6 +943,51 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
               </div>
               {trip.pod_details.remarks && (
                 <p className="text-xs text-green-700 mt-2">Remarks: {trip.pod_details.remarks}</p>
+              )}
+              {/* POD Verification Actions */}
+              {trip.status === 'pod_pending' && (
+                <div className="mt-3 pt-3 border-t border-green-200 flex gap-2">
+                  <button
+                    onClick={async () => {
+                      if (!organizationId) return;
+                      const { getPODForTrip, verifyPOD } = await import('../../../lib/tripEntities');
+                      const pod = await getPODForTrip(organizationId, trip.id);
+                      if (pod) {
+                        const result = await verifyPOD(organizationId, pod.id, 'current_user');
+                        if (result.success) {
+                          showToast('success', 'POD verified');
+                          updateTrip(trip.id, { status: 'completed' });
+                        } else {
+                          showToast('error', result.error || 'Verification failed');
+                        }
+                      } else {
+                        showToast('error', 'No POD record found. Upload POD first.');
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700"
+                  >
+                    ✓ Verify POD
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const reason = prompt('Rejection reason:');
+                      if (!reason || !organizationId) return;
+                      const { getPODForTrip, rejectPOD } = await import('../../../lib/tripEntities');
+                      const pod = await getPODForTrip(organizationId, trip.id);
+                      if (pod) {
+                        const result = await rejectPOD(organizationId, pod.id, reason);
+                        if (result.success) {
+                          showToast('warning', 'POD rejected. Driver must re-upload.');
+                        } else {
+                          showToast('error', result.error || 'Rejection failed');
+                        }
+                      }
+                    }}
+                    className="px-3 py-1.5 border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50"
+                  >
+                    ✗ Reject POD
+                  </button>
+                </div>
               )}
             </div>
           )}
