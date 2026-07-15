@@ -491,11 +491,13 @@ export default function TripsModule() {
                     onClick={async () => {
                       if (!organizationId) return;
                       const { validateTripClosure, closeTrip } = await import('../../../lib/workflowService');
+                      const { getTripPODState } = await import('../../../lib/tripEntities');
+                      const podState = await getTripPODState(organizationId, trip.id);
                       const validation = validateTripClosure(trip, {
                         hasSettlement: true, // Will be checked server-side in closeTrip
                         settlementStatus: 'approved',
                         hasInvoice: trip.status === 'billed',
-                        podStatus: trip.pod_url ? 'verified' : 'pending',
+                        podStatus: podState.status,
                       });
                       if (!validation.valid) {
                         const msgs = validation.blockers.map(b => `• ${b.message}`).join('\n');
@@ -1034,6 +1036,27 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
                     className="px-3 py-1.5 border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50"
                   >
                     ✗ Reject POD
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const reason = prompt('POD waiver reason (min 5 chars):');
+                      if (!reason || reason.length < 5 || !organizationId) {
+                        if (reason && reason.length < 5) showToast('error', 'Waiver reason must be at least 5 characters');
+                        return;
+                      }
+                      const { getPODForTrip, waivePOD } = await import('../../../lib/tripEntities');
+                      const pod = await getPODForTrip(organizationId, trip.id);
+                      const result = await waivePOD(organizationId, pod?.id || null, trip.id, reason, 'current_user');
+                      if (result.success) {
+                        showToast('success', 'POD requirement waived');
+                        updateTrip(trip.id, { status: 'completed' });
+                      } else {
+                        showToast('error', result.error || 'Waiver failed');
+                      }
+                    }}
+                    className="px-3 py-1.5 border border-orange-200 text-orange-600 text-xs font-medium rounded-lg hover:bg-orange-50"
+                  >
+                    ⚠ Waive POD
                   </button>
                 </div>
               )}

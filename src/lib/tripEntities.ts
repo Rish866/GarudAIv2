@@ -264,6 +264,79 @@ export async function rejectPOD(
 }
 
 /**
+ * Get authoritative POD state for a trip.
+ * This is the SINGLE source of truth for POD status — do not use trip.pod_url for business decisions.
+ */
+export async function getTripPODState(
+  organizationId: string,
+  tripId: string
+): Promise<{
+  status: 'pending' | 'uploaded' | 'verified' | 'rejected' | 'waived';
+  pod: PODRecord | null;
+  satisfiesBilling: boolean;
+  satisfiesClosure: boolean;
+}> {
+  const pod = await getPODForTrip(organizationId, tripId);
+
+  if (!pod) {
+    return { status: 'pending', pod: null, satisfiesBilling: false, satisfiesClosure: false };
+  }
+
+  const status = pod.status as 'pending' | 'uploaded' | 'verified' | 'rejected' | 'waived';
+  const satisfiesBilling = status === 'verified' || status === 'waived';
+  const satisfiesClosure = status === 'verified' || status === 'waived';
+
+  return { status, pod, satisfiesBilling, satisfiesClosure };
+}
+
+/**
+ * Waive POD requirement. Requires special permission and reason.
+ */
+export async function waivePOD(
+  organizationId: string,
+  podId: string | null,
+  tripId: string,
+  reason: string,
+  waivedBy: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!reason || reason.trim().length < 5) {
+    return { success: false, error: 'Waiver reason must be at least 5 characters' };
+  }
+
+  if (podId) {
+    // Waive existing POD record
+    const { error } = await supabase
+      .from('pods')
+      .update({
+        status: 'waived',
+        waiver_reason: reason,
+        waived_by: waivedBy,
+        waived_at: new Date().toISOString(),
+      })
+      .eq('id', podId)
+      .eq('organization_id', organizationId);
+
+    if (error) return { success: false, error: error.message };
+  } else {
+    // Create a waived POD record (no file uploaded, directly waived)
+    const { error } = await supabase
+      .from('pods')
+      .insert({
+        organization_id: organizationId,
+        trip_id: tripId,
+        status: 'waived',
+        waiver_reason: reason,
+        waived_by: waivedBy,
+        waived_at: new Date().toISOString(),
+      });
+
+    if (error) return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
  * Get POD for a trip.
  */
 export async function getPODForTrip(
