@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useStore } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
@@ -813,22 +813,22 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
   const { data: enquiries } = useModuleData<any>('enquiries');
   const currentIdx = STATUS_FLOW.indexOf(trip.status);
 
-  // P0.1 — Trip-Level Profitability (uses linked real data where available)
-  const tripExpenses = expenses.filter((e: any) => e.trip_id === trip.id || e.vehicle_id === trip.vehicle_id);
-  const tripFuel = fuelEntries.filter((f: any) => f.trip_id === trip.id);
+  // P0.1 — Trip-Level Profitability (authoritative service)
+  const [profitData, setProfitData] = useState<{ revenue: number; directCost: number; grossProfit: number; marginPercentage: number; completeness: string; missingInputs: string[] } | null>(null);
+  useEffect(() => {
+    if (!organizationId || !trip.id) return;
+    import('../../../lib/tripEntities').then(({ calculateTripProfitability }) => {
+      calculateTripProfitability(organizationId, trip.id).then(setProfitData);
+    });
+  }, [organizationId, trip.id]);
 
-  // Revenue from trip record
-  const totalRevenue = (trip.freight_amount || 0) + (trip.detention_charges || 0) + (trip.other_charges || 0);
-
-  // Costs from linked records (real data, not estimates)
-  const fuelCost = tripFuel.reduce((s: number, f: any) => s + (f.amount || 0), 0);
-  const expenseCost = tripExpenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
-  const totalCost = fuelCost + expenseCost;
-  const tripProfit = totalRevenue - totalCost;
-  const profitMargin = totalRevenue > 0 ? Math.round((tripProfit / totalRevenue) * 100) : 0;
-  const profitMissingData: string[] = [];
-  if (tripFuel.length === 0) profitMissingData.push('Fuel entries');
-  if (tripExpenses.length === 0) profitMissingData.push('Trip expenses');
+  const totalRevenue = profitData?.revenue ?? ((trip.freight_amount || 0) + (trip.detention_charges || 0) + (trip.other_charges || 0));
+  const fuelCost = profitData ? profitData.directCost : 0;
+  const expenseCost = 0; // Included in directCost from service
+  const totalCost = profitData?.directCost ?? 0;
+  const tripProfit = profitData?.grossProfit ?? (totalRevenue - totalCost);
+  const profitMargin = profitData?.marginPercentage ?? (totalRevenue > 0 ? Math.round((tripProfit / totalRevenue) * 100) : 0);
+  const profitMissingData = profitData?.missingInputs ?? [];
 
   // P0.2 — Linked Document Chain
   const linkedInvoice = invoices.find(i => i.trip_ids.includes(trip.id));
