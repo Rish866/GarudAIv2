@@ -8,6 +8,7 @@ import { useOrganization } from '../../../contexts/OrganizationContext';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { tripRepository } from '../../../data/trips/tripRepository';
 import { validateStatusTransition, validateVehicleForTrip, validateDriverForTrip, validateCustomerCredit, canGenerateInvoice, getValidNextStatuses } from '../../../lib/workflowRules';
+import { createInvoiceForTrip } from '../../../lib/workflowService';
 import type { Trip, TripStatus, Invoice } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateLRNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
@@ -74,7 +75,6 @@ export default function TripsModule() {
   const { data: customers } = useModuleData<any>('customers');
   const { data: vehicles } = useModuleData<any>('vehicles');
   const { data: drivers } = useModuleData<any>('drivers');
-  const { create: addInvoice } = useModuleData<any>('invoices', { fetchOnMount: false });
   const { create: addNotification } = useModuleData<any>('notifications', { fetchOnMount: false });
   const { create: addTrip } = useModuleData<any>('trips', { fetchOnMount: false });
 
@@ -196,57 +196,59 @@ export default function TripsModule() {
       setNotifyTrip({ trip: foundTrip, status: newStatus.replace(/_/g, ' ') });
     }
 
-    // Auto-generate invoice when trip is completed
+    // Auto-generate invoice when trip is completed (idempotent via invoice_trips)
     if (newStatus === 'completed') {
       const trip = trips.find(t => t.id === tripId);
-      if (trip) {
-        // Validate invoice generation rules
+      if (trip && organizationId) {
         const invoiceCheck = canGenerateInvoice(trip);
         if (!invoiceCheck.allowed) {
           showToast('warning', `Trip completed but invoice not generated: ${invoiceCheck.errors[0]}`);
         } else {
-          const subtotal = trip.freight_amount + trip.detention_charges + trip.other_charges;
+          const subtotal = (trip.freight_amount || 0) + (trip.detention_charges || 0) + (trip.other_charges || 0);
           const gst_amount = Math.round(subtotal * 0.05);
           const tds_amount = Math.round(subtotal * 0.02);
           const total_amount = subtotal + gst_amount - tds_amount;
 
-        const invoice: Partial<Invoice> = {
-          invoice_number: generateInvoiceNumber(),
-          customer_id: trip.customer_id,
-          customer_name: trip.customer_name,
-          invoice_date: new Date().toISOString().split('T')[0],
-          due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-          trip_ids: [trip.id],
-          freight_total: trip.freight_amount,
-          detention_total: trip.detention_charges,
-          other_charges: trip.other_charges,
-          subtotal,
-          gst_percent: 5,
-          gst_amount,
-          tds_amount,
-          total_amount,
-          paid_amount: 0,
-          balance_amount: total_amount,
-          status: 'sent',
-          created_at: new Date().toISOString(),
-        };
-        addInvoice(invoice);
+          const result = await createInvoiceForTrip(organizationId, tripId, {
+            invoice_number: generateInvoiceNumber(),
+            customer_id: trip.customer_id,
+            customer_name: trip.customer_name,
+            invoice_date: new Date().toISOString().split('T')[0],
+            due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+            freight_total: trip.freight_amount || 0,
+            detention_total: trip.detention_charges || 0,
+            other_charges: trip.other_charges || 0,
+            subtotal,
+            gst_percent: 5,
+            gst_amount,
+            tds_amount,
+            total_amount,
+            paid_amount: 0,
+            balance_amount: total_amount,
+            status: 'sent',
+          });
 
-        // Transition to billed via RPC
-        await tripRepository.transitionStatus(organizationId, tripId, 'billed');
-        await refreshTrips();
-
-        // Send notification
-        addNotification({
-          type: 'invoice_generated',
-          title: 'Invoice Auto-Generated',
-          message: `Invoice ${invoice.invoice_number} created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,
-          link_module: 'billing',
-          link_id: invoice.id,
-          is_read: false,
-          created_at: new Date().toISOString(),
-        });
-        } // end else (invoice validation passed)
+          if (result.success) {
+            if (result.isExisting) {
+              showToast('info', 'Invoice already exists for this trip.');
+            } else {
+              // Transition to billed
+              await tripRepository.transitionStatus(organizationId, tripId, 'billed');
+              await refreshTrips();
+              showToast('success', `Invoice generated (${formatCurrency(total_amount)})`);
+              addNotification({
+                type: 'invoice_generated',
+                title: 'Invoice Auto-Generated',
+                message: `Invoice created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,
+                link_module: 'billing',
+                is_read: false,
+                created_at: new Date().toISOString(),
+              });
+            }
+          } else {
+            showToast('error', `Invoice creation failed: ${result.error}`);
+          }
+        }
       }
     }
   };

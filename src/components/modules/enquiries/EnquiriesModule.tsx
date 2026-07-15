@@ -4,10 +4,13 @@ import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
+import { useOrganization } from '../../../contexts/OrganizationContext';
+import { convertEnquiryToQuotation } from '../../../lib/workflowService';
+import { showToast } from '../../ui/Toast';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { generateQuotationPDF } from '../../../lib/pdf';
 import { estimateDistance } from '../../../lib/distance';
-import { ArrowRight, FileText, Send, Truck, Package, MapPin, Calendar, Weight, IndianRupee, Plus, X, Edit, Search } from 'lucide-react';
+import { ArrowRight, FileText, Send, Truck, Package, MapPin, Calendar, Weight, IndianRupee, Plus, X, Edit, Search, Loader2 } from 'lucide-react';
 import type { Enquiry, Quotation, VehicleType } from '../../../types';
 
 type Tab = 'enquiries' | 'quotations';
@@ -16,7 +19,9 @@ export default function EnquiriesModule() {
   const [activeTab, setActiveTab] = useState<Tab>('enquiries');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null);
+  const [convertingEnquiryId, setConvertingEnquiryId] = useState<string | null>(null);
   const { company } = useStore();
+  const { organizationId } = useOrganization();
   const {
     data: enquiries,
     totalCount,
@@ -232,10 +237,41 @@ export default function EnquiriesModule() {
                     </div>
                     {enquiry.status === 'new' && (
                       <button
-                        onClick={() => addQuotation({ enquiry_id: enquiry.id, customer_id: enquiry.customer_id, customer_name: enquiry.customer_name, origin: enquiry.origin, destination: enquiry.destination, vehicle_type: enquiry.vehicle_type, material: enquiry.material, weight_tons: enquiry.weight_tons, rate_type: 'per_trip', rate: enquiry.target_rate, total_amount: Math.round(enquiry.target_rate * 1.05), gst_percent: 5, validity_days: 7, quotation_number: `QT-${Date.now().toString(36)}`, status: 'draft', created_at: new Date().toISOString() })}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        disabled={convertingEnquiryId === enquiry.id}
+                        onClick={async () => {
+                          if (!organizationId) return;
+                          setConvertingEnquiryId(enquiry.id);
+                          const result = await convertEnquiryToQuotation(organizationId, enquiry.id, {
+                            customer_id: enquiry.customer_id,
+                            customer_name: enquiry.customer_name,
+                            origin: enquiry.origin,
+                            destination: enquiry.destination,
+                            vehicle_type: enquiry.vehicle_type,
+                            material: enquiry.material,
+                            weight_tons: enquiry.weight_tons,
+                            rate_type: 'per_trip',
+                            rate: enquiry.target_rate,
+                            total_amount: Math.round(enquiry.target_rate * 1.05),
+                            gst_percent: 5,
+                            validity_days: 7,
+                            quotation_number: `QT-${Date.now().toString(36).toUpperCase()}`,
+                            status: 'draft',
+                          });
+                          setConvertingEnquiryId(null);
+                          if (result.success) {
+                            if (result.isExisting) {
+                              showToast('info', 'Quotation already exists for this enquiry.');
+                            } else {
+                              showToast('success', 'Quotation created successfully.');
+                            }
+                            await refreshEnquiries();
+                          } else {
+                            showToast('error', result.error || 'Failed to create quotation.');
+                          }
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                       >
-                        <FileText className="w-3.5 h-3.5" />
+                        {convertingEnquiryId === enquiry.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
                         Create Quotation
                       </button>
                     )}
