@@ -8,11 +8,14 @@ import Topbar from './components/layout/Topbar';
 import LandingPage from './components/LandingPage';
 import OnboardingWizard from './components/ui/OnboardingWizard';
 import ToastContainer from './components/ui/Toast';
+import SessionTimeoutWarning from './components/ui/SessionTimeoutWarning';
 import { OrganizationProvider, useOrganization } from './contexts/OrganizationContext';
 import { BranchProvider } from './contexts/BranchContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
 import { signIn, requestPasswordReset, performLogout, resolveUserRole } from './lib/auth';
+import { validatePassword } from './lib/passwordPolicy';
+import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { supabase, supabaseConfigurationError } from './lib/supabase';
 import InviteAcceptPage from './components/InviteAcceptPage';
 
@@ -250,8 +253,9 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
       setRegError('Please fill all required fields');
       return;
     }
-    if (regForm.password.length < 6) {
-      setRegError('Password must be at least 6 characters');
+    const passwordCheck = validatePassword(regForm.password, regForm.email);
+    if (!passwordCheck.valid) {
+      setRegError(passwordCheck.errors[0]);
       return;
     }
 
@@ -539,8 +543,8 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
                     <input type="text" value={regForm.phone} onChange={(e) => setRegForm({...regForm, phone: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} placeholder="+91 98765 43210" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Password * (min 6 chars)</label>
-                    <input type="password" value={regForm.password} onChange={(e) => setRegForm({...regForm, password: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} placeholder="Create a password" />
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Password * (min 8 chars, upper+lower+number+special)</label>
+                    <input type="password" value={regForm.password} onChange={(e) => setRegForm({...regForm, password: e.target.value})} className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }} placeholder="Strong password required" />
                   </div>
                   <div className="flex gap-3 pt-2">
                     <button type="button" onClick={() => setIsRegistering(false)} className="flex-1 py-2.5 border rounded-lg text-sm font-medium" style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>Cancel</button>
@@ -745,7 +749,8 @@ function PasswordResetScreen({ onComplete }: { onComplete: () => void }) {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (newPassword.length < 6) { setError('Password must be at least 6 characters'); return; }
+    const passwordCheck = validatePassword(newPassword);
+    if (!passwordCheck.valid) { setError(passwordCheck.errors[0]); return; }
     if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
     setSaving(true);
     const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
@@ -774,11 +779,11 @@ function PasswordResetScreen({ onComplete }: { onComplete: () => void }) {
             {error && <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>New Password</label>
-              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} placeholder="Minimum 6 characters" className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} placeholder="Min 8 chars, upper, lower, number, special" className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Confirm Password</label>
-              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} placeholder="Re-enter password" className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8} placeholder="Re-enter password" className="w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
             </div>
             <button type="submit" disabled={saving} className="w-full py-3 rounded-xl text-white text-sm font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
               {saving ? 'Updating...' : 'Update Password'}
@@ -788,6 +793,14 @@ function PasswordResetScreen({ onComplete }: { onComplete: () => void }) {
       </div>
     </div>
   );
+}
+
+function SessionTimeoutContainer() {
+  const timeoutMinutes = Number(import.meta.env.VITE_SESSION_TIMEOUT_MINUTES) || 30;
+  const { showWarning, secondsRemaining, extendSession } = useSessionTimeout(timeoutMinutes * 60 * 1000);
+
+  if (!showWarning) return null;
+  return <SessionTimeoutWarning secondsRemaining={secondsRemaining} onExtend={extendSession} />;
 }
 
 export default function App() {
@@ -903,6 +916,7 @@ export default function App() {
       <OrganizationProvider>
         <BranchProvider>
           <MainLayout />
+          <SessionTimeoutContainer />
         </BranchProvider>
       </OrganizationProvider>
       <ToastContainer />
