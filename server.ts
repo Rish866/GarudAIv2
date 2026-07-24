@@ -3,6 +3,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import helmet from 'helmet';
 import cors from 'cors';
+import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 
 async function startServer() {
@@ -81,6 +82,20 @@ async function startServer() {
   // Body parsing with size limit
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+
+  // ============================================================
+  // COMPRESSION (gzip/brotli — reduces transfer size by 60-70%)
+  // ============================================================
+
+  app.use(compression({
+    level: 6, // Good balance of speed vs compression ratio
+    threshold: 1024, // Only compress responses > 1KB
+    filter: (req, res) => {
+      // Don't compress if client doesn't accept it
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    },
+  }));
 
   // ============================================================
   // SECURITY HEADERS (additional beyond helmet)
