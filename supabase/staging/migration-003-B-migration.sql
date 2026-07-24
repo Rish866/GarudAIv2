@@ -1,6 +1,6 @@
 -- migration-003-B-migration.sql
 -- Migration 003: 102 role-based business RLS policies + immutable organization_id trigger
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- ATOMIC: BEGIN/COMMIT
 -- Pattern: role_{command}_{table} TO authenticated
 -- Organization scope: is_organization_member + has_organization_role

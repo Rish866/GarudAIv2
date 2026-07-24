@@ -1,6 +1,6 @@
 -- migration-005-A-preflight.sql
 -- Migration 005 Preflight: Same-organization relational integrity prerequisites
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- Read-only: raises exception on failure, emits PASS on success
 -- Checks (10 total):
 --   1. Source columns are nullable UUID

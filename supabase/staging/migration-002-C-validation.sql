@@ -1,6 +1,6 @@
 -- migration-002-C-validation.sql
 -- Read-only post-validation for Migration 002
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- Returns visible result rows. SUMMARY derives from actual check results.
 
 WITH expected_tables(name) AS (

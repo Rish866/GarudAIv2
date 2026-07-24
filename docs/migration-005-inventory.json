@@ -2,7 +2,7 @@
   "metadata": {
     "migration": "005",
     "purpose": "Same-organization relational integrity: declarative composite FKs for all 34 authoritative references",
-    "staging_project": "ybuhazlnjqjrshcvpuna",
+    "staging_project": "emcynvexbauhohpwcqaw",
     "prerequisite": "Migration 004 completed (22 TEXT→UUID + 16 org_id NOT NULL)",
     "tables_empty": true,
     "version": "1.0"

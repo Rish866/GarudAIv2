@@ -12,10 +12,10 @@ export default defineConfig(() => {
       // Production deployments SHOULD override via hosting env vars.
       // These fallbacks ensure the app works without manual .env setup.
       ...(process.env.VITE_SUPABASE_URL ? {} : {
-        'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://ybuhazlnjqjrshcvpuna.supabase.co'),
+        'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://emcynvexbauhohpwcqaw.supabase.co'),
       }),
       ...(process.env.VITE_SUPABASE_ANON_KEY ? {} : {
-        'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('sb_publishable_JIoyS-ns6cXseQLRRm25cA_ZfWRFPg_'),
+        'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('sb_publishable_MQxqdtD5HRHHsIxhmIjHrQ_XS4jyXWh'),
       }),
       ...(process.env.VITE_PLATFORM_ADMIN_EMAIL ? {} : {
         'import.meta.env.VITE_PLATFORM_ADMIN_EMAIL': JSON.stringify('rishkatiyar1@gmail.com'),

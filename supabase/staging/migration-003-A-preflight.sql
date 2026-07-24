@@ -1,6 +1,6 @@
 -- migration-003-A-preflight.sql
 -- Migration 003 Preflight: Verify ALL dependencies for business RLS policies
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- Read-only: raises exception on failure, emits PASS on success
 -- Dependencies: Migration 001 (platform), Migration 002 (20 additional tables)
 --

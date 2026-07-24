@@ -1,6 +1,6 @@
 -- remediation-001-A-preflight.sql
 -- Pre-Migration-003 Privilege Remediation: Read-only audit
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- Purpose: Report ALL privileges held by PUBLIC, anon, authenticated, and
 --          service_role on the 36 business tables. Also reports schema-level
 --          default ACLs that may auto-grant on future tables.

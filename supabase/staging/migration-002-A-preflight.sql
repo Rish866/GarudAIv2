@@ -1,6 +1,6 @@
 -- migration-002-A-preflight.sql
 -- Read-only pre-flight for Migration 002
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- Fail-closed: raises exception if any dependency missing or any target exists.
 -- On success: visible PASS result row.
 

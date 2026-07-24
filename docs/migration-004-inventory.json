@@ -2,7 +2,7 @@
   "metadata": {
     "migration": "004",
     "purpose": "Schema normalization: TEXT entity references \u2192 nullable UUID + organization_id NOT NULL",
-    "staging_project": "ybuhazlnjqjrshcvpuna",
+    "staging_project": "emcynvexbauhohpwcqaw",
     "prerequisite": "Migrations 000-003 + Remediations 001-002 executed",
     "tables_empty": true,
     "version": "2.0"

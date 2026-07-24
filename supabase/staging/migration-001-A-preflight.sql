@@ -1,6 +1,6 @@
 -- migration-001-A-preflight.sql
 -- Read-only pre-flight for Migration 001
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 
 SELECT 'PREFLIGHT_001_BASE_TABLES' AS check_name;
 SELECT t.name AS required_table,

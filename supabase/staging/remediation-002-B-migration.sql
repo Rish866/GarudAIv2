@@ -1,6 +1,6 @@
 -- remediation-002-B-migration.sql
 -- Default ACL Remediation: postgres-owned defaults ONLY
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- ATOMIC: BEGIN/COMMIT
 -- Scope: ALTER DEFAULT PRIVILEGES FOR ROLE postgres ONLY
 -- Purpose: Deny-by-default for future postgres-owned objects in public schema.

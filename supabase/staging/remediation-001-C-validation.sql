@@ -1,6 +1,6 @@
 -- remediation-001-C-validation.sql
 -- Pre-Migration-003 Privilege Remediation: Validation (v3)
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- Read-only: no persistent changes
 -- Validates EFFECTIVE privileges (not just direct grant rows)
 -- Validates all 8 PostgreSQL table privilege types including MAINTAIN

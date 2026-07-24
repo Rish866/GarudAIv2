@@ -1,6 +1,6 @@
 -- migration-004-C-validation.sql
 -- Migration 004 Validation: Schema normalization verification
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- Read-only. All results derived from catalog state.
 -- Expected: ALL 8 CHECKS PASS
 

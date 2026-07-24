@@ -1,6 +1,6 @@
 -- migration-002-B-migration.sql
 -- Migration 002: 20 additional business tables (revised v2)
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- ATOMIC: BEGIN/COMMIT
 -- organization_id: NOT NULL UUID FK → organizations(id), NO ACTION on delete
 -- Entity references: UUID FKs to existing tables where applicable

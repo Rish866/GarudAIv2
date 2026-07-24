@@ -1,6 +1,6 @@
 -- remediation-002-C-validation.sql
 -- Default ACL Remediation: Validation
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- Read-only: no persistent changes
 -- Validates postgres-owned defaults are clean.
 -- Reports supabase_admin defaults as BLOCKER (not PASS).

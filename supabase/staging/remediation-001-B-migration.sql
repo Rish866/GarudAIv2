@@ -1,6 +1,6 @@
 -- remediation-001-B-migration.sql
 -- Pre-Migration-003 Privilege Remediation: Revoke all unsafe grants
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- ATOMIC: BEGIN/COMMIT
 -- Purpose: Ensure zero table-level privileges for PUBLIC, anon, and
 --          authenticated on ALL 36 business tables.

@@ -1,6 +1,6 @@
 -- migration-005-D-transactional-tests.sql
 -- Migration 005 Transactional DML Validation
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- NOT read-only. Creates minimal test data, exercises composite FKs,
 -- and automatically rolls back via exception-backed subtransaction.
 -- Run ONLY after Block C passes and operator confirms.

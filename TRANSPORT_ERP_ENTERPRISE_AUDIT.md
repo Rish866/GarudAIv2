@@ -261,8 +261,8 @@ If migration 006 is NOT deployed, the RLS policies default to `USING (true)` whi
 
 ```typescript
 // vite.config.ts - Lines 15-22
-'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://ybuhazlnjqjrshcvpuna.supabase.co'),
-'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('sb_publishable_JIoyS-ns6cXseQLRRm25cA_ZfWRFPg_'),
+'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://emcynvexbauhohpwcqaw.supabase.co'),
+'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('sb_publishable_MQxqdtD5HRHHsIxhmIjHrQ_XS4jyXWh'),
 'import.meta.env.VITE_PLATFORM_ADMIN_EMAIL': JSON.stringify('rishkatiyar1@gmail.com'),
 ```
 

@@ -1,6 +1,6 @@
 -- migration-004-A-preflight.sql
 -- Migration 004 Preflight: Schema normalization prerequisites
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- Read-only: raises exception on failure, emits PASS on success
 -- Checks (11 total):
 --   1. All 12 affected tables exist

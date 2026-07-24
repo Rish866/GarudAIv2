@@ -1,6 +1,6 @@
 -- migration-004-B-migration.sql
 -- Migration 004: Schema Normalization (TEXT->UUID + org_id NOT NULL)
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- ATOMIC: BEGIN/COMMIT
 -- Phase 1: Convert 22 TEXT entity-reference columns to nullable UUID
 -- Phase 2: Enforce organization_id NOT NULL on 16 business tables

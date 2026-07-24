@@ -1,6 +1,6 @@
 -- migration-001-C-validation.sql
 -- Read-only post-validation for Migration 001
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 
 SELECT 'C1_PLATFORM_TABLES' AS check_name;
 SELECT t.name AS table_name,

@@ -1,6 +1,6 @@
 -- migration-001-B-migration.sql
 -- Migration 001: Platform foundation + organization_id + RLS enabled
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- Scope: platform tables, functions, org_id columns, platform policies, indexes
 -- Business tables: RLS enabled, NO client policies (deny-by-default)
 -- ATOMIC: Wrapped in BEGIN/COMMIT. Any error rolls back entire migration.

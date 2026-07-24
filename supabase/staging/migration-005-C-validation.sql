@@ -1,6 +1,6 @@
 -- migration-005-C-validation.sql
 -- Migration 005 Validation: catalog-derived exact comparison
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- STRICTLY READ-ONLY. No DML. Run before Block D.
 -- Expected: ALL checks PASS
 

@@ -1,6 +1,6 @@
 -- remediation-002-A-preflight.sql
 -- Default ACL Remediation: Read-only preflight
--- Target: staging ybuhazlnjqjrshcvpuna
+-- Target: staging emcynvexbauhohpwcqaw
 -- Purpose: Verify authorization for postgres-owned default revocation,
 --          report supabase_admin defaults as an unresolved external blocker.
 -- Read-only: no changes.

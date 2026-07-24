@@ -1,6 +1,6 @@
 metadata:
   version: '3.0'
-  target_project: ybuhazlnjqjrshcvpuna
+  target_project: emcynvexbauhohpwcqaw
   activation_migration: '013'
   status: APPROVED_SCHEMA_PENDING_MANIFEST
   pg_version_required: '>=15'
