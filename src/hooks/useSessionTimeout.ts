@@ -9,7 +9,10 @@
 // - Prevents unauthorized access on unattended devices
 // - Shows warning 2 minutes before timeout
 //
-// Activity events tracked: mouse, keyboard, touch, scroll, click
+// Implementation notes:
+// - Uses refs for mutable state to avoid useEffect dependency cycles
+// - Single interval (10s) checks idle status — no multiple timers
+// - Activity handlers use ref-based showWarning check (no re-registration)
 // ============================================================
 
 import { useEffect, useRef, useCallback, useState } from 'react';
@@ -51,87 +54,88 @@ export function useSessionTimeout(
   const { isLoggedIn, logout } = useStore();
   const [showWarning, setShowWarning] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
-  const lastActivityRef = useRef<number>(Date.now());
-  const warningTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const resetTimers = useCallback(() => {
+  // Use refs for mutable state to avoid dependency cycles
+  const lastActivityRef = useRef<number>(Date.now());
+  const showWarningRef = useRef(false);
+  const isLoggedInRef = useRef(isLoggedIn);
+
+  // Keep refs in sync with state
+  showWarningRef.current = showWarning;
+  isLoggedInRef.current = isLoggedIn;
+
+  // Activity handler — uses ref so it never needs to be re-created
+  const handleActivity = useCallback(() => {
+    // Only reset if warning is NOT showing
+    if (!showWarningRef.current) {
+      lastActivityRef.current = Date.now();
+    }
+  }, []); // Empty deps — stable function reference
+
+  // Extend session (dismiss warning and reset timer)
+  const extendSession = useCallback(() => {
     lastActivityRef.current = Date.now();
     setShowWarning(false);
     setSecondsRemaining(0);
-
-    // Clear existing timers
-    if (warningTimerRef.current) {
-      clearInterval(warningTimerRef.current);
-      warningTimerRef.current = null;
-    }
-    if (logoutTimerRef.current) {
-      clearTimeout(logoutTimerRef.current);
-      logoutTimerRef.current = null;
-    }
   }, []);
 
-  const handleActivity = useCallback(() => {
-    // Only reset if warning is not showing (once warning shows, user must explicitly extend)
-    if (!showWarning) {
-      lastActivityRef.current = Date.now();
-    }
-  }, [showWarning]);
-
-  const extendSession = useCallback(() => {
-    resetTimers();
-  }, [resetTimers]);
-
+  // Logout action
   const doLogout = useCallback(async () => {
-    resetTimers();
+    setShowWarning(false);
+    setSecondsRemaining(0);
     await performLogout();
     logout();
-  }, [resetTimers, logout]);
+  }, [logout]);
 
+  // Main effect — registers listeners and starts idle check interval
   useEffect(() => {
     if (!isLoggedIn) {
-      resetTimers();
+      setShowWarning(false);
+      setSecondsRemaining(0);
       return;
     }
 
-    // Register activity listeners
+    // Reset activity timestamp on login
+    lastActivityRef.current = Date.now();
+
+    // Register activity listeners (stable handler, never re-registered)
     ACTIVITY_EVENTS.forEach(event => {
       document.addEventListener(event, handleActivity, { passive: true });
     });
 
-    // Check idle status every 10 seconds
+    // Single interval checks idle status every second when warning is showing,
+    // every 10 seconds otherwise
     const checkInterval = setInterval(() => {
+      if (!isLoggedInRef.current) return;
+
       const elapsed = Date.now() - lastActivityRef.current;
       const remaining = timeoutMs - elapsed;
 
       if (remaining <= 0) {
         // Timeout reached — force logout
         doLogout();
-      } else if (remaining <= WARNING_BEFORE_MS && !showWarning) {
-        // Show warning
-        setShowWarning(true);
+      } else if (remaining <= WARNING_BEFORE_MS) {
+        // Show/update warning
+        if (!showWarningRef.current) {
+          setShowWarning(true);
+        }
         setSecondsRemaining(Math.ceil(remaining / 1000));
-
-        // Start countdown
-        warningTimerRef.current = setInterval(() => {
-          const nowRemaining = timeoutMs - (Date.now() - lastActivityRef.current);
-          if (nowRemaining <= 0) {
-            doLogout();
-          } else {
-            setSecondsRemaining(Math.ceil(nowRemaining / 1000));
-          }
-        }, 1000);
+      } else {
+        // Normal state — ensure warning is hidden
+        if (showWarningRef.current) {
+          setShowWarning(false);
+          setSecondsRemaining(0);
+        }
       }
-    }, 10_000);
+    }, 1000); // Check every second for smooth countdown
 
     return () => {
       clearInterval(checkInterval);
       ACTIVITY_EVENTS.forEach(event => {
         document.removeEventListener(event, handleActivity);
       });
-      resetTimers();
     };
-  }, [isLoggedIn, timeoutMs, handleActivity, showWarning, doLogout, resetTimers]);
+  }, [isLoggedIn, timeoutMs, handleActivity, doLogout]);
 
   return { showWarning, secondsRemaining, extendSession };
 }

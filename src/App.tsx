@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Eye, EyeOff, Truck, BarChart3, Shield, Zap, Loader2 } from 'lucide-react';
 import { useStore } from './store/useStore';

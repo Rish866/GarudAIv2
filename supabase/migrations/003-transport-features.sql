@@ -79,21 +79,21 @@ CREATE TABLE IF NOT EXISTS rate_rules (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL,
   name TEXT NOT NULL,
-  /** Which route/customer this applies to (null = all) */
+  -- Which route/customer this applies to (null = all)
   customer_id UUID,
   origin TEXT,
   destination TEXT,
   vehicle_type TEXT,
   material_type TEXT,
-  /** Rate calculation type */
+  -- Rate calculation type
   rate_type TEXT NOT NULL CHECK (rate_type IN ('per_trip', 'per_ton', 'per_km', 'per_ton_km', 'slab_weight', 'slab_distance')),
   base_rate NUMERIC NOT NULL DEFAULT 0,
   minimum_charge NUMERIC DEFAULT 0,
-  /** Weight/distance slabs as JSON */
+  -- Weight/distance slabs as JSON
   slabs JSONB DEFAULT '[]',
-  /** Surcharges as JSON */
+  -- Surcharges as JSON
   surcharges JSONB DEFAULT '[]',
-  /** Priority (higher = checked first for matching) */
+  -- Priority (higher = checked first for matching)
   priority INTEGER DEFAULT 0,
   effective_from DATE,
   effective_to DATE,
