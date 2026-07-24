@@ -17,6 +17,9 @@ export default defineConfig(() => {
       ...(process.env.VITE_SUPABASE_ANON_KEY ? {} : {
         'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('sb_publishable_JIoyS-ns6cXseQLRRm25cA_ZfWRFPg_'),
       }),
+      ...(process.env.VITE_PLATFORM_ADMIN_EMAIL ? {} : {
+        'import.meta.env.VITE_PLATFORM_ADMIN_EMAIL': JSON.stringify('rishkatiyar1@gmail.com'),
+      }),
     },
     resolve: {
       alias: {

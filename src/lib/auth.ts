@@ -32,6 +32,9 @@ export async function signIn(
       if (error.message.includes('Invalid login')) {
         return { success: false, error: 'Invalid email or password.' };
       }
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('fetch')) {
+        return { success: false, error: 'Cannot connect to authentication server. This usually means the Supabase API key is invalid or the project URL is unreachable. Contact your administrator.' };
+      }
       return { success: false, error: error.message };
     }
 
@@ -47,7 +50,9 @@ export async function signIn(
 
     return { success: true, user };
   } catch (e: any) {
-    return { success: false, error: 'Cannot connect to server. Please check your internet connection.' };
+    return { success: false, error: e?.message === 'Failed to fetch'
+      ? 'Cannot connect to Supabase. Check if VITE_SUPABASE_ANON_KEY is set correctly in your hosting environment.'
+      : 'Cannot connect to server. Please check your internet connection.' };
   }
 }
 
