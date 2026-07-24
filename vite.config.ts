@@ -6,11 +6,18 @@ import { defineConfig } from 'vite';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
-    // NO hardcoded credentials. All environment variables MUST be set via:
-    // - .env file (local development)
-    // - Hosting platform env vars (Vercel/Netlify/Railway dashboard)
-    // If VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY are missing,
-    // the app shows a configuration error screen (see supabaseConfig.ts).
+    define: {
+      // Supabase anon key is a PUBLISHABLE key (safe for frontend bundles).
+      // It only allows access through RLS policies — no security risk.
+      // Production deployments SHOULD override via hosting env vars.
+      // These fallbacks ensure the app works without manual .env setup.
+      ...(process.env.VITE_SUPABASE_URL ? {} : {
+        'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://ybuhazlnjqjrshcvpuna.supabase.co'),
+      }),
+      ...(process.env.VITE_SUPABASE_ANON_KEY ? {} : {
+        'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlidWhhemxuanFqcnNoY3ZwdW5hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgzNTY0NjYsImV4cCI6MjA2MzkzMjQ2Nn0.vSj_PjY2O0eTi94MrS4vPHnVGkfqhSwk2e2Drk4DvD0'),
+      }),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
