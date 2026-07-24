@@ -16,7 +16,9 @@ import {
   FileText,
   Info,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
+import { getPathForModule } from '../../router/routes';
 import type { ModuleName } from '../../types';
 import HelpButton from '../ui/HelpButton';
 import { MODULE_HELP } from '../../lib/helpContent';
@@ -109,6 +111,8 @@ export default function Topbar() {
     setActiveModule,
     logout,
   } = useStore();
+
+  const navigate = useNavigate();
 
   // Notifications from Supabase (org-scoped)
   const { data: notifications, update: updateNotification } = useModuleData<any>('notifications');
@@ -227,7 +231,7 @@ export default function Topbar() {
             {searchResults.map((result, idx) => (
               <button
                 key={idx}
-                onClick={() => { setActiveModule(result.module); setSearchQuery(''); }}
+                onClick={() => { setActiveModule(result.module); navigate(getPathForModule(result.module)); setSearchQuery(''); }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--bg-secondary)]"
               >
                 <span className="text-xs px-2 py-0.5 rounded font-medium" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>

@@ -1,6 +1,7 @@
 import { useStore } from '../../../store/useStore';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useOrganization } from '../../../contexts/OrganizationContext';
+import { useNavigateModule } from '../../../router';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -127,6 +128,7 @@ const itemVariants = {
 export default function DashboardModule() {
   const { organizationId, loading: orgLoading, error: orgError } = useOrganization();
   const { user } = useStore();
+  const navigateTo = useNavigateModule();
 
   // Read ALL data from Supabase (org-scoped via useModuleData)
   const { data: vehicles, loading: vehiclesLoading } = useModuleData<any>('vehicles');
@@ -309,13 +311,13 @@ export default function DashboardModule() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => useStore.getState().setActiveModule('trips')}
+            onClick={() => navigateTo('trips')}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-colors shadow-sm"
           >
             New Trip
           </button>
           <button
-            onClick={() => useStore.getState().setActiveModule('fleet')}
+            onClick={() => navigateTo('fleet')}
             className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-full transition-colors shadow-sm"
           >
             Add Vehicle
