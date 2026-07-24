@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Eye, EyeOff, Truck, BarChart3, Shield, Zap, Loader2 } from 'lucide-react';
 import { useStore } from './store/useStore';
 import type { ModuleName } from './types';
@@ -18,6 +19,7 @@ import { signIn, requestPasswordReset, performLogout, resolveUserRole } from './
 import { validatePassword } from './lib/passwordPolicy';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { supabase, supabaseConfigurationError } from './lib/supabase';
+import { queryClient } from './lib/queryClient';
 import { getModuleFromPath, MODULE_ROUTES } from './router/routes';
 import InviteAcceptPage from './components/InviteAcceptPage';
 
@@ -888,18 +890,20 @@ export default function App() {
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-      <BrowserRouter>
-        <OrganizationProvider>
-          <BranchProvider>
-            <Routes>
-              <Route path="/invite/accept" element={<InviteAcceptPage />} />
-              <Route path="/*" element={<MainLayout />} />
-            </Routes>
-            <SessionTimeoutContainer />
-          </BranchProvider>
-        </OrganizationProvider>
-        <ToastContainer />
-      </BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <OrganizationProvider>
+            <BranchProvider>
+              <Routes>
+                <Route path="/invite/accept" element={<InviteAcceptPage />} />
+                <Route path="/*" element={<MainLayout />} />
+              </Routes>
+              <SessionTimeoutContainer />
+            </BranchProvider>
+          </OrganizationProvider>
+          <ToastContainer />
+        </BrowserRouter>
+      </QueryClientProvider>
     </div>
   );
 }
