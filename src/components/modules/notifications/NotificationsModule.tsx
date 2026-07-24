@@ -1,25 +1,12 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useNavigateModule } from '../../../router';
-import { classNames } from '../../../lib/utils';
+import { classNames, getTimeAgo } from '../../../lib/utils';
 import { Truck, IndianRupee, FileWarning, Wrench, Package, FileText, Info, Bell, CheckCheck } from 'lucide-react';
 import type { AppNotification, ModuleName } from '../../../types';
 
 type FilterTab = 'all' | 'unread' | 'trip_update' | 'payment_received' | 'document_expiry' | 'system';
 
-function getTimeAgo(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return `${Math.floor(diffDays / 7)}w ago`;
-}
 
 function getNotificationIcon(type: AppNotification['type']) {
   switch (type) {
