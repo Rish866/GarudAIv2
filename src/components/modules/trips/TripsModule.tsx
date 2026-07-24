@@ -8,8 +8,9 @@ import { useOrganization } from '../../../contexts/OrganizationContext';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { tripRepository } from '../../../data/trips/tripRepository';
 import { validateStatusTransition, validateVehicleForTrip, validateDriverForTrip, validateCustomerCredit, canGenerateInvoice, getValidNextStatuses } from '../../../lib/workflowRules';
+import type { TripRecord } from '../../../lib/workflowRules';
 import { createInvoiceForTrip } from '../../../lib/workflowService';
-import type { Trip, TripStatus, Invoice } from '../../../types';
+import type { Trip, TripStatus, Invoice, Vehicle, Driver, Customer, Payment, Expense, FuelEntry, Enquiry, Quotation, AppNotification } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
 import { exportTrips } from '../../../lib/excel';
@@ -66,18 +67,18 @@ export default function TripsModule() {
     refresh: refreshTrips,
     hasNextPage,
     hasPrevPage,
-  } = usePaginatedData<any>('trips', {
+  } = usePaginatedData<Trip>('trips', {
     defaultSort: 'created_at',
     defaultSortDirection: 'desc',
     defaultPageSize: 25,
   });
 
   // Supporting data (non-paginated — small reference tables)
-  const { data: customers } = useModuleData<any>('customers');
-  const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: drivers } = useModuleData<any>('drivers');
-  const { create: addNotification } = useModuleData<any>('notifications', { fetchOnMount: false });
-  const { create: addTrip } = useModuleData<any>('trips', { fetchOnMount: false });
+  const { data: customers } = useModuleData<Customer>('customers');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
+  const { data: drivers } = useModuleData<Driver>('drivers');
+  const { create: addNotification } = useModuleData<AppNotification>('notifications', { fetchOnMount: false });
+  const { create: addTrip } = useModuleData<Trip>('trips', { fetchOnMount: false });
 
   // UI state
   const [showModal, setShowModal] = useState(false);
@@ -167,7 +168,7 @@ export default function TripsModule() {
     // Business rule validation before status transition
     const trip = trips.find((t: any) => t.id === tripId);
     if (trip) {
-      const validation = validateStatusTransition(trip, newStatus, {
+      const validation = validateStatusTransition(trip as unknown as TripRecord, newStatus, {
         canOverridePOD: can('approvals.action'),
       });
 
@@ -201,7 +202,7 @@ export default function TripsModule() {
     if (newStatus === 'completed') {
       const trip = trips.find(t => t.id === tripId);
       if (trip && organizationId) {
-        const invoiceCheck = canGenerateInvoice(trip);
+        const invoiceCheck = canGenerateInvoice(trip as unknown as TripRecord);
         if (!invoiceCheck.allowed) {
           showToast('warning', `Trip completed but invoice not generated: ${invoiceCheck.errors[0]}`);
         } else {
@@ -679,7 +680,7 @@ export default function TripsModule() {
 
 function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   const { organizationId } = useOrganization();
-  const { update: updateTrip } = useModuleData<any>('trips');
+  const { update: updateTrip } = useModuleData<Trip>('trips');
   const [receivedBy, setReceivedBy] = useState('');
   const [condition, setCondition] = useState<'good' | 'damaged' | 'partial'>('good');
   const [remarks, setRemarks] = useState('');
@@ -794,13 +795,13 @@ function PODUploadModal({ trip, onClose }: { trip: Trip; onClose: () => void }) 
 function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   const { company } = useStore();
   const { organizationId } = useOrganization();
-  const { update: updateTrip } = useModuleData<any>('trips', { fetchOnMount: false });
-  const { data: expenses } = useModuleData<any>('expenses');
-  const { data: fuelEntries } = useModuleData<any>('fuel_entries');
-  const { data: invoices } = useModuleData<any>('invoices');
-  const { data: payments } = useModuleData<any>('payments');
-  const { data: quotations } = useModuleData<any>('quotations');
-  const { data: enquiries } = useModuleData<any>('enquiries');
+  const { update: updateTrip } = useModuleData<Trip>('trips', { fetchOnMount: false });
+  const { data: expenses } = useModuleData<Expense>('expenses');
+  const { data: fuelEntries } = useModuleData<FuelEntry>('fuel_entries');
+  const { data: invoices } = useModuleData<Invoice>('invoices');
+  const { data: payments } = useModuleData<Payment>('payments');
+  const { data: quotations } = useModuleData<Quotation>('quotations');
+  const { data: enquiries } = useModuleData<Enquiry>('enquiries');
   const currentIdx = STATUS_FLOW.indexOf(trip.status);
 
   // P0.1 — Trip-Level Profitability (authoritative service)
@@ -1171,11 +1172,11 @@ function TripDetailModal({ trip, onClose }: { trip: Trip; onClose: () => void })
 
 function NewTripModal({ onClose }: { onClose: () => void }) {
   const { organizationId } = useOrganization();
-  const { data: customers } = useModuleData<any>('customers');
-  const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: drivers } = useModuleData<any>('drivers');
-  const { data: quotations } = useModuleData<any>('quotations');
-  const { create: addTrip } = useModuleData<any>('trips', { fetchOnMount: false });
+  const { data: customers } = useModuleData<Customer>('customers');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
+  const { data: drivers } = useModuleData<Driver>('drivers');
+  const { data: quotations } = useModuleData<Quotation>('quotations');
+  const { create: addTrip } = useModuleData<Trip>('trips', { fetchOnMount: false });
   const availableVehicles = vehicles;
   const availableDrivers = drivers.filter((d: any) => d.status !== 'inactive');
 
@@ -1533,9 +1534,9 @@ function CancelTripModal({
 function EditTripModal({ trip, onClose }: { trip: Trip; onClose: () => void }) {
   const { organizationId } = useOrganization();
   const { can } = usePermissions();
-  const { data: customers } = useModuleData<any>('customers');
-  const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: customers } = useModuleData<Customer>('customers');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
+  const { data: drivers } = useModuleData<Driver>('drivers');
 
   // Filter: show available + currently assigned vehicle/driver; exclude inactive
   const availableVehicles = vehicles.filter((v: any) =>

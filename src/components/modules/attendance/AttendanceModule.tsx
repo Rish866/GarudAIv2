@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import type { Driver } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -46,7 +47,7 @@ const today = new Date().toISOString().split('T')[0];
 type TabView = 'attendance' | 'leaves' | 'summary';
 
 export default function AttendanceModule() {
-  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: drivers } = useModuleData<Driver>('drivers');
   const {
     data: attendance,
     totalCount,

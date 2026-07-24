@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import type { Vehicle, Driver, Customer, Trip, Quotation } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -39,12 +40,12 @@ const generateIndentId = () => Date.now().toString(36) + Math.random().toString(
 
 
 export default function IndentModule() {
-  const { data: customers } = useModuleData<any>('customers');
-  const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: drivers } = useModuleData<any>('drivers');
-  const { data: trips } = useModuleData<any>('trips');
-  const { data: quotations } = useModuleData<any>('quotations');
-  const { create: addTrip } = useModuleData<any>('trips');
+  const { data: customers } = useModuleData<Customer>('customers');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
+  const { data: drivers } = useModuleData<Driver>('drivers');
+  const { data: trips } = useModuleData<Trip>('trips');
+  const { data: quotations } = useModuleData<Quotation>('quotations');
+  const { create: addTrip } = useModuleData<Trip>('trips');
   const {
     data: indents,
     totalCount,

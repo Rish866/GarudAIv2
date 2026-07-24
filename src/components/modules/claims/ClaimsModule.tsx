@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import type { Trip } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -35,7 +36,7 @@ interface Claim {
 
 
 export default function ClaimsModule() {
-  const { data: trips } = useModuleData<any>('trips');
+  const { data: trips } = useModuleData<Trip>('trips');
   const {
     data: claims,
     totalCount,

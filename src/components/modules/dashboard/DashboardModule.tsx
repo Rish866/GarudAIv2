@@ -1,4 +1,5 @@
 import { useStore } from '../../../store/useStore';
+import type { Vehicle, Driver, Trip, Invoice, Payment, Expense, FuelEntry, AppNotification, SystemAlert } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { useNavigateModule } from '../../../router';
@@ -131,15 +132,15 @@ export default function DashboardModule() {
   const navigateTo = useNavigateModule();
 
   // Read ALL data from Supabase (org-scoped via useModuleData)
-  const { data: vehicles, loading: vehiclesLoading } = useModuleData<any>('vehicles');
-  const { data: drivers } = useModuleData<any>('drivers');
-  const { data: trips } = useModuleData<any>('trips');
-  const { data: invoices } = useModuleData<any>('invoices');
-  const { data: payments } = useModuleData<any>('payments');
-  const { data: expenses } = useModuleData<any>('expenses');
-  const { data: fuelEntries } = useModuleData<any>('fuel_entries');
-  const { data: notifications } = useModuleData<any>('notifications');
-  const { data: alerts } = useModuleData<any>('activity_log');
+  const { data: vehicles, loading: vehiclesLoading } = useModuleData<Vehicle>('vehicles');
+  const { data: drivers } = useModuleData<Driver>('drivers');
+  const { data: trips } = useModuleData<Trip>('trips');
+  const { data: invoices } = useModuleData<Invoice>('invoices');
+  const { data: payments } = useModuleData<Payment>('payments');
+  const { data: expenses } = useModuleData<Expense>('expenses');
+  const { data: fuelEntries } = useModuleData<FuelEntry>('fuel_entries');
+  const { data: notifications } = useModuleData<AppNotification>('notifications');
+  const { data: alerts } = useModuleData<SystemAlert>('activity_log');
 
   // Loading state — show spinner while org resolves or first data batch loads
   if (orgLoading || vehiclesLoading) {

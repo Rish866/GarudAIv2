@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { Driver } from '../../../types';
 // Mobile App - config module
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
@@ -33,7 +34,7 @@ const seedDriverApps: DriverAppStatus[] = [];
 const seedActivity: AppActivity[] = [];
 
 export default function MobileAppModule() {
-  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: drivers } = useModuleData<Driver>('drivers');
   const [view, setView] = useState<AppView>('overview');
   const [appConfig, setAppConfig] = useState({
     gps_interval_seconds: 30,

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { Driver } from '../../../types';
+import type { Driver, Trip } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
 import { exportDrivers } from '../../../lib/excel';
 import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle, TrendingUp, Clock, Award, Fuel, ChevronRight, BarChart3, Star, Edit, Trash2 } from 'lucide-react';
@@ -11,8 +11,8 @@ import { usePermission } from '../../../hooks/usePermission';
 type DriverView = 'list' | 'performance' | 'detail';
 
 export default function DriversModule() {
-  const { data: trips } = useModuleData<any>('trips');
-  const { data: drivers, create: addDriver, update: updateDriver, remove: removeDriver, loading: driversLoading } = useModuleData<any>('drivers');
+  const { data: trips } = useModuleData<Trip>('trips');
+  const { data: drivers, create: addDriver, update: updateDriver, remove: removeDriver, loading: driversLoading } = useModuleData<Driver>('drivers');
   const { can } = usePermission();
   const canCreate = can('drivers.create');
   const canEdit = can('drivers.update');
@@ -495,7 +495,7 @@ function DriverCard({ driver, onTimePercent, overallScore, rating }: { key?: str
 }
 
 function AddDriverModal({ driver: editDriver, onClose }: { driver?: any | null; onClose: () => void }) {
-  const { create: addDriver, update: updateDriver } = useModuleData<any>('drivers');
+  const { create: addDriver, update: updateDriver } = useModuleData<Driver>('drivers');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 

@@ -1,4 +1,5 @@
 import { Camera, AlertTriangle, ShieldCheck, Wifi, WifiOff, Info, Eye, Brain, Phone, ArrowLeftRight, Gauge } from 'lucide-react';
+import type { Vehicle, Driver } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { classNames } from '../../../lib/utils';
@@ -36,8 +37,8 @@ function getSeverityStyle(severity: EventSeverity) {
 }
 
 export default function DashcamModule() {
-  const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
+  const { data: drivers } = useModuleData<Driver>('drivers');
 
   const cameraVehicles = vehicles.slice(0, 6);
   const topDrivers = [...drivers].sort((a, b) => b.safety_score - a.safety_score).slice(0, 5);

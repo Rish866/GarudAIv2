@@ -4,7 +4,7 @@ import { useStore } from '../../../store/useStore';
 import { useNavigateModule } from '../../../router';
 import { classNames } from '../../../lib/utils';
 import { Truck, IndianRupee, FileWarning, Wrench, Package, FileText, Info, Bell, CheckCheck } from 'lucide-react';
-import type { Notification, ModuleName } from '../../../types';
+import type { AppNotification, ModuleName } from '../../../types';
 
 type FilterTab = 'all' | 'unread' | 'trip_update' | 'payment_received' | 'document_expiry' | 'system';
 
@@ -22,7 +22,7 @@ function getTimeAgo(dateStr: string): string {
   return `${Math.floor(diffDays / 7)}w ago`;
 }
 
-function getNotificationIcon(type: Notification['type']) {
+function getNotificationIcon(type: AppNotification['type']) {
   switch (type) {
     case 'trip_update':
       return <Truck className="w-5 h-5 text-blue-500" />;
@@ -46,7 +46,7 @@ function getNotificationIcon(type: Notification['type']) {
 export default function NotificationsModule() {
   const [filter, setFilter] = useState<FilterTab>('all');
   const navigateTo = useNavigateModule();
-  const { data: notifications, update: markNotification } = useModuleData<any>('notifications');
+  const { data: notifications, update: markNotification } = useModuleData<AppNotification>('notifications');
   const markNotificationRead = (id: string) => markNotification(id, { is_read: true });
   const markAllNotificationsRead = () => notifications.forEach((n: any) => { if (!n.is_read) markNotification(n.id, { is_read: true }); });
 
@@ -71,7 +71,7 @@ export default function NotificationsModule() {
     { key: 'system', label: 'System' },
   ];
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = (notification: AppNotification) => {
     if (!notification.is_read) {
       markNotificationRead(notification.id);
     }

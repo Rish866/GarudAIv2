@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { Vehicle } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
@@ -29,7 +30,7 @@ interface MappedVehicle {
 }
 
 export default function GPSSettingsModule() {
-  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
 
   const providers: GPSProvider[] = [
     { id: 'itriangle', name: 'iTriangle', description: 'India\'s leading GPS tracking provider', logo_color: 'bg-blue-500' },

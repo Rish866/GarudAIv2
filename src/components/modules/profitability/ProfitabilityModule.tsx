@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import type { Vehicle, Customer, Trip, Invoice, Expense, FuelEntry } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, classNames } from '../../../lib/utils';
@@ -7,12 +8,12 @@ import { TrendingUp, TrendingDown, BarChart3, Filter, Download } from 'lucide-re
 type GroupBy = 'customer' | 'vehicle' | 'route' | 'branch' | 'month';
 
 export default function ProfitabilityModule() {
-  const { data: trips } = useModuleData<any>('trips');
-  const { data: expenses } = useModuleData<any>('expenses');
-  const { data: fuelEntries } = useModuleData<any>('fuel_entries');
-  const { data: invoices } = useModuleData<any>('invoices');
-  const { data: customers } = useModuleData<any>('customers');
-  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: trips } = useModuleData<Trip>('trips');
+  const { data: expenses } = useModuleData<Expense>('expenses');
+  const { data: fuelEntries } = useModuleData<FuelEntry>('fuel_entries');
+  const { data: invoices } = useModuleData<Invoice>('invoices');
+  const { data: customers } = useModuleData<Customer>('customers');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
   const branches: any[] = [];
   const [groupBy, setGroupBy] = useState<GroupBy>('customer');
 

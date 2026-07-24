@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import type { Customer, Invoice } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
@@ -34,8 +35,8 @@ interface HSNRow {
 
 export default function GSTReportsModule() {
   const { company } = useStore();
-  const { data: invoices } = useModuleData<any>('invoices');
-  const { data: customers } = useModuleData<any>('customers');
+  const { data: invoices } = useModuleData<Invoice>('invoices');
+  const { data: customers } = useModuleData<Customer>('customers');
   const [view, setView] = useState<GSTView>('gstr1');
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState<MonthFilter>(

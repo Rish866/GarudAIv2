@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import type { Vehicle, Driver } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
@@ -16,8 +17,8 @@ interface ExpiryItem {
 }
 
 export default function ExpiryDashboardModule() {
-  const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
+  const { data: drivers } = useModuleData<Driver>('drivers');
   const [filter, setFilter] = useState<'all' | 'expired' | 'critical' | 'warning' | 'ok'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'vehicle' | 'driver'>('all');
 

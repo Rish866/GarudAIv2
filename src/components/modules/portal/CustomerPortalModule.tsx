@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import type { Customer, Trip, Invoice, Payment } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
@@ -7,10 +8,10 @@ import { Users, Eye, Package, Receipt, MapPin, Search, Download, Truck, Clock, C
 type PortalView = 'overview' | 'tracking' | 'invoices' | 'pod' | 'bookings';
 
 export default function CustomerPortalModule() {
-  const { data: customers } = useModuleData<any>('customers');
-  const { data: trips } = useModuleData<any>('trips');
-  const { data: invoices } = useModuleData<any>('invoices');
-  const { data: payments } = useModuleData<any>('payments');
+  const { data: customers } = useModuleData<Customer>('customers');
+  const { data: trips } = useModuleData<Trip>('trips');
+  const { data: invoices } = useModuleData<Invoice>('invoices');
+  const { data: payments } = useModuleData<Payment>('payments');
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [activeView, setActiveView] = useState<PortalView>('overview');
   const [searchTerm, setSearchTerm] = useState('');

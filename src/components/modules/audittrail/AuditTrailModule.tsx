@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
+import type { ActivityLog } from '../../../types';
 import Pagination from '../../ui/Pagination';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
@@ -52,7 +53,7 @@ export default function AuditTrailModule() {
     refresh: refreshActivity,
     hasNextPage,
     hasPrevPage,
-  } = usePaginatedData<any>('activity_log', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  } = usePaginatedData<ActivityLog>('activity_log', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all');
   const [actionFilter, setActionFilter] = useState<string>('all');

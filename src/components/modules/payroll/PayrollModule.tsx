@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import type { Driver, Trip } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, classNames } from '../../../lib/utils';
@@ -19,8 +20,8 @@ interface SalaryRecord {
 }
 
 export default function PayrollModule() {
-  const { data: drivers } = useModuleData<any>('drivers');
-  const { data: trips } = useModuleData<any>('trips');
+  const { data: drivers } = useModuleData<Driver>('drivers');
+  const { data: trips } = useModuleData<Trip>('trips');
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());

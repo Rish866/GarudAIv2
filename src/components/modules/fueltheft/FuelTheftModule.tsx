@@ -1,4 +1,5 @@
 import { Fuel, AlertTriangle, TrendingUp, Shield, Info, Search, DollarSign, BarChart3 } from 'lucide-react';
+import type { Vehicle, FuelEntry } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, classNames } from '../../../lib/utils';
@@ -42,8 +43,8 @@ function getStatusBadge(status: 'normal' | 'low' | 'critical') {
 }
 
 export default function FuelTheftModule() {
-  const { data: fuelEntries } = useModuleData<any>('fuel_entries');
-  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: fuelEntries } = useModuleData<FuelEntry>('fuel_entries');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
 
   const totalFuelCost = fuelEntries.reduce((sum, entry) => sum + entry.amount, 0);
   const avgMileage = fuelEntries.length > 0

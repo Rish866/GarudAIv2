@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Vehicle, Driver, FuelEntry } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency, formatDate } from '../../../lib/utils';
 import { showToast } from '../../ui/Toast';
@@ -6,9 +7,9 @@ import { Edit, Trash2, X } from 'lucide-react';
 import { usePermission } from '../../../hooks/usePermission';
 
 export default function FuelModule() {
-  const { data: fuelEntries, create: addFuelEntry, update: updateFuelEntry, remove: removeFuelEntry } = useModuleData<any>('fuel_entries');
-  const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: fuelEntries, create: addFuelEntry, update: updateFuelEntry, remove: removeFuelEntry } = useModuleData<FuelEntry>('fuel_entries');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
+  const { data: drivers } = useModuleData<Driver>('drivers');
   const { can } = usePermission();
   const canCreate = can('fuel.create');
   const canEdit = can('fuel.update');

@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import type { MaintenanceRecord } from '../../../types';
+import type { MaintenanceRecord, Vehicle } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames } from '../../../lib/utils';
 import { showToast } from '../../ui/Toast';
 import { usePermission } from '../../../hooks/usePermission';
 
 export default function MaintenanceModule() {
-  const { data: maintenance, create: addMaintenance, update: updateMaintenance, remove: removeMaintenance } = useModuleData<any>('maintenance');
-  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: maintenance, create: addMaintenance, update: updateMaintenance, remove: removeMaintenance } = useModuleData<MaintenanceRecord>('maintenance');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
   const { can } = usePermission();
   const canCreate = can('maintenance.create');
   const canUpdate = can('maintenance.update');

@@ -30,7 +30,7 @@ export interface Branch {
 }
 
 // Notification
-export interface Notification {
+export interface AppNotification {
   id: string;
   type: 'trip_update' | 'payment_received' | 'document_expiry' | 'maintenance_due' | 'pod_received' | 'invoice_generated' | 'system';
   title: string;
@@ -40,6 +40,9 @@ export interface Notification {
   is_read: boolean;
   created_at: string;
 }
+
+/** @deprecated Use AppNotification instead (avoids DOM Notification conflict) */
+export type Notification = AppNotification;
 
 // Quotation (for enquiry to quotation to trip flow)
 export interface Quotation {
@@ -356,7 +359,7 @@ export interface MaintenanceRecord {
   vendor: string;
   next_due_date?: string;
   next_due_km?: number;
-  status: 'scheduled' | 'in_progress' | 'completed';
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   created_at: string;
 }
 
@@ -385,5 +388,32 @@ export interface Enquiry {
   target_rate: number;
   status: 'new' | 'quoted' | 'confirmed' | 'lost';
   remarks?: string;
+  created_at: string;
+}
+
+
+
+// Driver Settlement (trip expense reconciliation)
+export interface DriverSettlement {
+  id: string;
+  trip_id: string;
+  driver_id: string;
+  opening_advance: number;
+  additional_advance: number;
+  diesel_cash: number;
+  toll_cash: number;
+  loading_cash: number;
+  unloading_cash: number;
+  bata: number;
+  parking: number;
+  repair_cash: number;
+  miscellaneous: number;
+  total_admissible: number;
+  recoverable_amount: number;
+  payable_amount: number;
+  status: 'draft' | 'submitted' | 'approved' | 'settled' | 'reversed';
+  submitted_at?: string;
+  approved_at?: string;
+  settled_at?: string;
   created_at: string;
 }
