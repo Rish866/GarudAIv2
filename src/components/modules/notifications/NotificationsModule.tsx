@@ -47,7 +47,7 @@ export default function NotificationsModule() {
   const navigateTo = useNavigateModule();
   const { data: notifications, update: markNotification } = useModuleData<AppNotification>('notifications');
   const markNotificationRead = (id: string) => markNotification(id, { is_read: true });
-  const markAllNotificationsRead = () => notifications.forEach((n: any) => { if (!n.is_read) markNotification(n.id, { is_read: true }); });
+  const markAllNotificationsRead = () => notifications.forEach((n) => { if (!n.is_read) markNotification(n.id, { is_read: true }); });
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 

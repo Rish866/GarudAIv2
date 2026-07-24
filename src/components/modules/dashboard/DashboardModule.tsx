@@ -66,7 +66,7 @@ function formatCompact(amount: number): string {
 
 // Revenue vs Expenses chart data — derived from actual invoices/expenses
 // Shows last 6 months of real data, or empty if no data exists
-function getRevenueExpenseChartData(invoices: any[], expenses: any[], fuelEntries: any[]) {
+function getRevenueExpenseChartData(invoices: Invoice[], expenses: Expense[], fuelEntries: FuelEntry[]) {
   const months: { month: string; revenue: number; expenses: number }[] = [];
   const now = new Date();
   for (let i = 5; i >= 0; i--) {
@@ -75,13 +75,13 @@ function getRevenueExpenseChartData(invoices: any[], expenses: any[], fuelEntrie
     const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     const monthRevenue = invoices
       .filter(inv => inv.invoice_date?.startsWith(yearMonth))
-      .reduce((s: number, inv: any) => s + (inv.total_amount || 0), 0);
+      .reduce((s, inv) => s + (inv.total_amount || 0), 0);
     const monthExpenses = expenses
       .filter(exp => exp.date?.startsWith(yearMonth))
-      .reduce((s: number, exp: any) => s + (exp.amount || 0), 0)
+      .reduce((s, exp) => s + (exp.amount || 0), 0)
       + fuelEntries
       .filter(f => f.date?.startsWith(yearMonth))
-      .reduce((s: number, f: any) => s + (f.amount || 0), 0);
+      .reduce((s, f) => s + (f.amount || 0), 0);
     months.push({ month: monthStr, revenue: monthRevenue, expenses: monthExpenses });
   }
   return months;
@@ -180,19 +180,19 @@ export default function DashboardModule() {
 
   // Compute metrics from Supabase data (org-scoped, real zeros)
   const totalVehicles = vehicles.length;
-  const activeVehicles = vehicles.filter((v: any) => v.status === 'on_trip').length;
-  const availableVehicles = vehicles.filter((v: any) => v.status === 'available').length;
-  const maintenanceVehicles = vehicles.filter((v: any) => v.status === 'maintenance' || v.status === 'breakdown').length;
+  const activeVehicles = vehicles.filter((v) => v.status === 'on_trip').length;
+  const availableVehicles = vehicles.filter((v) => v.status === 'available').length;
+  const maintenanceVehicles = vehicles.filter((v) => v.status === 'maintenance' || v.status === 'breakdown').length;
   const totalTrips = trips.length;
-  const activeTrips = trips.filter((t: any) => ['in_transit', 'loading', 'unloading', 'assigned'].includes(t.status));
-  const completedTrips = trips.filter((t: any) => ['completed', 'billed', 'settled'].includes(t.status)).length;
-  const totalRevenue = invoices.reduce((sum: number, inv: any) => sum + (inv.total_amount ?? 0), 0);
-  const totalReceived = payments.reduce((sum: number, p: any) => sum + (p.amount ?? 0), 0);
-  const totalExpenses = expenses.reduce((sum: number, e: any) => sum + (e.amount ?? 0), 0);
-  const totalOutstanding = invoices.reduce((sum: number, inv: any) => sum + (inv.balance_amount ?? 0), 0);
+  const activeTrips = trips.filter((t) => ['in_transit', 'loading', 'unloading', 'assigned'].includes(t.status));
+  const completedTrips = trips.filter((t) => ['completed', 'billed', 'settled'].includes(t.status)).length;
+  const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.total_amount ?? 0), 0);
+  const totalReceived = payments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
+  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+  const totalOutstanding = invoices.reduce((sum, inv) => sum + (inv.balance_amount ?? 0), 0);
   const totalDrivers = drivers.length;
-  const availableDrivers = drivers.filter((d: any) => d.status === 'available').length;
-  const unreadAlertItems = (alerts || []).filter((a: any) => !a.is_read);
+  const availableDrivers = drivers.filter((d) => d.status === 'available').length;
+  const unreadAlertItems = (alerts || []).filter((a) => !a.is_read);
   const unreadAlertCount = unreadAlertItems.length;
 
   const metrics = {
@@ -203,7 +203,7 @@ export default function DashboardModule() {
   };
 
   const vehiclesWithLocation = vehicles.filter(
-    (v: any) =>
+    (v) =>
       v != null &&
       v.lat != null &&
       v.lng != null &&
@@ -211,7 +211,7 @@ export default function DashboardModule() {
       Number.isFinite(Number(v.lng))
   );
   const onlineVehicles = vehiclesWithLocation.filter(
-    (v: any) => v.status === 'on_trip'
+    (v) => v.status === 'on_trip'
   );
 
   // Dynamic chart data from actual Supabase data
@@ -220,13 +220,13 @@ export default function DashboardModule() {
 
   const recentNotifications = [...(notifications || [])]
     .sort(
-      (a: any, b: any) =>
+      (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
     .slice(0, 5);
 
   // Trip status distribution for pie chart
-  const tripStatusCounts = trips.reduce<Record<string, number>>((acc, t: any) => {
+  const tripStatusCounts = trips.reduce<Record<string, number>>((acc, t) => {
     acc[t.status] = (acc[t.status] || 0) + 1;
     return acc;
   }, {});

@@ -21,10 +21,10 @@ export default function EditTripModal({ trip, onClose }: { trip: Trip; onClose: 
   const { data: drivers } = useModuleData<Driver>('drivers');
 
   // Filter: show available + currently assigned vehicle/driver; exclude inactive
-  const availableVehicles = vehicles.filter((v: any) =>
+  const availableVehicles = vehicles.filter((v) =>
     v.status === 'available' || v.status === 'on_trip' || v.id === trip.vehicle_id
   );
-  const availableDrivers = drivers.filter((d: any) =>
+  const availableDrivers = drivers.filter((d) =>
     d.status === 'available' || d.status === 'on_trip' || d.id === trip.driver_id
   );
 
@@ -59,9 +59,9 @@ export default function EditTripModal({ trip, onClose }: { trip: Trip; onClose: 
     }
     setSaving(true);
 
-    const customer = customers.find((c: any) => c.id === form.customer_id);
-    const vehicle = vehicles.find((v: any) => v.id === form.vehicle_id);
-    const driver = drivers.find((d: any) => d.id === form.driver_id);
+    const customer = customers.find((c) => c.id === form.customer_id);
+    const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
+    const driver = drivers.find((d) => d.id === form.driver_id);
 
     // Build updates object for the RPC (only changed fields)
     const updates: Record<string, any> = {
@@ -118,7 +118,7 @@ export default function EditTripModal({ trip, onClose }: { trip: Trip; onClose: 
             <label className="block text-sm font-medium text-slate-700 mb-1">Customer</label>
             <select name="customer_id" value={form.customer_id} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
               <option value="">Select customer</option>
-              {customers.map((c: any) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+              {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           </div>
 
@@ -128,14 +128,14 @@ export default function EditTripModal({ trip, onClose }: { trip: Trip; onClose: 
               <label className="block text-sm font-medium text-slate-700 mb-1">Vehicle</label>
               <select name="vehicle_id" value={form.vehicle_id} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="">Select vehicle</option>
-                {availableVehicles.map((v: any) => (<option key={v.id} value={v.id}>{v.reg_number} ({v.vehicle_type}) {v.id === trip.vehicle_id ? '(current)' : v.status !== 'available' ? `— ${v.status}` : ''}</option>))}
+                {availableVehicles.map((v) => (<option key={v.id} value={v.id}>{v.reg_number} ({v.vehicle_type}) {v.id === trip.vehicle_id ? '(current)' : v.status !== 'available' ? `— ${v.status}` : ''}</option>))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Driver</label>
               <select name="driver_id" value={form.driver_id} onChange={handleChange} required className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="">Select driver</option>
-                {availableDrivers.map((d: any) => (<option key={d.id} value={d.id}>{d.name} {d.id === trip.driver_id ? '(current)' : d.status !== 'available' ? `— ${d.status}` : ''}</option>))}
+                {availableDrivers.map((d) => (<option key={d.id} value={d.id}>{d.name} {d.id === trip.driver_id ? '(current)' : d.status !== 'available' ? `— ${d.status}` : ''}</option>))}
               </select>
             </div>
           </div>

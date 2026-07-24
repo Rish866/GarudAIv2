@@ -21,7 +21,7 @@ export default function NewTripModal({ onClose }: { onClose: () => void }) {
   const { data: quotations } = useModuleData<Quotation>('quotations');
   const { create: addTrip } = useModuleData<Trip>('trips', { fetchOnMount: false });
   const availableVehicles = vehicles;
-  const availableDrivers = drivers.filter((d: any) => d.status !== 'inactive');
+  const availableDrivers = drivers.filter((d) => d.status !== 'inactive');
 
   // Simulated indents (from store would be better but indents are local to IndentModule currently)
   const pendingQuotations = quotations.filter(q => q.status === 'sent' || q.status === 'draft' || q.status === 'accepted');

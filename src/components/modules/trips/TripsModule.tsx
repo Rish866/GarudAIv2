@@ -172,7 +172,7 @@ export default function TripsModule() {
     }
 
     // Business rule validation before status transition
-    const trip = trips.find((t: any) => t.id === tripId);
+    const trip = trips.find((t) => t.id === tripId);
     if (trip) {
       const validation = validateStatusTransition(trip as unknown as TripRecord, newStatus, {
         canOverridePOD: can('approvals.action'),

@@ -17,11 +17,11 @@ export default function FuelModule() {
   const [editingEntry, setEditingEntry] = useState<any | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const totalFuelSpend = fuelEntries.reduce((sum: number, f: any) => sum + (f.amount || 0), 0);
-  const totalLitres = fuelEntries.reduce((sum: number, f: any) => sum + (f.litres || 0), 0);
-  const entriesWithMileage = fuelEntries.filter((f: any) => f.mileage && f.mileage > 0);
+  const totalFuelSpend = fuelEntries.reduce((sum, f) => sum + (f.amount || 0), 0);
+  const totalLitres = fuelEntries.reduce((sum, f) => sum + (f.litres || 0), 0);
+  const entriesWithMileage = fuelEntries.filter((f) => f.mileage && f.mileage > 0);
   const avgMileage = entriesWithMileage.length > 0
-    ? entriesWithMileage.reduce((sum: number, f: any) => sum + f.mileage, 0) / entriesWithMileage.length : 0;
+    ? entriesWithMileage.reduce((sum, f) => sum + (f.mileage || 0), 0) / entriesWithMileage.length : 0;
 
   const handleDelete = async (id: string) => {
     const result = await removeFuelEntry(id);
@@ -67,7 +67,7 @@ export default function FuelModule() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {fuelEntries.map((entry: any) => (
+            {fuelEntries.map((entry) => (
               <tr key={entry.id} className="hover:bg-slate-50">
                 <td className="px-4 py-3 text-sm text-slate-600">{formatDate(entry.date)}</td>
                 <td className="px-4 py-3 text-sm font-medium text-slate-700">{entry.vehicle_reg}</td>
@@ -126,7 +126,7 @@ export default function FuelModule() {
 
 
 function FuelFormModal({ entry, vehicles, drivers, allEntries, onClose, onSave }: {
-  entry: any | null; vehicles: any[]; drivers: any[]; allEntries: any[]; onClose: () => void; onSave: (data: any) => Promise<void>;
+  entry: FuelEntry | null; vehicles: Vehicle[]; drivers: Driver[]; allEntries: FuelEntry[]; onClose: () => void; onSave: (data: Partial<FuelEntry>) => Promise<void>;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -142,8 +142,8 @@ function FuelFormModal({ entry, vehicles, drivers, allEntries, onClose, onSave }
   });
 
   const handleVehicleChange = (vehicleId: string) => {
-    const vehicle = vehicles.find((v: any) => v.id === vehicleId);
-    const driver = vehicle?.driver_id ? drivers.find((d: any) => d.id === vehicle.driver_id) : undefined;
+    const vehicle = vehicles.find((v) => v.id === vehicleId);
+    const driver = vehicle?.driver_id ? drivers.find((d) => d.id === vehicle.driver_id) : undefined;
     setForm({ ...form, vehicle_id: vehicleId, driver_id: driver?.id || '', driver_name: driver?.name || '', odometer: vehicle?.odometer || form.odometer });
   };
 
@@ -158,15 +158,15 @@ function FuelFormModal({ entry, vehicles, drivers, allEntries, onClose, onSave }
     // Odometer validation: must be greater than previous entry for this vehicle
     if (!entry) {
       const previousEntries = allEntries
-        .filter((e: any) => e.vehicle_id === form.vehicle_id && e.id !== entry?.id)
-        .sort((a: any, b: any) => (b.odometer || 0) - (a.odometer || 0));
+        .filter((e) => e.vehicle_id === form.vehicle_id && e.id !== entry?.id)
+        .sort((a, b) => (b.odometer || 0) - (a.odometer || 0));
       if (previousEntries.length > 0 && form.odometer <= previousEntries[0].odometer) {
         setError(`Odometer must be greater than last reading (${previousEntries[0].odometer.toLocaleString()} km)`);
         return;
       }
     }
 
-    const vehicle = vehicles.find((v: any) => v.id === form.vehicle_id);
+    const vehicle = vehicles.find((v) => v.id === form.vehicle_id);
     setSaving(true);
     await onSave({
       vehicle_id: form.vehicle_id, vehicle_reg: vehicle?.reg_number || '',
@@ -191,7 +191,7 @@ function FuelFormModal({ entry, vehicles, drivers, allEntries, onClose, onSave }
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Vehicle *</label>
             <select value={form.vehicle_id} onChange={(e) => handleVehicleChange(e.target.value)} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
               <option value="">Select vehicle</option>
-              {vehicles.map((v: any) => <option key={v.id} value={v.id}>{v.reg_number}</option>)}
+              {vehicles.map((v) => <option key={v.id} value={v.id}>{v.reg_number}</option>)}
             </select>
           </div>
           <div>

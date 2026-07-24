@@ -102,9 +102,9 @@ export default function DriversModule() {
   };
 
   /** Safe delete: blocks if driver is assigned to an active trip, otherwise deactivates */
-  const handleDeleteDriver = async (driver: any) => {
+  const handleDeleteDriver = async (driver: Driver) => {
     const activeTrip = trips.find(
-      (t: any) => t.driver_id === driver.id && ['assigned', 'loading', 'in_transit', 'reached', 'unloading'].includes(t.status)
+      (t) => t.driver_id === driver.id && ['assigned', 'loading', 'in_transit', 'reached', 'unloading'].includes(t.status)
     );
     if (activeTrip) {
       showToast('error', `Cannot remove: driver is on active trip ${activeTrip.trip_number}. Complete or reassign the trip first.`);
@@ -494,7 +494,7 @@ function DriverCard({ driver, onTimePercent, overallScore, rating }: { key?: str
   );
 }
 
-function AddDriverModal({ driver: editDriver, onClose }: { driver?: any | null; onClose: () => void }) {
+function AddDriverModal({ driver: editDriver, onClose }: { driver?: Driver | null; onClose: () => void }) {
   const { create: addDriver, update: updateDriver } = useModuleData<Driver>('drivers');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
