@@ -9,17 +9,6 @@ import type {
 } from '../types';
 
 // ============================================================
-// DEPRECATED: generateId() — DO NOT USE for new code.
-// All business records use Postgres-generated UUIDs via useModuleData.
-// This remains exported only because some modules still import it.
-// The useModuleData sanitizer strips non-UUID IDs before INSERT.
-// ============================================================
-/** @deprecated Use useModuleData.create() which lets Postgres generate UUIDs */
-export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
-}
-
-// ============================================================
 // STORE STATE INTERFACE
 //
 // This store manages ONLY:
@@ -55,19 +44,6 @@ interface StoreState {
   setActiveBranch: (branchId: string) => void;
   login: (user: User) => void;
   logout: () => void;
-}
-
-// ============================================================
-// DEPRECATED: getDashboardMetrics — Dashboard uses Supabase data directly
-// ============================================================
-/** @deprecated Dashboard uses useModuleData for real-time Supabase metrics */
-export function getDashboardMetrics(_state: StoreState) {
-  return {
-    totalVehicles: 0, activeVehicles: 0, availableVehicles: 0, maintenanceVehicles: 0,
-    totalTrips: 0, activeTrips: 0, completedTrips: 0,
-    totalRevenue: 0, totalReceived: 0, totalExpenses: 0, totalOutstanding: 0,
-    totalDrivers: 0, availableDrivers: 0, unreadAlerts: 0,
-  };
 }
 
 export const useStore = create<StoreState>()(

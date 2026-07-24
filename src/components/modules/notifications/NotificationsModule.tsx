@@ -1,27 +1,14 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore } from '../../../store/useStore';
-import { classNames } from '../../../lib/utils';
+import { useNavigateModule } from '../../../router';
+import { classNames, getTimeAgo } from '../../../lib/utils';
 import { Truck, IndianRupee, FileWarning, Wrench, Package, FileText, Info, Bell, CheckCheck } from 'lucide-react';
-import type { Notification, ModuleName } from '../../../types';
+import type { AppNotification, ModuleName } from '../../../types';
 
 type FilterTab = 'all' | 'unread' | 'trip_update' | 'payment_received' | 'document_expiry' | 'system';
 
-function getTimeAgo(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return `${Math.floor(diffDays / 7)}w ago`;
-}
 
-function getNotificationIcon(type: Notification['type']) {
+function getNotificationIcon(type: AppNotification['type']) {
   switch (type) {
     case 'trip_update':
       return <Truck className="w-5 h-5 text-blue-500" />;
@@ -44,10 +31,10 @@ function getNotificationIcon(type: Notification['type']) {
 
 export default function NotificationsModule() {
   const [filter, setFilter] = useState<FilterTab>('all');
-  const { setActiveModule } = useStore();
-  const { data: notifications, update: markNotification } = useModuleData<any>('notifications');
+  const navigateTo = useNavigateModule();
+  const { data: notifications, update: markNotification } = useModuleData<AppNotification>('notifications');
   const markNotificationRead = (id: string) => markNotification(id, { is_read: true });
-  const markAllNotificationsRead = () => notifications.forEach((n: any) => { if (!n.is_read) markNotification(n.id, { is_read: true }); });
+  const markAllNotificationsRead = () => notifications.forEach((n) => { if (!n.is_read) markNotification(n.id, { is_read: true }); });
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -70,12 +57,12 @@ export default function NotificationsModule() {
     { key: 'system', label: 'System' },
   ];
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = (notification: AppNotification) => {
     if (!notification.is_read) {
       markNotificationRead(notification.id);
     }
     if (notification.link_module) {
-      setActiveModule(notification.link_module as ModuleName);
+      navigateTo(notification.link_module as ModuleName);
     }
   };
 

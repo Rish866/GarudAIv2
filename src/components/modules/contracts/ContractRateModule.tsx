@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { Customer, Trip } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
@@ -20,8 +21,8 @@ interface ContractRate {
 }
 
 export default function ContractRateModule() {
-  const { data: customers } = useModuleData<any>('customers');
-  const { data: trips } = useModuleData<any>('trips');
+  const { data: customers } = useModuleData<Customer>('customers');
+  const { data: trips } = useModuleData<Trip>('trips');
 
   const { data: contracts, create: createContract, remove: removeContract, loading: contractsLoading } = useModuleData<ContractRate>('contracts');
 

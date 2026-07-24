@@ -83,9 +83,9 @@ export default function FleetModule() {
     refresh: refreshVehicles,
     hasNextPage,
     hasPrevPage,
-  } = usePaginatedData<any>('vehicles', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  } = usePaginatedData<Vehicle>('vehicles', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
   // CRUD operations
-  const { create: addVehicle, update: updateVehicle, remove: deleteVehicle } = useModuleData<any>('vehicles', { fetchOnMount: false });
+  const { create: addVehicle, update: updateVehicle, remove: deleteVehicle } = useModuleData<Vehicle>('vehicles', { fetchOnMount: false });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState('');
@@ -200,7 +200,7 @@ export default function FleetModule() {
     } else {
       // Let PostgreSQL generate the UUID primary key. The legacy browser ID
       // generator produces non-UUID strings and must not be used for DB rows.
-      const newVehicle = {
+      const newVehicle: Partial<Vehicle> = {
         branch_id: form.branch_id || undefined,
         reg_number: form.reg_number,
         vehicle_type: form.vehicle_type,
@@ -215,7 +215,7 @@ export default function FleetModule() {
         insurance_expiry: form.insurance_expiry,
         puc_expiry: form.puc_expiry,
         permit_expiry: form.permit_expiry,
-        status: 'available',
+        status: 'available' as const,
         odometer: 0,
         created_at: new Date().toISOString(),
       };

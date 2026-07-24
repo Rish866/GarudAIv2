@@ -29,8 +29,8 @@ export default function CustomersModule() {
     refresh: refreshCustomers,
     hasNextPage,
     hasPrevPage,
-  } = usePaginatedData<any>('customers', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: addCustomer, update: updateCustomer } = useModuleData<any>('customers', { fetchOnMount: false });
+  } = usePaginatedData<Customer>('customers', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: addCustomer, update: updateCustomer } = useModuleData<Customer>('customers', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -311,7 +311,7 @@ export default function CustomersModule() {
 }
 
 function AddCustomerModal({ onClose }: { onClose: () => void }) {
-  const { create: addCustomer } = useModuleData<any>("customers");
+  const { create: addCustomer } = useModuleData<Customer>("customers");
 
   const [form, setForm] = useState({
     branch_id: '',

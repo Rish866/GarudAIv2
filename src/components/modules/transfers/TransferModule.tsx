@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { Vehicle, Driver } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatDate, classNames } from '../../../lib/utils';
@@ -27,8 +28,8 @@ interface Transfer {
 
 
 export default function TransferModule() {
-  const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
+  const { data: drivers } = useModuleData<Driver>('drivers');
   const branches: any[] = []; // branches loaded from org context
   const { data: transfers, create: createTransfer, update: updateTransfer } = useModuleData<Transfer>('transfers');
   const [showModal, setShowModal] = useState(false);

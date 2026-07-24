@@ -29,10 +29,12 @@ import {
   Shield,
   Globe,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { usePermission } from '../../hooks/usePermission';
 import { useBranch } from '../../contexts/BranchContext';
 import { MODULE_PERMISSIONS } from '../../lib/modulePermissions';
+import { getPathForModule } from '../../router/routes';
 import type { ModuleName } from '../../types';
 
 interface NavItem {
@@ -152,6 +154,8 @@ export default function Sidebar() {
     toggleTheme,
   } = useStore();
 
+  const navigate = useNavigate();
+
   // Branch state from Supabase-backed BranchContext (not Zustand)
   const { accessibleBranches, selectedBranchId, hasAllBranchAccess, selectBranch } = useBranch();
 
@@ -176,6 +180,7 @@ export default function Sidebar() {
 
   const handleNavClick = (module: ModuleName) => {
     setActiveModule(module);
+    navigate(getPathForModule(module));
     if (window.innerWidth < 1024) {
       toggleSidebar();
     }

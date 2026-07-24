@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Trip, Invoice, Expense } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency } from '../../../lib/utils';
@@ -6,9 +7,9 @@ import { generateTripReportPDF } from '../../../lib/pdf';
 
 export default function ReportsModule() {
   const { company } = useStore();
-  const { data: invoices } = useModuleData<any>('invoices');
-  const { data: expenses } = useModuleData<any>('expenses');
-  const { data: trips } = useModuleData<any>('trips');
+  const { data: invoices } = useModuleData<Invoice>('invoices');
+  const { data: expenses } = useModuleData<Expense>('expenses');
+  const { data: trips } = useModuleData<Trip>('trips');
 
   const [dateRange, setDateRange] = useState<'all' | 'this_month' | 'last_month' | 'custom'>('all');
   const [startDate, setStartDate] = useState('');

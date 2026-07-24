@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import type { Driver } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -36,7 +37,6 @@ interface LeaveRequest {
 }
 
 
-const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
 const today = new Date().toISOString().split('T')[0];
 
@@ -46,7 +46,7 @@ const today = new Date().toISOString().split('T')[0];
 type TabView = 'attendance' | 'leaves' | 'summary';
 
 export default function AttendanceModule() {
-  const { data: drivers } = useModuleData<any>('drivers');
+  const { data: drivers } = useModuleData<Driver>('drivers');
   const {
     data: attendance,
     totalCount,
@@ -133,8 +133,7 @@ export default function AttendanceModule() {
     const from = new Date(leaveForm.from_date);
     const to = new Date(leaveForm.to_date);
     const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-    const newLeave: LeaveRequest = {
-      id: 'lv_' + generateId(),
+    const newLeave: Partial<LeaveRequest> = {
       employee_id: leaveForm.employee_id,
       employee_name: emp?.name || '',
       leave_type: leaveForm.leave_type,

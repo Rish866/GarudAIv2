@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Truck, Users, Building2, Route, Check, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
+import { getPathForModule } from '../../router/routes';
 
 const steps = [
   {
@@ -49,6 +51,7 @@ const steps = [
 
 export default function OnboardingWizard() {
   const { setActiveModule } = useStore();
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [dismissed, setDismissed] = useState(() => {
     return localStorage.getItem('garud_onboarding_done') === 'true';
@@ -70,6 +73,7 @@ export default function OnboardingWizard() {
     if (isLast) {
       handleDismiss();
       setActiveModule('trips');
+      navigate(getPathForModule('trips'));
     } else {
       setCurrentStep(currentStep + 1);
     }

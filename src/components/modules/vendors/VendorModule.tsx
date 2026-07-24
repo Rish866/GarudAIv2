@@ -5,7 +5,6 @@ import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 
-const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 import { Users, Plus, X, Search, Download, Edit, Trash2, Phone, Mail } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
 
@@ -117,7 +116,6 @@ export default function VendorModule() {
   const handleAdd = () => {
     if (!form.name || !form.phone) return;
     const newVendor: Vendor = {
-      id: 'vnd_' + generateId(),
       ...form,
       total_paid: 0,
       outstanding: 0,
@@ -337,7 +335,7 @@ export default function VendorModule() {
       )}
 
       {showBulkUpload && (
-        <BulkUpload title="Bulk Upload Vendors" description="Import vendor records from CSV" sampleFields={['name', 'type', 'contact_person', 'phone', 'email', 'gstin', 'city', 'state']} onUpload={(data) => { data.forEach(row => { createVendor( { id: 'vnd_' + generateId(), name: row.name || '', type: (row.type as VendorType) || 'other', contact_person: row.contact_person || '', phone: row.phone || '', email: row.email || '', gstin: row.gstin || '', pan: row.pan || '', address: row.address || '', city: row.city || '', state: row.state || '', bank_name: '', account_number: '', ifsc: '', total_paid: 0, outstanding: 0, status: 'active', created_at: new Date().toISOString().split('T')[0] }); }); }} onClose={() => setShowBulkUpload(false)} />
+        <BulkUpload title="Bulk Upload Vendors" description="Import vendor records from CSV" sampleFields={['name', 'type', 'contact_person', 'phone', 'email', 'gstin', 'city', 'state']} onUpload={(data) => { data.forEach(row => { createVendor( { name: row.name || '', type: (row.type as VendorType) || 'other', contact_person: row.contact_person || '', phone: row.phone || '', email: row.email || '', gstin: row.gstin || '', pan: row.pan || '', address: row.address || '', city: row.city || '', state: row.state || '', bank_name: '', account_number: '', ifsc: '', total_paid: 0, outstanding: 0, status: 'active', created_at: new Date().toISOString().split('T')[0] }); }); }} onClose={() => setShowBulkUpload(false)} />
       )}
     </div>
   );

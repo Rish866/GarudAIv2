@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import type { Trip } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, classNames } from '../../../lib/utils';
@@ -21,12 +22,11 @@ interface RouteRecord {
   status: 'active' | 'inactive';
 }
 
-const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 
 
 
 export default function RouteModule() {
-  const { data: trips } = useModuleData<any>('trips');
+  const { data: trips } = useModuleData<Trip>('trips');
   const { data: routes, create: createRoute, remove: removeRoute, loading: routesLoading } = useModuleData<RouteRecord>('routes');
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -55,8 +55,7 @@ export default function RouteModule() {
 
   const handleAdd = () => {
     if (!form.name || !form.origin || !form.destination || !form.distance_km) return;
-    const newRoute: RouteRecord = {
-      id: 'rt_' + generateId(),
+    const newRoute: Partial<RouteRecord> = {
       name: form.name,
       origin: form.origin,
       destination: form.destination,
@@ -227,7 +226,7 @@ export default function RouteModule() {
       )}
 
       {showBulkUpload && (
-        <BulkUpload title="Bulk Upload Routes" description="Import route records from CSV" sampleFields={['name', 'origin', 'destination', 'distance_km', 'standard_hours', 'toll_points', 'toll_cost', 'fuel_estimate']} onUpload={(data) => { data.forEach(row => { createRoute( { id: 'rt_' + generateId(), name: row.name || '', origin: row.origin || '', destination: row.destination || '', distance_km: Number(row.distance_km) || 0, standard_hours: Number(row.standard_hours) || 0, toll_points: Number(row.toll_points) || 0, toll_cost: Number(row.toll_cost) || 0, fuel_estimate: Number(row.fuel_estimate) || 0, trips_completed: 0, total_revenue: 0, total_cost: 0, status: 'active' }); }); }} onClose={() => setShowBulkUpload(false)} />
+        <BulkUpload title="Bulk Upload Routes" description="Import route records from CSV" sampleFields={['name', 'origin', 'destination', 'distance_km', 'standard_hours', 'toll_points', 'toll_cost', 'fuel_estimate']} onUpload={(data) => { data.forEach(row => { createRoute( { name: row.name || '', origin: row.origin || '', destination: row.destination || '', distance_km: Number(row.distance_km) || 0, standard_hours: Number(row.standard_hours) || 0, toll_points: Number(row.toll_points) || 0, toll_cost: Number(row.toll_cost) || 0, fuel_estimate: Number(row.fuel_estimate) || 0, trips_completed: 0, total_revenue: 0, total_cost: 0, status: 'active' }); }); }} onClose={() => setShowBulkUpload(false)} />
       )}
     </div>
   );

@@ -1,6 +1,8 @@
 import { useStore } from '../../../store/useStore';
+import type { Vehicle, Driver, Trip, Invoice, Payment, Expense, FuelEntry, AppNotification, SystemAlert } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useOrganization } from '../../../contexts/OrganizationContext';
+import { useNavigateModule } from '../../../router';
 import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -64,7 +66,7 @@ function formatCompact(amount: number): string {
 
 // Revenue vs Expenses chart data — derived from actual invoices/expenses
 // Shows last 6 months of real data, or empty if no data exists
-function getRevenueExpenseChartData(invoices: any[], expenses: any[], fuelEntries: any[]) {
+function getRevenueExpenseChartData(invoices: Invoice[], expenses: Expense[], fuelEntries: FuelEntry[]) {
   const months: { month: string; revenue: number; expenses: number }[] = [];
   const now = new Date();
   for (let i = 5; i >= 0; i--) {
@@ -73,13 +75,13 @@ function getRevenueExpenseChartData(invoices: any[], expenses: any[], fuelEntrie
     const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     const monthRevenue = invoices
       .filter(inv => inv.invoice_date?.startsWith(yearMonth))
-      .reduce((s: number, inv: any) => s + (inv.total_amount || 0), 0);
+      .reduce((s, inv) => s + (inv.total_amount || 0), 0);
     const monthExpenses = expenses
       .filter(exp => exp.date?.startsWith(yearMonth))
-      .reduce((s: number, exp: any) => s + (exp.amount || 0), 0)
+      .reduce((s, exp) => s + (exp.amount || 0), 0)
       + fuelEntries
       .filter(f => f.date?.startsWith(yearMonth))
-      .reduce((s: number, f: any) => s + (f.amount || 0), 0);
+      .reduce((s, f) => s + (f.amount || 0), 0);
     months.push({ month: monthStr, revenue: monthRevenue, expenses: monthExpenses });
   }
   return months;
@@ -127,17 +129,18 @@ const itemVariants = {
 export default function DashboardModule() {
   const { organizationId, loading: orgLoading, error: orgError } = useOrganization();
   const { user } = useStore();
+  const navigateTo = useNavigateModule();
 
   // Read ALL data from Supabase (org-scoped via useModuleData)
-  const { data: vehicles, loading: vehiclesLoading } = useModuleData<any>('vehicles');
-  const { data: drivers } = useModuleData<any>('drivers');
-  const { data: trips } = useModuleData<any>('trips');
-  const { data: invoices } = useModuleData<any>('invoices');
-  const { data: payments } = useModuleData<any>('payments');
-  const { data: expenses } = useModuleData<any>('expenses');
-  const { data: fuelEntries } = useModuleData<any>('fuel_entries');
-  const { data: notifications } = useModuleData<any>('notifications');
-  const { data: alerts } = useModuleData<any>('activity_log');
+  const { data: vehicles, loading: vehiclesLoading } = useModuleData<Vehicle>('vehicles');
+  const { data: drivers } = useModuleData<Driver>('drivers');
+  const { data: trips } = useModuleData<Trip>('trips');
+  const { data: invoices } = useModuleData<Invoice>('invoices');
+  const { data: payments } = useModuleData<Payment>('payments');
+  const { data: expenses } = useModuleData<Expense>('expenses');
+  const { data: fuelEntries } = useModuleData<FuelEntry>('fuel_entries');
+  const { data: notifications } = useModuleData<AppNotification>('notifications');
+  const { data: alerts } = useModuleData<SystemAlert>('activity_log');
 
   // Loading state — show spinner while org resolves or first data batch loads
   if (orgLoading || vehiclesLoading) {
@@ -177,19 +180,19 @@ export default function DashboardModule() {
 
   // Compute metrics from Supabase data (org-scoped, real zeros)
   const totalVehicles = vehicles.length;
-  const activeVehicles = vehicles.filter((v: any) => v.status === 'on_trip').length;
-  const availableVehicles = vehicles.filter((v: any) => v.status === 'available').length;
-  const maintenanceVehicles = vehicles.filter((v: any) => v.status === 'maintenance' || v.status === 'breakdown').length;
+  const activeVehicles = vehicles.filter((v) => v.status === 'on_trip').length;
+  const availableVehicles = vehicles.filter((v) => v.status === 'available').length;
+  const maintenanceVehicles = vehicles.filter((v) => v.status === 'maintenance' || v.status === 'breakdown').length;
   const totalTrips = trips.length;
-  const activeTrips = trips.filter((t: any) => ['in_transit', 'loading', 'unloading', 'assigned'].includes(t.status));
-  const completedTrips = trips.filter((t: any) => ['completed', 'billed', 'settled'].includes(t.status)).length;
-  const totalRevenue = invoices.reduce((sum: number, inv: any) => sum + (inv.total_amount ?? 0), 0);
-  const totalReceived = payments.reduce((sum: number, p: any) => sum + (p.amount ?? 0), 0);
-  const totalExpenses = expenses.reduce((sum: number, e: any) => sum + (e.amount ?? 0), 0);
-  const totalOutstanding = invoices.reduce((sum: number, inv: any) => sum + (inv.balance_amount ?? 0), 0);
+  const activeTrips = trips.filter((t) => ['in_transit', 'loading', 'unloading', 'assigned'].includes(t.status));
+  const completedTrips = trips.filter((t) => ['completed', 'billed', 'settled'].includes(t.status)).length;
+  const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.total_amount ?? 0), 0);
+  const totalReceived = payments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
+  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+  const totalOutstanding = invoices.reduce((sum, inv) => sum + (inv.balance_amount ?? 0), 0);
   const totalDrivers = drivers.length;
-  const availableDrivers = drivers.filter((d: any) => d.status === 'available').length;
-  const unreadAlertItems = (alerts || []).filter((a: any) => !a.is_read);
+  const availableDrivers = drivers.filter((d) => d.status === 'available').length;
+  const unreadAlertItems = (alerts || []).filter((a) => !a.is_read);
   const unreadAlertCount = unreadAlertItems.length;
 
   const metrics = {
@@ -200,7 +203,7 @@ export default function DashboardModule() {
   };
 
   const vehiclesWithLocation = vehicles.filter(
-    (v: any) =>
+    (v) =>
       v != null &&
       v.lat != null &&
       v.lng != null &&
@@ -208,7 +211,7 @@ export default function DashboardModule() {
       Number.isFinite(Number(v.lng))
   );
   const onlineVehicles = vehiclesWithLocation.filter(
-    (v: any) => v.status === 'on_trip'
+    (v) => v.status === 'on_trip'
   );
 
   // Dynamic chart data from actual Supabase data
@@ -217,13 +220,13 @@ export default function DashboardModule() {
 
   const recentNotifications = [...(notifications || [])]
     .sort(
-      (a: any, b: any) =>
+      (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
     .slice(0, 5);
 
   // Trip status distribution for pie chart
-  const tripStatusCounts = trips.reduce<Record<string, number>>((acc, t: any) => {
+  const tripStatusCounts = trips.reduce<Record<string, number>>((acc, t) => {
     acc[t.status] = (acc[t.status] || 0) + 1;
     return acc;
   }, {});
@@ -309,13 +312,13 @@ export default function DashboardModule() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => useStore.getState().setActiveModule('trips')}
+            onClick={() => navigateTo('trips')}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-colors shadow-sm"
           >
             New Trip
           </button>
           <button
-            onClick={() => useStore.getState().setActiveModule('fleet')}
+            onClick={() => navigateTo('fleet')}
             className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-full transition-colors shadow-sm"
           >
             Add Vehicle

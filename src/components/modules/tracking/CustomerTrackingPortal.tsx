@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
-import type { Trip, TripStatus } from '../../../types';
+import type { Trip, TripStatus, Vehicle } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames } from '../../../lib/utils';
 import { Search, MapPin, Truck, Phone, Package, ChevronDown, ChevronUp, Navigation, Clock, CheckCircle2 } from 'lucide-react';
 
@@ -57,7 +57,7 @@ function StatusProgressBar({ currentStatus }: { currentStatus: TripStatus }) {
 
 
 function TrackingCard({ trip }: { trip: Trip; key?: React.Key }) {
-  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
   const vehicle = vehicles.find(v => v.id === trip.vehicle_id);
   const lastLocation = vehicle?.last_location || null;
 
@@ -143,7 +143,7 @@ function TrackingCard({ trip }: { trip: Trip; key?: React.Key }) {
 
 
 export default function CustomerTrackingPortal() {
-  const { data: trips } = useModuleData<any>('trips');
+  const { data: trips } = useModuleData<Trip>('trips');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
 

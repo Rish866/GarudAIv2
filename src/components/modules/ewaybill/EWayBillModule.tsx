@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { Vehicle, Trip } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
@@ -33,8 +34,8 @@ interface EWayBillRecord {
 
 export default function EWayBillModule() {
   const { company } = useStore();
-  const { data: trips } = useModuleData<any>('trips');
-  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: trips } = useModuleData<Trip>('trips');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
     const { data: bills, create: createBill, loading: billsLoading } = useModuleData<EWayBillRecord>('eway_bills');
 
   const [showModal, setShowModal] = useState(false);

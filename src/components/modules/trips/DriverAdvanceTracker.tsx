@@ -1,4 +1,5 @@
 import { useModuleData } from '../../../hooks/useModuleData';
+import type { Trip, DriverSettlement } from '../../../types';
 import { formatCurrency } from '../../../lib/utils';
 
 /**
@@ -13,12 +14,12 @@ import { formatCurrency } from '../../../lib/utils';
  * 2. driver_settlements entity status (draft/submitted/approved/settled)
  */
 export default function DriverAdvanceTracker() {
-  const { data: trips } = useModuleData<any>('trips');
-  const { data: settlements } = useModuleData<any>('driver_settlements');
+  const { data: trips } = useModuleData<Trip>('trips');
+  const { data: settlements } = useModuleData<DriverSettlement>('driver_settlements');
   
   // Build settlement index by trip_id for quick lookup
   const settlementByTrip: Record<string, { status: string; payable_amount: number; recoverable_amount: number }> = {};
-  (settlements || []).forEach((s: any) => {
+  (settlements || []).forEach((s) => {
     if (s.status !== 'reversed') {
       settlementByTrip[s.trip_id] = { status: s.status, payable_amount: s.payable_amount || 0, recoverable_amount: s.recoverable_amount || 0 };
     }
@@ -37,7 +38,7 @@ export default function DriverAdvanceTracker() {
     total_recoverable: number;
   }> = {};
   
-  trips.forEach((trip: any) => {
+  trips.forEach((trip) => {
     if (!trip.driver_name) return;
     if (!driverAdvances[trip.driver_name]) {
       driverAdvances[trip.driver_name] = {

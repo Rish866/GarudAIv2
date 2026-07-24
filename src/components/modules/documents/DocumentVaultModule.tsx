@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import type { Vehicle } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatDate, getDaysUntil, classNames } from '../../../lib/utils';
@@ -19,7 +20,7 @@ interface VaultDocument {
 type FilterType = 'all' | 'expiring' | 'expired' | 'by_vehicle';
 
 export default function DocumentVaultModule() {
-  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
 
   const generateDocuments = (): VaultDocument[] => {
     const docs: VaultDocument[] = [];

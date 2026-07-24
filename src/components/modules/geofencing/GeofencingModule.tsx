@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Vehicle } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { MapPin, Plus, Bell, Shield, X, Circle as CircleIcon, Warehouse, Users, AlertTriangle } from 'lucide-react';
 import { MapContainer, TileLayer, Circle, Marker, Popup } from 'react-leaflet';
@@ -62,7 +63,7 @@ function getTypeIcon(type: GeofenceType) {
 }
 
 export default function GeofencingModule() {
-  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
   const { data: geofences, create: createGeofence, remove: removeGeofence, loading: geofencesLoading } = useModuleData<Geofence>('geofences');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newGeofence, setNewGeofence] = useState<{ name: string; type: GeofenceType; lat: string; lng: string; radius: string }>({

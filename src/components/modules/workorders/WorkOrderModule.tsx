@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import type { Vehicle } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -69,7 +70,7 @@ const STATUS_COLORS: Record<WOStatus, string> = {
 
 
 export default function WorkOrderModule() {
-  const { data: vehicles } = useModuleData<any>('vehicles');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
   const {
     data: workOrders,
     totalCount,

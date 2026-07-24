@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import type { Invoice, Payment, Expense, FuelEntry, MaintenanceRecord } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, classNames } from '../../../lib/utils';
@@ -8,11 +9,11 @@ type ViewMode = 'pnl' | 'balance_sheet';
 type PeriodFilter = 'this_month' | 'last_month' | 'this_quarter' | 'this_year' | 'all';
 
 export default function PnLModule() {
-  const { data: invoices } = useModuleData<any>('invoices');
-  const { data: expenses } = useModuleData<any>('expenses');
-  const { data: payments } = useModuleData<any>('payments');
-  const { data: fuelEntries } = useModuleData<any>('fuel_entries');
-  const { data: maintenance } = useModuleData<any>('maintenance');
+  const { data: invoices } = useModuleData<Invoice>('invoices');
+  const { data: expenses } = useModuleData<Expense>('expenses');
+  const { data: payments } = useModuleData<Payment>('payments');
+  const { data: fuelEntries } = useModuleData<FuelEntry>('fuel_entries');
+  const { data: maintenance } = useModuleData<MaintenanceRecord>('maintenance');
   const [viewMode, setViewMode] = useState<ViewMode>('pnl');
   const [period, setPeriod] = useState<PeriodFilter>('this_month');
 

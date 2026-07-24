@@ -1,4 +1,19 @@
 -- ============================================================
+-- DEPRECATED — DO NOT USE FOR NEW DEPLOYMENTS
+-- ============================================================
+-- This file is the ORIGINAL legacy schema with INSECURE open policies.
+-- It uses tenant_id (TEXT) instead of organization_id (UUID).
+-- Its RLS policies allow ALL authenticated users to access ALL data.
+--
+-- For new deployments, use:
+--   supabase/schema.sql (platform tables)
+--   supabase/migrations/001-business-tables.sql (business tables + secure RLS)
+--   supabase/migrations/002-workflow-tables.sql (LR, POD, settlements)
+--   supabase/storage-policies.sql (file access isolation)
+--
+-- This file is kept ONLY for reference and existing deployment migration.
+-- ============================================================
+
 -- GARUD AI TRANSPORT ERP — Full Supabase Schema (Fixed)
 -- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New Query)
 -- 

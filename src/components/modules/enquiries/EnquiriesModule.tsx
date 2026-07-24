@@ -11,7 +11,7 @@ import { formatCurrency, formatDate, getStatusColor } from '../../../lib/utils';
 import { generateQuotationPDF } from '../../../lib/pdf';
 import { estimateDistance } from '../../../lib/distance';
 import { ArrowRight, FileText, Send, Truck, Package, MapPin, Calendar, Weight, IndianRupee, Plus, X, Edit, Search, Loader2 } from 'lucide-react';
-import type { Enquiry, Quotation, VehicleType } from '../../../types';
+import type { Enquiry, Quotation, VehicleType, Customer } from '../../../types';
 
 type Tab = 'enquiries' | 'quotations';
 
@@ -38,10 +38,10 @@ export default function EnquiriesModule() {
     refresh: refreshEnquiries,
     hasNextPage,
     hasPrevPage,
-  } = usePaginatedData<any>('enquiries', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: addEnquiry } = useModuleData<any>('enquiries', { fetchOnMount: false });
-  const { data: quotations, create: addQuotation, update: updateQuotation } = useModuleData<any>('quotations');
-  const { data: customers } = useModuleData<any>('customers');
+  } = usePaginatedData<Enquiry>('enquiries', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
+  const { create: addEnquiry } = useModuleData<Enquiry>('enquiries', { fetchOnMount: false });
+  const { data: quotations, create: addQuotation, update: updateQuotation } = useModuleData<Quotation>('quotations');
+  const { data: customers } = useModuleData<Customer>('customers');
   const [searchQuery, setSearchQuery] = useState('');
   const [enquirySort, setEnquirySort] = useState('created_at:desc');
   const [statusFilter, setStatusFilter] = useState('');
@@ -427,8 +427,8 @@ export default function EnquiriesModule() {
 }
 
 function AddEnquiryModal({ onClose }: { onClose: () => void }) {
-  const { data: customers } = useModuleData<any>('customers');
-  const { create: addEnquiry } = useModuleData<any>('enquiries', { fetchOnMount: false });
+  const { data: customers } = useModuleData<Customer>('customers');
+  const { create: addEnquiry } = useModuleData<Enquiry>('enquiries', { fetchOnMount: false });
 
   const [form, setForm] = useState({
     customer_id: '',
@@ -566,7 +566,7 @@ function AddEnquiryModal({ onClose }: { onClose: () => void }) {
 
 
 function EditQuotationModal({ quotation, onClose }: { quotation: Quotation; onClose: () => void }) {
-  const { update: updateQuotation } = useModuleData<any>('quotations');
+  const { update: updateQuotation } = useModuleData<Quotation>('quotations');
   const [form, setForm] = useState({
     origin: quotation.origin,
     destination: quotation.destination,

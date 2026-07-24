@@ -15,7 +15,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { signIn } from '../lib/auth';
-import { CheckCircle, XCircle, Clock, Loader2, LogIn, UserPlus, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Loader2, LogIn, UserPlus } from 'lucide-react';
 
 type AcceptState = 'loading' | 'needs_auth' | 'processing' | 'success' | 'error';
 

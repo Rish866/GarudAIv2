@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
+import type { Customer, Invoice } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { ShieldAlert, ShieldCheck, AlertTriangle, Lock, Unlock, Search, Ban } from 'lucide-react';
 
 export default function CreditBlockModule() {
-  const { data: customers, update: updateCustomer } = useModuleData<any>('customers');
-  const { data: invoices } = useModuleData<any>('invoices');
+  const { data: customers, update: updateCustomer } = useModuleData<Customer>('customers');
+  const { data: invoices } = useModuleData<Invoice>('invoices');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'blocked' | 'at_risk' | 'clear'>('all');
 

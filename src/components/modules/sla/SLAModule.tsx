@@ -1,4 +1,5 @@
 import { Clock, AlertTriangle, CheckCircle, TrendingDown, Target, ArrowRight } from 'lucide-react';
+import type { Trip } from '../../../types';
 // SLA uses store data directly
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
@@ -56,7 +57,7 @@ function getSLABadge(status: SLAStatus) {
 }
 
 export default function SLAModule() {
-  const { data: trips } = useModuleData<any>('trips');
+  const { data: trips } = useModuleData<Trip>('trips');
 
   const activeTrips = trips.filter((t) =>
     ['in_transit', 'loading', 'assigned', 'booked'].includes(t.status) && t.expected_delivery

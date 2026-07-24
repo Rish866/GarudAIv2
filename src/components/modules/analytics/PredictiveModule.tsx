@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import type { Vehicle, Trip, MaintenanceRecord } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Brain, TrendingUp, Truck, Clock, Wrench, BarChart3, AlertTriangle, Zap, Target } from 'lucide-react';
 
@@ -40,9 +40,9 @@ interface DemandForecast {
 
 
 export default function PredictiveModule() {
-  const { data: trips } = useModuleData<any>('trips');
-  const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: maintenance } = useModuleData<any>('maintenance');
+  const { data: trips } = useModuleData<Trip>('trips');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
+  const { data: maintenance } = useModuleData<MaintenanceRecord>('maintenance');
   const [view, setView] = useState<AIView>('eta');
 
   // Simulated AI predictions based on real store data

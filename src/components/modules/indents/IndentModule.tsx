@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import type { Vehicle, Driver, Customer, Trip, Quotation } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
@@ -39,12 +40,12 @@ const generateIndentId = () => Date.now().toString(36) + Math.random().toString(
 
 
 export default function IndentModule() {
-  const { data: customers } = useModuleData<any>('customers');
-  const { data: vehicles } = useModuleData<any>('vehicles');
-  const { data: drivers } = useModuleData<any>('drivers');
-  const { data: trips } = useModuleData<any>('trips');
-  const { data: quotations } = useModuleData<any>('quotations');
-  const { create: addTrip } = useModuleData<any>('trips');
+  const { data: customers } = useModuleData<Customer>('customers');
+  const { data: vehicles } = useModuleData<Vehicle>('vehicles');
+  const { data: drivers } = useModuleData<Driver>('drivers');
+  const { data: trips } = useModuleData<Trip>('trips');
+  const { data: quotations } = useModuleData<Quotation>('quotations');
+  const { create: addTrip } = useModuleData<Trip>('trips');
   const {
     data: indents,
     totalCount,
@@ -209,7 +210,7 @@ export default function IndentModule() {
     if (indent.allocated_vehicles.length === 0) return;
 
     // Credit block enforcement before creating trips
-    const customer = customers.find((c: any) => c.id === indent.customer_id);
+    const customer = customers.find((c) => c.id === indent.customer_id);
     if (customer) {
       const creditCheck = validateCustomerCredit(customer, indent.rate);
       if (!creditCheck.allowed) {
@@ -220,7 +221,7 @@ export default function IndentModule() {
 
     // Validate all allocated vehicles and drivers before creating any trips
     for (const allocVeh of indent.allocated_vehicles) {
-      const vehicle = vehicles.find((v: any) => v.id === allocVeh.id);
+      const vehicle = vehicles.find((v) => v.id === allocVeh.id);
       if (vehicle) {
         const vCheck = validateVehicleForTrip(vehicle);
         if (!vCheck.allowed) {
@@ -229,7 +230,7 @@ export default function IndentModule() {
         }
       }
       if (allocVeh.driver_id) {
-        const driver = drivers.find((d: any) => d.id === allocVeh.driver_id);
+        const driver = drivers.find((d) => d.id === allocVeh.driver_id);
         if (driver) {
           const dCheck = validateDriverForTrip(driver);
           if (!dCheck.allowed) {
@@ -242,8 +243,8 @@ export default function IndentModule() {
 
     // Create one trip per allocated vehicle with proper linkage
     indent.allocated_vehicles.forEach((allocVeh, idx) => {
-      const vehicle = vehicles.find((v: any) => v.id === allocVeh.id);
-      const driver = allocVeh.driver_id ? drivers.find((d: any) => d.id === allocVeh.driver_id) : null;
+      const vehicle = vehicles.find((v) => v.id === allocVeh.id);
+      const driver = allocVeh.driver_id ? drivers.find((d) => d.id === allocVeh.driver_id) : null;
       const trip = {
         // Workflow linkage — immutable parent references
         indent_id: indent.id,
