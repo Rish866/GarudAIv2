@@ -41,6 +41,25 @@ export default function BillingModule() {
     .reduce((sum, p) => sum + p.amount, 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
+  // Aging analysis: classify outstanding invoices by days overdue
+  const today = new Date();
+  const agingBuckets = invoices
+    .filter(inv => inv.balance_amount > 0 && inv.status !== 'cancelled' && inv.status !== 'paid')
+    .reduce(
+      (buckets, inv) => {
+        const dueDate = new Date(inv.due_date);
+        const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysOverdue <= 0) buckets.current += inv.balance_amount;
+        else if (daysOverdue <= 30) buckets.days30 += inv.balance_amount;
+        else if (daysOverdue <= 60) buckets.days60 += inv.balance_amount;
+        else if (daysOverdue <= 90) buckets.days90 += inv.balance_amount;
+        else buckets.days90plus += inv.balance_amount;
+        return buckets;
+      },
+      { current: 0, days30: 0, days60: 0, days90: 0, days90plus: 0 }
+    );
+  const hasOverdue = agingBuckets.days30 + agingBuckets.days60 + agingBuckets.days90 + agingBuckets.days90plus > 0;
+
   // Invoice form state
   const [invForm, setInvForm] = useState({
     customer_id: '',
@@ -271,6 +290,35 @@ export default function BillingModule() {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Outstanding Aging Analysis */}
+      {hasOverdue && activeTab === 'invoices' && (
+        <div className="rounded-2xl border p-4" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Outstanding Aging</h3>
+          <div className="grid grid-cols-5 gap-3">
+            <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Current</p>
+              <p className="text-sm font-bold text-green-600">{formatCurrency(agingBuckets.current)}</p>
+            </div>
+            <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>1-30 days</p>
+              <p className="text-sm font-bold text-yellow-600">{formatCurrency(agingBuckets.days30)}</p>
+            </div>
+            <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>31-60 days</p>
+              <p className="text-sm font-bold text-orange-600">{formatCurrency(agingBuckets.days60)}</p>
+            </div>
+            <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>61-90 days</p>
+              <p className="text-sm font-bold text-red-500">{formatCurrency(agingBuckets.days90)}</p>
+            </div>
+            <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>90+ days</p>
+              <p className="text-sm font-bold text-red-700">{formatCurrency(agingBuckets.days90plus)}</p>
+            </div>
           </div>
         </div>
       )}

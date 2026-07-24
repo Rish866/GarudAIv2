@@ -25,7 +25,9 @@ import { MODULE_HELP } from '../../lib/helpContent';
 import BranchSelector from '../ui/BranchSelector';
 import { isPlatformAdmin, performLogout } from '../../lib/auth';
 import { useModuleData } from '../../hooks/useModuleData';
+import { useReferenceData } from '../../hooks/useReferenceData';
 import { useOrganization } from '../../contexts/OrganizationContext';
+import type { Vehicle, Customer, AppNotification } from '../../types';
 
 const moduleLabels: Record<ModuleName, string> = {
   dashboard: 'Dashboard',
@@ -115,7 +117,7 @@ export default function Topbar() {
   const navigate = useNavigate();
 
   // Notifications from Supabase (org-scoped)
-  const { data: notifications, update: updateNotification } = useModuleData<any>('notifications');
+  const { data: notifications, update: updateNotification } = useModuleData<AppNotification>('notifications');
   const { role: orgRole } = useOrganization();
 
   const [notifOpen, setNotifOpen] = useState(false);
@@ -136,9 +138,30 @@ export default function Topbar() {
     });
   };
 
-  // Search — currently empty until Supabase full-text search is implemented.
-  // This prevents stale localStorage data from appearing as search results.
-  const searchResults: { type: string; title: string; subtitle: string; module: ModuleName }[] = [];
+  // Global search across cached reference data (vehicles, customers)
+  // These are cached via TanStack Query — no extra network calls.
+  const { data: searchVehicles = [] } = useReferenceData<Vehicle>('vehicles');
+  const { data: searchCustomers = [] } = useReferenceData<Customer>('customers');
+
+  const searchResults: { type: string; title: string; subtitle: string; module: ModuleName }[] = (() => {
+    if (!searchQuery || searchQuery.length < 2) return [];
+    const q = searchQuery.toLowerCase().trim();
+    const results: { type: string; title: string; subtitle: string; module: ModuleName }[] = [];
+
+    // Search vehicles by reg number, make, model
+    searchVehicles
+      .filter(v => v.reg_number?.toLowerCase().includes(q) || v.make?.toLowerCase().includes(q))
+      .slice(0, 3)
+      .forEach(v => results.push({ type: 'Vehicle', title: v.reg_number, subtitle: `${v.make} ${v.model} • ${v.status}`, module: 'fleet' }));
+
+    // Search customers by name, contact person, GSTIN
+    searchCustomers
+      .filter(c => c.name?.toLowerCase().includes(q) || c.contact_person?.toLowerCase().includes(q) || c.gstin?.toLowerCase().includes(q))
+      .slice(0, 3)
+      .forEach(c => results.push({ type: 'Customer', title: c.name, subtitle: c.contact_person || c.phone || '', module: 'customers' }));
+
+    return results.slice(0, 8); // Max 8 results
+  })();
 
   // Close dropdowns on outside click
   useEffect(() => {
