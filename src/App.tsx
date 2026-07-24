@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Truck, BarChart3, Shield, Zap, Loader2 } from 'lucide-react';
 import { useStore } from './store/useStore';
 import type { ModuleName } from './types';
@@ -17,6 +18,7 @@ import { signIn, requestPasswordReset, performLogout, resolveUserRole } from './
 import { validatePassword } from './lib/passwordPolicy';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { supabase, supabaseConfigurationError } from './lib/supabase';
+import { getModuleFromPath, MODULE_ROUTES } from './router/routes';
 import InviteAcceptPage from './components/InviteAcceptPage';
 
 // Lazy-loaded modules
@@ -619,38 +621,19 @@ function LoginPage({ onBackToHome }: { onBackToHome?: () => void }) {
 }
 
 function MainLayout() {
-  const { activeModule, sidebarCollapsed, setActiveModule } = useStore();
+  const { sidebarCollapsed, setActiveModule } = useStore();
   const { loading: orgLoading, error: orgError, organizationId } = useOrganization();
+  const location = useLocation();
 
-  // Browser history management — prevents back button from leaving the app
+  // Sync URL → Zustand activeModule (for sidebar highlighting)
   useEffect(() => {
-    // Push initial state
-    window.history.pushState({ module: activeModule }, '', `#${activeModule}`);
-  }, []);
+    const moduleFromUrl = getModuleFromPath(location.pathname);
+    setActiveModule(moduleFromUrl);
+  }, [location.pathname, setActiveModule]);
 
-  useEffect(() => {
-    // Push state when module changes (but not on popstate)
-    const currentHash = window.location.hash.replace('#', '');
-    if (currentHash !== activeModule) {
-      window.history.pushState({ module: activeModule }, '', `#${activeModule}`);
-    }
-  }, [activeModule]);
-
-  useEffect(() => {
-    // Listen for back/forward button
-    const handlePopState = (event: PopStateEvent) => {
-      if (event.state?.module) {
-        setActiveModule(event.state.module);
-      } else {
-        // If no state, push current state to prevent leaving
-        window.history.pushState({ module: activeModule }, '', `#${activeModule}`);
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeModule, setActiveModule]);
-
-  const ActiveComponent = moduleComponents[activeModule];
+  // Determine which module component to render based on current route
+  const currentModule = getModuleFromPath(location.pathname);
+  const ActiveComponent = moduleComponents[currentModule];
 
   // Show loading state while organization is resolving
   const renderContent = () => {
@@ -703,7 +686,7 @@ function MainLayout() {
           {ActiveComponent ? (
             <ActiveComponent />
           ) : (
-            <PlaceholderModule name={activeModule} />
+            <PlaceholderModule name={currentModule} />
           )}
         </Suspense>
       </ErrorBoundary>
@@ -809,14 +792,6 @@ export default function App() {
   const [authChecking, setAuthChecking] = useState(true);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
 
-  // Route detection: /invite/accept path takes priority over normal app
-  const isInviteAcceptRoute = window.location.pathname === '/invite/accept'
-    || window.location.pathname.startsWith('/invite/accept');
-
-  if (isInviteAcceptRoute) {
-    return <InviteAcceptPage />;
-  }
-
   // Auth bootstrap: verify Supabase session on mount.
   // Supabase session is the source of truth, NOT Zustand isLoggedIn.
   // If Supabase has a valid session, restore user. If not, force logout.
@@ -913,13 +888,18 @@ export default function App() {
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-      <OrganizationProvider>
-        <BranchProvider>
-          <MainLayout />
-          <SessionTimeoutContainer />
-        </BranchProvider>
-      </OrganizationProvider>
-      <ToastContainer />
+      <BrowserRouter>
+        <OrganizationProvider>
+          <BranchProvider>
+            <Routes>
+              <Route path="/invite/accept" element={<InviteAcceptPage />} />
+              <Route path="/*" element={<MainLayout />} />
+            </Routes>
+            <SessionTimeoutContainer />
+          </BranchProvider>
+        </OrganizationProvider>
+        <ToastContainer />
+      </BrowserRouter>
     </div>
   );
 }
