@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
-import { Plus, X, BookOpen, Building2, Landmark, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { Plus, X, BookOpen, Building2, Landmark } from 'lucide-react';
 
 interface CashEntry {
   id: string;

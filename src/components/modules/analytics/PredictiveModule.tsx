@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { Vehicle, Trip, MaintenanceRecord } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
-import { useStore } from '../../../store/useStore';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
 import { Brain, TrendingUp, Truck, Clock, Wrench, BarChart3, AlertTriangle, Zap, Target } from 'lucide-react';
 

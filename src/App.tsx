@@ -15,12 +15,12 @@ import { OrganizationProvider, useOrganization } from './contexts/OrganizationCo
 import { BranchProvider } from './contexts/BranchContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { signUpWithOrganization } from './services/organizationService';
-import { signIn, requestPasswordReset, performLogout, resolveUserRole } from './lib/auth';
+import { signIn, requestPasswordReset, resolveUserRole } from './lib/auth';
 import { validatePassword } from './lib/passwordPolicy';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { supabase, supabaseConfigurationError } from './lib/supabase';
 import { queryClient } from './lib/queryClient';
-import { getModuleFromPath, MODULE_ROUTES } from './router/routes';
+import { getModuleFromPath } from './router/routes';
 import InviteAcceptPage from './components/InviteAcceptPage';
 
 // Lazy-loaded modules
