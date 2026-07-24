@@ -15,7 +15,7 @@ export default defineConfig(() => {
         'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://ybuhazlnjqjrshcvpuna.supabase.co'),
       }),
       ...(process.env.VITE_SUPABASE_ANON_KEY ? {} : {
-        'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlidWhhemxuanFqcnNoY3ZwdW5hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgzNTY0NjYsImV4cCI6MjA2MzkzMjQ2Nn0.vSj_PjY2O0eTi94MrS4vPHnVGkfqhSwk2e2Drk4DvD0'),
+        'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('sb_publishable_JIoyS-ns6cXseQLRRm25cA_ZfWRFPg_'),
       }),
     },
     resolve: {
