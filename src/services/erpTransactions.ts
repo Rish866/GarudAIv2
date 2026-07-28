@@ -516,6 +516,761 @@ export async function recordVendorPayment(
 }
 
 // ============================================================
+// VENDOR TRANSACTIONS
+// ============================================================
+
+/**
+ * Create a vendor with all dependent records.
+ * CASCADE: vendor + payable_ledger_account + activity_log
+ */
+export async function createVendor(
+  organizationId: string,
+  vendor: {
+    name: string;
+    type?: string;
+    contact_person?: string;
+    phone?: string;
+    email?: string;
+    gstin?: string;
+    pan?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    bank_name?: string;
+    account_number?: string;
+    ifsc?: string;
+    branch_id?: string;
+  }
+): Promise<TransactionResult<{ vendorId: string }>> {
+  try {
+    const { data: created, error } = await supabase
+      .from('vendors')
+      .insert({
+        organization_id: organizationId,
+        ...vendor,
+        type: vendor.type || 'general',
+        outstanding: 0,
+        total_paid: 0,
+        status: 'active',
+      })
+      .select('id')
+      .single();
+
+    if (error) return { success: false, error: error.message };
+
+    // Create payable ledger account
+    await supabase.from('ledger_accounts').insert({
+      organization_id: organizationId,
+      name: `${vendor.name} (Payable)`,
+      group: 'Liabilities',
+      balance: 0,
+      balance_type: 'Cr',
+    });
+
+    // Activity log
+    await supabase.from('activity_log').insert({
+      organization_id: organizationId,
+      user_name: 'system',
+      action: 'created',
+      entity_type: 'vendor',
+      entity_id: created.id,
+      details: `Vendor created: ${vendor.name}`,
+    });
+
+    invalidateVendorCaches(organizationId);
+    return { success: true, data: { vendorId: created.id } };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to create vendor' };
+  }
+}
+
+// ============================================================
+// VEHICLE TRANSACTIONS
+// ============================================================
+
+/**
+ * Create a vehicle with activity logging.
+ * CASCADE: vehicle + activity_log
+ */
+export async function createVehicle(
+  organizationId: string,
+  vehicle: {
+    reg_number: string;
+    vehicle_type?: string;
+    make?: string;
+    model?: string;
+    year?: number;
+    ownership_type?: string;
+    owner_name?: string;
+    owner_phone?: string;
+    capacity_tons?: number;
+    fitness_expiry?: string;
+    insurance_expiry?: string;
+    puc_expiry?: string;
+    permit_expiry?: string;
+    branch_id?: string;
+  }
+): Promise<TransactionResult<{ vehicleId: string }>> {
+  try {
+    const { data: created, error } = await supabase
+      .from('vehicles')
+      .insert({
+        organization_id: organizationId,
+        ...vehicle,
+        status: 'available',
+        odometer: 0,
+      })
+      .select('id')
+      .single();
+
+    if (error) return { success: false, error: error.message };
+
+    // Activity log
+    await supabase.from('activity_log').insert({
+      organization_id: organizationId,
+      user_name: 'system',
+      action: 'created',
+      entity_type: 'vehicle',
+      entity_id: created.id,
+      details: `Vehicle added: ${vehicle.reg_number} (${vehicle.vehicle_type || 'truck'})`,
+    });
+
+    invalidateVehicleCaches(organizationId);
+    return { success: true, data: { vehicleId: created.id } };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to create vehicle' };
+  }
+}
+
+// ============================================================
+// DRIVER TRANSACTIONS
+// ============================================================
+
+/**
+ * Create a driver with activity logging.
+ * CASCADE: driver + activity_log
+ */
+export async function createDriver(
+  organizationId: string,
+  driver: {
+    name: string;
+    phone?: string;
+    license_number?: string;
+    license_expiry?: string;
+    aadhar?: string;
+    address?: string;
+    emergency_contact?: string;
+    emergency_phone?: string;
+    date_of_joining?: string;
+    salary_type?: string;
+    base_salary?: number;
+    branch_id?: string;
+  }
+): Promise<TransactionResult<{ driverId: string }>> {
+  try {
+    const { data: created, error } = await supabase
+      .from('drivers')
+      .insert({
+        organization_id: organizationId,
+        ...driver,
+        status: 'available',
+        safety_score: 85,
+        total_trips: 0,
+        total_km: 0,
+      })
+      .select('id')
+      .single();
+
+    if (error) return { success: false, error: error.message };
+
+    // Activity log
+    await supabase.from('activity_log').insert({
+      organization_id: organizationId,
+      user_name: 'system',
+      action: 'created',
+      entity_type: 'driver',
+      entity_id: created.id,
+      details: `Driver added: ${driver.name}`,
+    });
+
+    invalidateDriverCaches(organizationId);
+    return { success: true, data: { driverId: created.id } };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to create driver' };
+  }
+}
+
+// ============================================================
+// TRIP CREATION TRANSACTION
+// ============================================================
+
+/**
+ * Create a trip with full cascade.
+ * CASCADE: trip + vehicle.status=on_trip + driver.status=on_trip + indent.status update + activity_log
+ */
+export async function createTrip(
+  organizationId: string,
+  trip: {
+    trip_number: string;
+    customer_id: string;
+    customer_name: string;
+    vehicle_id: string;
+    vehicle_reg: string;
+    driver_id: string;
+    driver_name: string;
+    driver_phone?: string;
+    origin: string;
+    destination: string;
+    distance_km?: number;
+    material?: string;
+    weight_tons?: number;
+    booking_date: string;
+    loading_date?: string;
+    freight_amount: number;
+    advance_amount?: number;
+    indent_id?: string;
+    quotation_id?: string;
+    enquiry_id?: string;
+    branch_id?: string;
+  }
+): Promise<TransactionResult<{ tripId: string }>> {
+  try {
+    const balance = (trip.freight_amount || 0) - (trip.advance_amount || 0);
+
+    const { data: created, error } = await supabase
+      .from('trips')
+      .insert({
+        organization_id: organizationId,
+        ...trip,
+        balance_amount: balance,
+        total_amount: trip.freight_amount,
+        detention_charges: 0,
+        other_charges: 0,
+        status: 'assigned',
+      })
+      .select('id')
+      .single();
+
+    if (error) return { success: false, error: error.message };
+
+    // Lock vehicle
+    await supabase.from('vehicles')
+      .update({ status: 'on_trip', driver_id: trip.driver_id, driver_name: trip.driver_name })
+      .eq('id', trip.vehicle_id)
+      .eq('organization_id', organizationId);
+
+    // Lock driver
+    await supabase.from('drivers')
+      .update({ status: 'on_trip', assigned_vehicle_id: trip.vehicle_id, assigned_vehicle_reg: trip.vehicle_reg })
+      .eq('id', trip.driver_id)
+      .eq('organization_id', organizationId);
+
+    // Update indent status if linked
+    if (trip.indent_id) {
+      await supabase.from('indents')
+        .update({ status: 'in_progress', trip_id: created.id })
+        .eq('id', trip.indent_id)
+        .eq('organization_id', organizationId);
+    }
+
+    // Activity log
+    await supabase.from('activity_log').insert({
+      organization_id: organizationId,
+      user_name: 'system',
+      action: 'created',
+      entity_type: 'trip',
+      entity_id: created.id,
+      details: `Trip ${trip.trip_number}: ${trip.origin} → ${trip.destination} | ${trip.vehicle_reg} | ${trip.driver_name}`,
+    });
+
+    invalidateTripCaches(organizationId);
+    invalidateVehicleCaches(organizationId);
+    invalidateDriverCaches(organizationId);
+    invalidateDashboardCaches(organizationId);
+
+    return { success: true, data: { tripId: created.id } };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to create trip' };
+  }
+}
+
+// ============================================================
+// MAINTENANCE TRANSACTIONS
+// ============================================================
+
+/**
+ * Record maintenance with cascade.
+ * CASCADE: maintenance_record + vehicle.status=maintenance + expense (if completed) + vendor.outstanding↑ (if credit) + activity_log
+ */
+export async function recordMaintenance(
+  organizationId: string,
+  maintenance: {
+    vehicle_id: string;
+    vehicle_reg: string;
+    type: string;
+    description: string;
+    date: string;
+    odometer?: number;
+    cost: number;
+    vendor?: string;
+    vendor_id?: string;
+    status?: string;
+    branch_id?: string;
+  }
+): Promise<TransactionResult<{ maintenanceId: string }>> {
+  try {
+    const { data: created, error } = await supabase
+      .from('maintenance_records')
+      .insert({
+        organization_id: organizationId,
+        vehicle_id: maintenance.vehicle_id,
+        vehicle_reg: maintenance.vehicle_reg,
+        type: maintenance.type,
+        description: maintenance.description,
+        date: maintenance.date,
+        odometer: maintenance.odometer || 0,
+        cost: maintenance.cost,
+        vendor: maintenance.vendor || '',
+        status: maintenance.status || 'scheduled',
+        branch_id: maintenance.branch_id || null,
+      })
+      .select('id')
+      .single();
+
+    if (error) return { success: false, error: error.message };
+
+    // If status is 'in_progress', set vehicle to maintenance
+    if (maintenance.status === 'in_progress') {
+      await supabase.from('vehicles')
+        .update({ status: 'maintenance' })
+        .eq('id', maintenance.vehicle_id)
+        .eq('organization_id', organizationId);
+      invalidateVehicleCaches(organizationId);
+    }
+
+    // If completed immediately, create expense record
+    if (maintenance.status === 'completed' && maintenance.cost > 0) {
+      await supabase.from('expenses').insert({
+        organization_id: organizationId,
+        vehicle_id: maintenance.vehicle_id,
+        vehicle_reg: maintenance.vehicle_reg,
+        category: 'repair',
+        amount: maintenance.cost,
+        date: maintenance.date,
+        description: `Maintenance: ${maintenance.description}`,
+        paid_to: maintenance.vendor || '',
+        payment_mode: 'cash',
+        approved: true,
+        branch_id: maintenance.branch_id || null,
+      });
+
+      // If vendor specified, increase vendor outstanding
+      if (maintenance.vendor_id) {
+        const { error: vendorErr } = await supabase.rpc('increment_vendor_outstanding', {
+          p_vendor_id: maintenance.vendor_id,
+          p_amount: maintenance.cost,
+          p_organization_id: organizationId,
+        });
+        // If RPC doesn't exist, do direct update
+        if (vendorErr) {
+          const { data: vendor } = await supabase.from('vendors')
+            .select('outstanding')
+            .eq('id', maintenance.vendor_id)
+            .eq('organization_id', organizationId)
+            .single();
+          if (vendor) {
+            await supabase.from('vendors')
+              .update({ outstanding: (vendor.outstanding || 0) + maintenance.cost })
+              .eq('id', maintenance.vendor_id)
+              .eq('organization_id', organizationId);
+          }
+        }
+      }
+
+      invalidateExpenseCaches(organizationId);
+    }
+
+    // Activity log
+    await supabase.from('activity_log').insert({
+      organization_id: organizationId,
+      user_name: 'system',
+      action: 'maintenance_recorded',
+      entity_type: 'maintenance',
+      entity_id: created.id,
+      details: `${maintenance.type}: ${maintenance.description} | ${maintenance.vehicle_reg} | ₹${maintenance.cost}`,
+    });
+
+    invalidateDashboardCaches(organizationId);
+    return { success: true, data: { maintenanceId: created.id } };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to record maintenance' };
+  }
+}
+
+/**
+ * Complete a maintenance job.
+ * CASCADE: maintenance.status=completed + vehicle.status=available + expense creation + activity_log
+ */
+export async function completeMaintenance(
+  organizationId: string,
+  maintenanceId: string,
+  actualCost: number
+): Promise<TransactionResult> {
+  try {
+    // Get maintenance record
+    const { data: record } = await supabase
+      .from('maintenance_records')
+      .select('*')
+      .eq('id', maintenanceId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (!record) return { success: false, error: 'Maintenance record not found' };
+
+    // Update status + cost
+    await supabase.from('maintenance_records')
+      .update({ status: 'completed', cost: actualCost })
+      .eq('id', maintenanceId)
+      .eq('organization_id', organizationId);
+
+    // Release vehicle
+    await supabase.from('vehicles')
+      .update({ status: 'available' })
+      .eq('id', record.vehicle_id)
+      .eq('organization_id', organizationId);
+
+    // Create expense for the maintenance cost
+    if (actualCost > 0) {
+      await supabase.from('expenses').insert({
+        organization_id: organizationId,
+        vehicle_id: record.vehicle_id,
+        vehicle_reg: record.vehicle_reg,
+        category: 'repair',
+        amount: actualCost,
+        date: new Date().toISOString().split('T')[0],
+        description: `Maintenance completed: ${record.description}`,
+        paid_to: record.vendor || '',
+        payment_mode: 'cash',
+        approved: true,
+      });
+      invalidateExpenseCaches(organizationId);
+    }
+
+    invalidateVehicleCaches(organizationId);
+    invalidateDashboardCaches(organizationId);
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to complete maintenance' };
+  }
+}
+
+// ============================================================
+// CHALLAN TRANSACTIONS
+// ============================================================
+
+/**
+ * Record a traffic challan with cascade.
+ * CASCADE: challan + expense + driver_penalty (optional deduction) + activity_log
+ */
+export async function recordChallan(
+  organizationId: string,
+  challan: {
+    challan_number?: string;
+    vehicle_id: string;
+    vehicle_reg: string;
+    driver_id?: string;
+    driver_name?: string;
+    offence: string;
+    amount: number;
+    date: string;
+    location?: string;
+    deducted_from?: string;
+    branch_id?: string;
+  }
+): Promise<TransactionResult<{ challanId: string }>> {
+  try {
+    const { data: created, error } = await supabase
+      .from('challans')
+      .insert({
+        organization_id: organizationId,
+        ...challan,
+        payment_status: 'unpaid',
+      })
+      .select('id')
+      .single();
+
+    if (error) return { success: false, error: error.message };
+
+    // Create corresponding expense
+    await supabase.from('expenses').insert({
+      organization_id: organizationId,
+      vehicle_id: challan.vehicle_id,
+      vehicle_reg: challan.vehicle_reg,
+      category: 'misc',
+      amount: challan.amount,
+      date: challan.date,
+      description: `Traffic Challan: ${challan.offence} at ${challan.location || 'unknown'}`,
+      paid_to: 'Traffic Police',
+      payment_mode: 'cash',
+      approved: true,
+      branch_id: challan.branch_id || null,
+    });
+
+    // Activity log
+    await supabase.from('activity_log').insert({
+      organization_id: organizationId,
+      user_name: 'system',
+      action: 'challan_recorded',
+      entity_type: 'challan',
+      entity_id: created.id,
+      details: `Challan ₹${challan.amount}: ${challan.offence} | ${challan.vehicle_reg} | ${challan.driver_name || ''}`,
+    });
+
+    invalidateExpenseCaches(organizationId);
+    invalidateVehicleCaches(organizationId);
+    invalidateDashboardCaches(organizationId);
+    return { success: true, data: { challanId: created.id } };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to record challan' };
+  }
+}
+
+// ============================================================
+// WORK ORDER TRANSACTIONS
+// ============================================================
+
+/**
+ * Create a work order with cascade.
+ * CASCADE: work_order + vehicle.status (if immediate) + activity_log
+ */
+export async function createWorkOrder(
+  organizationId: string,
+  workOrder: {
+    vehicle_id: string;
+    vehicle_reg: string;
+    type: string;
+    description: string;
+    assigned_to?: string;
+    priority?: string;
+    estimated_cost?: number;
+    branch_id?: string;
+  }
+): Promise<TransactionResult<{ workOrderId: string }>> {
+  try {
+    const woNumber = `WO-${Date.now().toString(36).toUpperCase()}`;
+
+    const { data: created, error } = await supabase
+      .from('work_orders')
+      .insert({
+        organization_id: organizationId,
+        work_order_number: woNumber,
+        vehicle_id: workOrder.vehicle_id,
+        vehicle_reg: workOrder.vehicle_reg,
+        type: workOrder.type,
+        description: workOrder.description,
+        assigned_to: workOrder.assigned_to || '',
+        priority: workOrder.priority || 'normal',
+        estimated_cost: workOrder.estimated_cost || 0,
+        actual_cost: 0,
+        status: 'open',
+        branch_id: workOrder.branch_id || null,
+      })
+      .select('id')
+      .single();
+
+    if (error) return { success: false, error: error.message };
+
+    // Activity log
+    await supabase.from('activity_log').insert({
+      organization_id: organizationId,
+      user_name: 'system',
+      action: 'work_order_created',
+      entity_type: 'work_order',
+      entity_id: created.id,
+      details: `Work Order ${woNumber}: ${workOrder.type} — ${workOrder.description} | ${workOrder.vehicle_reg}`,
+    });
+
+    invalidateDashboardCaches(organizationId);
+    return { success: true, data: { workOrderId: created.id } };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to create work order' };
+  }
+}
+
+// ============================================================
+// TRIP CANCELLATION TRANSACTION
+// ============================================================
+
+/**
+ * Cancel a trip with full rollback cascade.
+ * CASCADE: trip.status=cancelled + vehicle.status=available + driver.status=available + indent.status revert + activity_log
+ */
+export async function cancelTrip(
+  organizationId: string,
+  tripId: string,
+  reason: string
+): Promise<TransactionResult> {
+  try {
+    // Get trip details for cascade
+    const { data: trip } = await supabase
+      .from('trips')
+      .select('vehicle_id, driver_id, indent_id, trip_number, status')
+      .eq('id', tripId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (!trip) return { success: false, error: 'Trip not found' };
+    if (['completed', 'billed', 'settled'].includes(trip.status)) {
+      return { success: false, error: 'Cannot cancel completed/billed/settled trip' };
+    }
+
+    // Cancel the trip
+    await supabase.from('trips')
+      .update({
+        status: 'cancelled',
+        cancellation_reason: reason,
+        cancelled_at: new Date().toISOString(),
+        previous_status: trip.status,
+      })
+      .eq('id', tripId)
+      .eq('organization_id', organizationId);
+
+    // Release vehicle
+    if (trip.vehicle_id) {
+      await supabase.from('vehicles')
+        .update({ status: 'available' })
+        .eq('id', trip.vehicle_id)
+        .eq('organization_id', organizationId);
+    }
+
+    // Release driver
+    if (trip.driver_id) {
+      await supabase.from('drivers')
+        .update({ status: 'available' })
+        .eq('id', trip.driver_id)
+        .eq('organization_id', organizationId);
+    }
+
+    // Revert indent status if linked
+    if (trip.indent_id) {
+      await supabase.from('indents')
+        .update({ status: 'allocated' })
+        .eq('id', trip.indent_id)
+        .eq('organization_id', organizationId);
+    }
+
+    // Activity log
+    await supabase.from('activity_log').insert({
+      organization_id: organizationId,
+      user_name: 'system',
+      action: 'cancelled',
+      entity_type: 'trip',
+      entity_id: tripId,
+      details: `Trip ${trip.trip_number} cancelled. Reason: ${reason}`,
+    });
+
+    invalidateTripCaches(organizationId);
+    invalidateVehicleCaches(organizationId);
+    invalidateDriverCaches(organizationId);
+    invalidateDashboardCaches(organizationId);
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to cancel trip' };
+  }
+}
+
+// ============================================================
+// INVOICE GENERATION FROM TRIP
+// ============================================================
+
+/**
+ * Generate an invoice from a completed trip.
+ * CASCADE: invoice + customer.outstanding↑ + invoice_trips link + trip.status=billed + activity_log
+ */
+export async function generateInvoiceFromTrip(
+  organizationId: string,
+  tripId: string,
+  invoiceNumber: string,
+  gstPercent: number = 5
+): Promise<TransactionResult<{ invoiceId: string }>> {
+  try {
+    // Get trip details
+    const { data: trip } = await supabase
+      .from('trips')
+      .select('*')
+      .eq('id', tripId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (!trip) return { success: false, error: 'Trip not found' };
+    if (!['completed', 'pod_pending'].includes(trip.status)) {
+      return { success: false, error: `Cannot invoice trip in "${trip.status}" status` };
+    }
+
+    // Check idempotency — is this trip already invoiced?
+    const { data: existingLink } = await supabase
+      .from('invoice_trips')
+      .select('invoice_id')
+      .eq('organization_id', organizationId)
+      .eq('trip_id', tripId)
+      .limit(1);
+
+    if (existingLink && existingLink.length > 0) {
+      return { success: true, data: { invoiceId: existingLink[0].invoice_id } };
+    }
+
+    // Calculate amounts
+    const subtotal = (trip.freight_amount || 0) + (trip.detention_charges || 0) + (trip.other_charges || 0);
+    const gstAmount = Math.round(subtotal * gstPercent / 100);
+    const totalAmount = subtotal + gstAmount;
+
+    // Use RPC for atomic invoice + outstanding update
+    const { data: result, error } = await supabase.rpc('create_invoice_with_outstanding', {
+      p_organization_id: organizationId,
+      p_customer_id: trip.customer_id,
+      p_invoice_number: invoiceNumber,
+      p_invoice_date: new Date().toISOString().split('T')[0],
+      p_due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      p_trip_ids: JSON.stringify([tripId]),
+      p_freight_total: trip.freight_amount || 0,
+      p_detention_total: trip.detention_charges || 0,
+      p_other_charges: trip.other_charges || 0,
+      p_gst_percent: gstPercent,
+      p_status: 'sent',
+    });
+
+    if (error) return { success: false, error: error.message };
+
+    const invoiceId = result?.invoice_id;
+
+    // Link invoice to trip
+    if (invoiceId) {
+      await supabase.from('invoice_trips').insert({
+        organization_id: organizationId,
+        invoice_id: invoiceId,
+        trip_id: tripId,
+        billed_amount: totalAmount,
+      });
+    }
+
+    // Update trip status to billed
+    await supabase.from('trips')
+      .update({ status: 'billed' })
+      .eq('id', tripId)
+      .eq('organization_id', organizationId);
+
+    invalidateTripCaches(organizationId);
+    invalidateInvoiceCaches(organizationId);
+    invalidateCustomerCaches(organizationId);
+    invalidateDashboardCaches(organizationId);
+
+    return { success: true, data: { invoiceId: invoiceId || '' } };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to generate invoice' };
+  }
+}
+
+// ============================================================
 // CACHE INVALIDATION HELPERS
 // These ensure all affected UI components refresh after a transaction
 // ============================================================

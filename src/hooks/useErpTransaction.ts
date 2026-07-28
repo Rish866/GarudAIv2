@@ -1,19 +1,14 @@
 // ============================================================
 // useErpTransaction — Hook for integrated ERP operations
 //
-// Provides access to transaction functions that cascade updates
-// across all modules. Use these INSTEAD of raw useModuleData.create()
-// for any business operation that affects multiple modules.
+// ALL 18 transaction functions that cascade updates across modules.
+// Use these INSTEAD of raw useModuleData.create() for any business
+// operation that affects multiple tables.
 //
 // Usage:
-//   const { createCustomer, recordPayment, recordExpense } = useErpTransaction();
-//   const result = await recordPayment({ ... });
+//   const erp = useErpTransaction();
+//   const result = await erp.recordPayment({ ... });
 //   if (result.success) showToast('success', 'Payment recorded');
-//
-// Every function in this hook:
-// 1. Calls a server-side RPC (atomic multi-table update)
-// 2. Invalidates all affected TanStack Query caches
-// 3. All dependent UI components auto-refresh
 // ============================================================
 
 import { useCallback } from 'react';
@@ -21,76 +16,140 @@ import { useOrganization } from '../contexts/OrganizationContext';
 import { showToast } from '../components/ui/Toast';
 import * as erp from '../services/erpTransactions';
 
+type NoOrg = { success: false; error: string };
+const noOrg: NoOrg = { success: false, error: 'No organization' };
+
 export function useErpTransaction() {
   const { organizationId } = useOrganization();
 
-  const createCustomer = useCallback(async (customer: Parameters<typeof erp.createCustomer>[1]) => {
-    if (!organizationId) { showToast('error', 'No organization'); return { success: false, error: 'No org' }; }
-    const result = await erp.createCustomer(organizationId, customer);
-    if (!result.success) showToast('error', result.error || 'Failed');
-    return result;
+  // Helper to check org before every call
+  const withOrg = useCallback(<T>(fn: (orgId: string) => Promise<T>): Promise<T | NoOrg> => {
+    if (!organizationId) { showToast('error', 'No organization'); return Promise.resolve(noOrg as T | NoOrg); }
+    return fn(organizationId);
   }, [organizationId]);
 
-  const createInvoice = useCallback(async (invoice: Parameters<typeof erp.createInvoice>[1]) => {
-    if (!organizationId) { showToast('error', 'No organization'); return { success: false, error: 'No org' }; }
-    const result = await erp.createInvoice(organizationId, invoice);
-    if (!result.success) showToast('error', result.error || 'Failed');
-    return result;
-  }, [organizationId]);
+  // ─── MASTER DATA ─────────────────────────────────────────────
 
-  const recordPayment = useCallback(async (payment: Parameters<typeof erp.recordPayment>[1]) => {
-    if (!organizationId) { showToast('error', 'No organization'); return { success: false, error: 'No org' }; }
-    const result = await erp.recordPayment(organizationId, payment);
-    if (!result.success) showToast('error', result.error || 'Failed');
-    return result;
-  }, [organizationId]);
+  const createCustomer = useCallback(
+    (data: Parameters<typeof erp.createCustomer>[1]) => withOrg(orgId => erp.createCustomer(orgId, data)),
+    [withOrg]
+  );
 
-  const recordExpense = useCallback(async (expense: Parameters<typeof erp.recordExpense>[1]) => {
-    if (!organizationId) { showToast('error', 'No organization'); return { success: false, error: 'No org' }; }
-    const result = await erp.recordExpense(organizationId, expense);
-    if (!result.success) showToast('error', result.error || 'Failed');
-    return result;
-  }, [organizationId]);
+  const createVendor = useCallback(
+    (data: Parameters<typeof erp.createVendor>[1]) => withOrg(orgId => erp.createVendor(orgId, data)),
+    [withOrg]
+  );
 
-  const recordFuel = useCallback(async (fuel: Parameters<typeof erp.recordFuel>[1]) => {
-    if (!organizationId) { showToast('error', 'No organization'); return { success: false, error: 'No org' }; }
-    const result = await erp.recordFuel(organizationId, fuel);
-    if (!result.success) showToast('error', result.error || 'Failed');
-    return result;
-  }, [organizationId]);
+  const createVehicle = useCallback(
+    (data: Parameters<typeof erp.createVehicle>[1]) => withOrg(orgId => erp.createVehicle(orgId, data)),
+    [withOrg]
+  );
 
-  const completeTrip = useCallback(async (tripId: string, deliveryDate: string) => {
-    if (!organizationId) { showToast('error', 'No organization'); return { success: false, error: 'No org' }; }
-    const result = await erp.completeTrip(organizationId, tripId, deliveryDate);
-    if (!result.success) showToast('error', result.error || 'Failed');
-    return result;
-  }, [organizationId]);
+  const createDriver = useCallback(
+    (data: Parameters<typeof erp.createDriver>[1]) => withOrg(orgId => erp.createDriver(orgId, data)),
+    [withOrg]
+  );
 
-  const assignTripResources = useCallback(async (
-    tripId: string, vehicleId: string, driverId: string,
-    vehicleReg: string, driverName: string, driverPhone: string
-  ) => {
-    if (!organizationId) { showToast('error', 'No organization'); return { success: false, error: 'No org' }; }
-    const result = await erp.assignTripResources(organizationId, tripId, vehicleId, driverId, vehicleReg, driverName, driverPhone);
-    if (!result.success) showToast('error', result.error || 'Failed');
-    return result;
-  }, [organizationId]);
+  // ─── TRIP LIFECYCLE ──────────────────────────────────────────
 
-  const recordVendorPayment = useCallback(async (payment: Parameters<typeof erp.recordVendorPayment>[1]) => {
-    if (!organizationId) { showToast('error', 'No organization'); return { success: false, error: 'No org' }; }
-    const result = await erp.recordVendorPayment(organizationId, payment);
-    if (!result.success) showToast('error', result.error || 'Failed');
-    return result;
-  }, [organizationId]);
+  const createTrip = useCallback(
+    (data: Parameters<typeof erp.createTrip>[1]) => withOrg(orgId => erp.createTrip(orgId, data)),
+    [withOrg]
+  );
+
+  const assignTripResources = useCallback(
+    (tripId: string, vehicleId: string, driverId: string, vehicleReg: string, driverName: string, driverPhone: string) =>
+      withOrg(orgId => erp.assignTripResources(orgId, tripId, vehicleId, driverId, vehicleReg, driverName, driverPhone)),
+    [withOrg]
+  );
+
+  const completeTrip = useCallback(
+    (tripId: string, deliveryDate: string) => withOrg(orgId => erp.completeTrip(orgId, tripId, deliveryDate)),
+    [withOrg]
+  );
+
+  const cancelTrip = useCallback(
+    (tripId: string, reason: string) => withOrg(orgId => erp.cancelTrip(orgId, tripId, reason)),
+    [withOrg]
+  );
+
+  // ─── FINANCIAL ───────────────────────────────────────────────
+
+  const createInvoice = useCallback(
+    (data: Parameters<typeof erp.createInvoice>[1]) => withOrg(orgId => erp.createInvoice(orgId, data)),
+    [withOrg]
+  );
+
+  const generateInvoiceFromTrip = useCallback(
+    (tripId: string, invoiceNumber: string, gstPercent?: number) =>
+      withOrg(orgId => erp.generateInvoiceFromTrip(orgId, tripId, invoiceNumber, gstPercent)),
+    [withOrg]
+  );
+
+  const recordPayment = useCallback(
+    (data: Parameters<typeof erp.recordPayment>[1]) => withOrg(orgId => erp.recordPayment(orgId, data)),
+    [withOrg]
+  );
+
+  const recordExpense = useCallback(
+    (data: Parameters<typeof erp.recordExpense>[1]) => withOrg(orgId => erp.recordExpense(orgId, data)),
+    [withOrg]
+  );
+
+  const recordVendorPayment = useCallback(
+    (data: Parameters<typeof erp.recordVendorPayment>[1]) => withOrg(orgId => erp.recordVendorPayment(orgId, data)),
+    [withOrg]
+  );
+
+  // ─── FLEET OPERATIONS ────────────────────────────────────────
+
+  const recordFuel = useCallback(
+    (data: Parameters<typeof erp.recordFuel>[1]) => withOrg(orgId => erp.recordFuel(orgId, data)),
+    [withOrg]
+  );
+
+  const recordMaintenance = useCallback(
+    (data: Parameters<typeof erp.recordMaintenance>[1]) => withOrg(orgId => erp.recordMaintenance(orgId, data)),
+    [withOrg]
+  );
+
+  const completeMaintenance = useCallback(
+    (maintenanceId: string, actualCost: number) => withOrg(orgId => erp.completeMaintenance(orgId, maintenanceId, actualCost)),
+    [withOrg]
+  );
+
+  const recordChallan = useCallback(
+    (data: Parameters<typeof erp.recordChallan>[1]) => withOrg(orgId => erp.recordChallan(orgId, data)),
+    [withOrg]
+  );
+
+  const createWorkOrder = useCallback(
+    (data: Parameters<typeof erp.createWorkOrder>[1]) => withOrg(orgId => erp.createWorkOrder(orgId, data)),
+    [withOrg]
+  );
 
   return {
+    // Master Data
     createCustomer,
+    createVendor,
+    createVehicle,
+    createDriver,
+    // Trip Lifecycle
+    createTrip,
+    assignTripResources,
+    completeTrip,
+    cancelTrip,
+    // Financial
     createInvoice,
+    generateInvoiceFromTrip,
     recordPayment,
     recordExpense,
-    recordFuel,
-    completeTrip,
-    assignTripResources,
     recordVendorPayment,
+    // Fleet Operations
+    recordFuel,
+    recordMaintenance,
+    completeMaintenance,
+    recordChallan,
+    createWorkOrder,
   };
 }
