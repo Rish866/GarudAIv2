@@ -6,6 +6,7 @@ import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useErpTransaction } from '../../../hooks/useErpTransaction';
 import { tripRepository } from '../../../data/trips/tripRepository';
 import { validateStatusTransition, validateVehicleForTrip, validateDriverForTrip, validateCustomerCredit, canGenerateInvoice, getValidNextStatuses } from '../../../lib/workflowRules';
 import type { TripRecord } from '../../../lib/workflowRules';
@@ -53,6 +54,7 @@ export default function TripsModule() {
   const { company } = useStore();
   const { organizationId } = useOrganization();
   const { can } = usePermissions();
+  const erpTx = useErpTransaction();
 
   // Server-side paginated trip data
   const {
@@ -193,6 +195,26 @@ export default function TripsModule() {
     if (error) {
       showToast('error', `Status update failed: ${error}`);
       return;
+    }
+
+    // === ERP CASCADE: Update dependent modules based on new status ===
+    const tripData = trips.find(t => t.id === tripId);
+    
+    // When trip is ASSIGNED: mark vehicle + driver as on_trip
+    if (newStatus === 'assigned' && tripData?.vehicle_id && tripData?.driver_id) {
+      await erpTx.assignTripResources(
+        tripId,
+        tripData.vehicle_id,
+        tripData.driver_id,
+        tripData.vehicle_reg || '',
+        tripData.driver_name || '',
+        tripData.driver_phone || ''
+      );
+    }
+
+    // When trip is COMPLETED: release vehicle + driver
+    if (newStatus === 'completed' || newStatus === 'settled') {
+      await erpTx.completeTrip(tripId, new Date().toISOString().split('T')[0]);
     }
 
     showToast('success', `Status updated to ${newStatus.replace(/_/g, ' ')}`);

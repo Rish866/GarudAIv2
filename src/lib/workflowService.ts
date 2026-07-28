@@ -217,49 +217,63 @@ export async function createInvoiceForTrip(
     };
   }
 
-  // Create invoice
-  const { data: invoice, error: invError } = await supabase
-    .from('invoices')
-    .insert({
-      ...invoiceData,
-      organization_id: organizationId,
-      trip_ids: [tripId], // Keep JSONB for backward compat
-    })
-    .select('id')
-    .single();
+  // Create invoice VIA RPC — atomically updates customer outstanding + total_business
+  const { data: rpcResult, error: rpcError } = await supabase.rpc('create_invoice_with_outstanding', {
+    p_organization_id: organizationId,
+    p_customer_id: invoiceData.customer_id as string,
+    p_invoice_number: invoiceData.invoice_number as string,
+    p_invoice_date: (invoiceData.invoice_date as string) || new Date().toISOString().split('T')[0],
+    p_due_date: (invoiceData.due_date as string) || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+    p_trip_ids: JSON.stringify([tripId]),
+    p_freight_total: (invoiceData.freight_total as number) || 0,
+    p_detention_total: (invoiceData.detention_total as number) || 0,
+    p_other_charges: (invoiceData.other_charges as number) || 0,
+    p_gst_percent: (invoiceData.gst_percent as number) || 5,
+    p_status: (invoiceData.status as string) || 'sent',
+  });
 
-  if (invError) {
-    return { success: false, error: invError.message };
-  }
-
-  // Create invoice_trips link (unique constraint prevents race condition)
-  const { error: linkError } = await supabase
-    .from('invoice_trips')
-    .insert({
-      organization_id: organizationId,
-      invoice_id: invoice.id,
-      trip_id: tripId,
-      billed_amount: (invoiceData.total_amount as number) || 0,
-    });
-
-  if (linkError) {
-    // Unique constraint violation = another request created it simultaneously
-    if (linkError.code === '23505') {
-      // Delete the orphan invoice we just created
-      await supabase.from('invoices').delete().eq('id', invoice.id);
-      // Return the existing one
-      const { data: existing } = await supabase
-        .from('invoice_trips')
-        .select('invoice_id')
-        .eq('organization_id', organizationId)
-        .eq('trip_id', tripId)
+  if (rpcError) {
+    // Fallback: direct insert if RPC doesn't exist
+    if (rpcError.message.includes('does not exist')) {
+      const { data: invoice, error: invError } = await supabase
+        .from('invoices')
+        .insert({
+          ...invoiceData,
+          organization_id: organizationId,
+          trip_ids: [tripId],
+        })
+        .select('id')
         .single();
-      return { success: true, invoiceId: existing?.invoice_id, isExisting: true };
+      if (invError) return { success: false, error: invError.message };
+      
+      // Create invoice_trips link
+      await supabase.from('invoice_trips').insert({
+        organization_id: organizationId,
+        invoice_id: invoice.id,
+        trip_id: tripId,
+        billed_amount: (invoiceData.total_amount as number) || 0,
+      });
+      
+      return { success: true, invoiceId: invoice.id, isExisting: false };
     }
-    return { success: false, error: linkError.message };
+    return { success: false, error: rpcError.message };
   }
 
-  return { success: true, invoiceId: invoice.id, isExisting: false };
+  const invoiceId = rpcResult?.invoice_id;
+  
+  // Create invoice_trips link for idempotency
+  if (invoiceId) {
+    try {
+      await supabase.from('invoice_trips').insert({
+        organization_id: organizationId,
+        invoice_id: invoiceId,
+        trip_id: tripId,
+        billed_amount: (invoiceData.total_amount as number) || 0,
+      });
+    } catch { /* Best-effort — invoice already created via RPC */ }
+  }
+
+  return { success: true, invoiceId: invoiceId, isExisting: false };
 }
 
 // ============================================================
