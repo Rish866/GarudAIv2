@@ -18,9 +18,10 @@ import { signUpWithOrganization } from './services/organizationService';
 import { signIn, requestPasswordReset, resolveUserRole } from './lib/auth';
 import { validatePassword } from './lib/passwordPolicy';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
-import { supabase, supabaseConfigurationError } from './lib/supabase';
+import { supabase } from './lib/supabase';
 import { queryClient } from './lib/queryClient';
 import { getModuleFromPath } from './router/routes';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import InviteAcceptPage from './components/InviteAcceptPage';
 
 // Lazy-loaded modules
@@ -789,121 +790,69 @@ function SessionTimeoutContainer() {
 }
 
 export default function App() {
-  const { isLoggedIn, theme, user, login, logout } = useStore();
-  const [showLanding, setShowLanding] = useState(true);
-  const [authChecking, setAuthChecking] = useState(true);
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
-
-  // Auth bootstrap: verify Supabase session on mount.
-  // Supabase session is the source of truth, NOT Zustand isLoggedIn.
-  // If Supabase has a valid session, restore user. If not, force logout.
-  useEffect(() => {
-    if (supabaseConfigurationError) {
-      setAuthChecking(false);
-      return;
-    }
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
-        // No Supabase session — ensure local state reflects this
-        if (isLoggedIn) logout();
-        setAuthChecking(false);
-        return;
-      }
-
-      // Session exists — restore user identity if not already logged in
-      if (!isLoggedIn) {
-        const user = session.user;
-        login({
-          id: user.id,
-          name: user.user_metadata?.name || user.email?.split('@')[0] || '',
-          email: user.email || '',
-          role: 'operations', // Will be resolved by OrganizationContext
-          phone: '',
-          status: 'active',
-        });
-      }
-      setAuthChecking(false);
-    });
-
-    // Listen for auth state changes (e.g. token refresh, sign out from another tab)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        logout();
-      }
-      if (event === 'TOKEN_REFRESHED' && session && !isLoggedIn) {
-        // Session restored (e.g. after tab regains focus)
-        login({
-          id: session.user.id,
-          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
-          email: session.user.email || '',
-          role: 'operations',
-          phone: '',
-          status: 'active',
-        });
-      }
-      if (event === 'PASSWORD_RECOVERY') {
-        setShowPasswordReset(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (supabaseConfigurationError) {
-    return <ConfigurationErrorScreen message={supabaseConfigurationError} />;
-  }
-
-  // Show loading while verifying auth
-  if (authChecking) {
-    return (
-      <div className={theme === 'dark' ? 'dark' : ''}>
-        <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
-          <Loader2 size={32} className="animate-spin text-blue-600" />
-        </div>
-      </div>
-    );
-  }
-
-  if (showPasswordReset) {
-    return (
-      <div className={theme === 'dark' ? 'dark' : ''}>
-        <PasswordResetScreen onComplete={() => setShowPasswordReset(false)} />
-      </div>
-    );
-  }
-
-  if (!isLoggedIn) {
-    if (showLanding) {
-      return (
-        <div className={theme === 'dark' ? 'dark' : ''}>
-          <LandingPage onGetStarted={() => setShowLanding(false)} />
-        </div>
-      );
-    }
-    return (
-      <div className={theme === 'dark' ? 'dark' : ''}>
-        <LoginPage onBackToHome={() => setShowLanding(true)} />
-      </div>
-    );
-  }
+  const { theme } = useStore();
 
   return (
     <div className={theme === 'dark' ? 'dark' : ''}>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <OrganizationProvider>
-            <BranchProvider>
-              <Routes>
-                <Route path="/invite/accept" element={<InviteAcceptPage />} />
-                <Route path="/*" element={<MainLayout />} />
-              </Routes>
-              <SessionTimeoutContainer />
-            </BranchProvider>
-          </OrganizationProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <AppRouter />
           <ToastContainer />
-        </BrowserRouter>
-      </QueryClientProvider>
+        </QueryClientProvider>
+      </AuthProvider>
     </div>
+  );
+}
+
+/**
+ * AppRouter — handles routing based on auth state.
+ * MUST be inside AuthProvider to access useAuth().
+ */
+function AppRouter() {
+  const { loading, isAuthenticated, configError, isPasswordRecovery, clearPasswordRecovery } = useAuth();
+  const { theme } = useStore();
+  const [showLanding, setShowLanding] = useState(true);
+
+  // Show configuration error screen if Supabase is not configured
+  if (configError) {
+    return <ConfigurationErrorScreen message={configError} />;
+  }
+
+  // Loading guard — NEVER show login while auth state is being resolved
+  // This prevents the flash-of-login-page on refresh
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <Loader2 size={32} className="animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  // Password recovery mode
+  if (isPasswordRecovery) {
+    return <PasswordResetScreen onComplete={clearPasswordRecovery} />;
+  }
+
+  // NOT authenticated — show landing or login
+  if (!isAuthenticated) {
+    if (showLanding) {
+      return <LandingPage onGetStarted={() => setShowLanding(false)} />;
+    }
+    return <LoginPage onBackToHome={() => setShowLanding(true)} />;
+  }
+
+  // AUTHENTICATED — render the full ERP application
+  return (
+    <BrowserRouter>
+      <OrganizationProvider>
+        <BranchProvider>
+          <Routes>
+            <Route path="/invite/accept" element={<InviteAcceptPage />} />
+            <Route path="/*" element={<MainLayout />} />
+          </Routes>
+          <SessionTimeoutContainer />
+        </BranchProvider>
+      </OrganizationProvider>
+    </BrowserRouter>
   );
 }
