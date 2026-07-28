@@ -99,22 +99,11 @@ export async function createCustomer(
     });
 
     if (error) {
-      // Fallback: if RPC doesn't exist yet, do simple insert
-      if (error.message.includes('function') && error.message.includes('does not exist')) {
-        const { data: created, error: insertErr } = await supabase
-          .from('customers')
-          .insert({ ...customer, organization_id: organizationId, outstanding: 0, total_business: 0, status: 'active' })
-          .select('id')
-          .single();
-        if (insertErr) return { success: false, error: insertErr.message };
-        invalidateCustomerCaches(organizationId);
-        fireEvent(organizationId, { name: "customer.created", data: { customerId: created.id, customerName: customer.name } });
-    return { success: true, data: { customerId: created.id } };
-      }
       return { success: false, error: error.message };
     }
 
     invalidateCustomerCaches(organizationId);
+    await fireEvent(organizationId, { name: 'customer.created', data: { customerId: data?.customer_id || '', customerName: customer.name } });
     return { success: true, data: { customerId: data?.customer_id || data } };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to create customer' };
@@ -165,6 +154,7 @@ export async function createInvoice(
     invalidateInvoiceCaches(organizationId);
     invalidateCustomerCaches(organizationId);
     invalidateDashboardCaches(organizationId);
+    await fireEvent(organizationId, { name: 'invoice.created', data: { invoiceId: String(data?.invoice_id || ''), invoiceNumber: invoice.invoice_number, customerName: '', totalAmount: invoice.freight_total } });
 
     return { success: true, data: { invoiceId: data?.invoice_id || data } };
   } catch (e: unknown) {
@@ -212,6 +202,7 @@ export async function recordPayment(
     invalidateInvoiceCaches(organizationId);
     invalidateCustomerCaches(organizationId);
     invalidateDashboardCaches(organizationId);
+    await fireEvent(organizationId, { name: 'payment.recorded', data: { paymentId: String(data?.payment_id || ''), customerName: '', amount: payment.amount, mode: payment.payment_mode } });
 
     return { success: true, data: { paymentId: data?.payment_id || data } };
   } catch (e: unknown) {
@@ -260,30 +251,6 @@ export async function recordExpense(
     });
 
     if (error) {
-      // Fallback if RPC doesn't exist: simple insert
-      if (error.message.includes('does not exist')) {
-        const { data: created, error: insertErr } = await supabase
-          .from('expenses')
-          .insert({
-            organization_id: organizationId,
-            trip_id: expense.trip_id || null,
-            vehicle_id: expense.vehicle_id || null,
-            vehicle_reg: expense.vehicle_reg || '',
-            category: expense.category,
-            amount: expense.amount,
-            date: expense.date,
-            description: expense.description || '',
-            paid_to: expense.paid_to || '',
-            payment_mode: expense.payment_mode || 'cash',
-            branch_id: expense.branch_id || null,
-            approved: false,
-          })
-          .select('id')
-          .single();
-        if (insertErr) return { success: false, error: insertErr.message };
-        invalidateExpenseCaches(organizationId);
-        return { success: true, data: { expenseId: created.id } };
-      }
       return { success: false, error: error.message };
     }
 
@@ -291,6 +258,7 @@ export async function recordExpense(
     invalidateDashboardCaches(organizationId);
     if (expense.trip_id) invalidateTripCaches(organizationId);
     if (expense.vehicle_id) invalidateVehicleCaches(organizationId);
+    await fireEvent(organizationId, { name: 'expense.recorded', data: { expenseId: String(data?.expense_id || ''), category: expense.category, amount: expense.amount, tripId: expense.trip_id, vehicleReg: expense.vehicle_reg } });
 
     return { success: true, data: { expenseId: data?.expense_id || data } };
   } catch (e: unknown) {
@@ -350,6 +318,7 @@ export async function recordFuel(
     invalidateVehicleCaches(organizationId);
     if (fuel.trip_id) invalidateTripCaches(organizationId);
     invalidateDashboardCaches(organizationId);
+    await fireEvent(organizationId, { name: 'fuel.recorded', data: { fuelEntryId: String(created.id), vehicleReg: fuel.vehicle_reg, litres: fuel.litres, amount: fuel.amount } });
 
     return { success: true, data: { fuelEntryId: created.id } };
   } catch (e: unknown) {
