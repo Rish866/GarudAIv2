@@ -189,17 +189,30 @@ export default function DashboardModule() {
   const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.total_amount ?? 0), 0);
   const totalReceived = payments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+  const totalFuel = fuelEntries.reduce((sum, f) => sum + (f.amount ?? 0), 0);
   const totalOutstanding = invoices.reduce((sum, inv) => sum + (inv.balance_amount ?? 0), 0);
   const totalDrivers = drivers.length;
   const availableDrivers = drivers.filter((d) => d.status === 'available').length;
   const unreadAlertItems = (alerts || []).filter((a) => !a.is_read);
   const unreadAlertCount = unreadAlertItems.length;
 
+  // NET PROFIT = Revenue received - all costs (expenses + fuel)
+  const netProfit = totalReceived - totalExpenses - totalFuel;
+
+  // OVERDUE INVOICES (due_date < today AND balance > 0)
+  const today = new Date().toISOString().split('T')[0];
+  const overdueInvoices = invoices.filter(inv => inv.balance_amount > 0 && inv.due_date < today && inv.status !== 'cancelled' && inv.status !== 'paid');
+  const overdueAmount = overdueInvoices.reduce((sum, inv) => sum + inv.balance_amount, 0);
+
+  // VEHICLE UTILIZATION (on_trip / total * 100)
+  const vehicleUtilization = totalVehicles > 0 ? Math.round((activeVehicles / totalVehicles) * 100) : 0;
+
   const metrics = {
     totalVehicles, activeVehicles, availableVehicles, maintenanceVehicles,
     totalTrips, activeTrips: activeTrips.length, completedTrips,
     totalRevenue, totalReceived, totalExpenses, totalOutstanding,
-    totalDrivers, availableDrivers, unreadAlerts: unreadAlertCount
+    totalDrivers, availableDrivers, unreadAlerts: unreadAlertCount,
+    netProfit, overdueAmount, overdueCount: overdueInvoices.length, vehicleUtilization,
   };
 
   const vehiclesWithLocation = vehicles.filter(
@@ -244,7 +257,7 @@ export default function DashboardModule() {
       icon: Truck,
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
       iconColor: 'text-blue-600 dark:text-blue-400',
-      subtitle: `${metrics.availableVehicles} available`,
+      subtitle: `${metrics.vehicleUtilization}% utilization`,
     },
     {
       label: 'Active Trips',
@@ -260,7 +273,15 @@ export default function DashboardModule() {
       icon: IndianRupee,
       bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
       iconColor: 'text-indigo-600 dark:text-indigo-400',
-      subtitle: `${formatCompact(metrics.totalReceived)} received`,
+      subtitle: `${formatCompact(metrics.totalReceived)} collected`,
+    },
+    {
+      label: 'Net Profit',
+      value: formatCompact(metrics.netProfit),
+      icon: TrendingUp,
+      bgColor: metrics.netProfit >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/20',
+      iconColor: metrics.netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
+      subtitle: `₹${formatCompact(metrics.totalExpenses)} costs`,
     },
     {
       label: 'Outstanding',
@@ -268,7 +289,7 @@ export default function DashboardModule() {
       icon: Clock,
       bgColor: 'bg-orange-50 dark:bg-orange-900/20',
       iconColor: 'text-orange-600 dark:text-orange-400',
-      subtitle: `${formatCompact(metrics.totalExpenses)} expenses`,
+      subtitle: metrics.overdueCount > 0 ? `${metrics.overdueCount} overdue` : 'all current',
     },
     {
       label: 'Drivers',
@@ -277,14 +298,6 @@ export default function DashboardModule() {
       bgColor: 'bg-purple-50 dark:bg-purple-900/20',
       iconColor: 'text-purple-600 dark:text-purple-400',
       subtitle: 'available',
-    },
-    {
-      label: 'Alerts',
-      value: metrics.unreadAlerts.toString(),
-      icon: AlertTriangle,
-      bgColor: 'bg-red-50 dark:bg-red-900/20',
-      iconColor: 'text-red-600 dark:text-red-400',
-      subtitle: 'unread',
     },
   ];
 
