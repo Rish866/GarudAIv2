@@ -381,6 +381,7 @@ export async function completeTrip(
 
     return { success: true };
   } catch (e: unknown) {
+    await fireEvent(organizationId, { name: "trip.completed", data: { tripId: tripId, tripNumber: "", customerName: "", freightAmount: 0 } });
     return { success: false, error: e instanceof Error ? e.message : 'Failed to complete trip' };
   }
 }
@@ -567,6 +568,7 @@ export async function createVendor(
     });
 
     invalidateVendorCaches(organizationId);
+    await fireEvent(organizationId, { name: "vendor.created", data: { vendorId: created.id, vendorName: vendor.name } });
     return { success: true, data: { vendorId: created.id } };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to create vendor' };
@@ -625,6 +627,7 @@ export async function createVehicle(
     });
 
     invalidateVehicleCaches(organizationId);
+    await fireEvent(organizationId, { name: "vehicle.created", data: { vehicleId: created.id, regNumber: vehicle.reg_number } });
     return { success: true, data: { vehicleId: created.id } };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to create vehicle' };
@@ -683,6 +686,7 @@ export async function createDriver(
     });
 
     invalidateDriverCaches(organizationId);
+    await fireEvent(organizationId, { name: "driver.created", data: { driverId: created.id, driverName: driver.name } });
     return { success: true, data: { driverId: created.id } };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to create driver' };
@@ -777,6 +781,7 @@ export async function createTrip(
     invalidateDriverCaches(organizationId);
     invalidateDashboardCaches(organizationId);
 
+    await fireEvent(organizationId, { name: "trip.created", data: { tripId: created.id, tripNumber: trip.trip_number, origin: trip.origin, destination: trip.destination, customerName: trip.customer_name, vehicleReg: trip.vehicle_reg, driverName: trip.driver_name } });
     return { success: true, data: { tripId: created.id } };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to create trip' };
@@ -891,6 +896,7 @@ export async function recordMaintenance(
 
     invalidateDashboardCaches(organizationId);
     return { success: true, data: { maintenanceId: created.id } };
+    await fireEvent(organizationId, { name: "maintenance.recorded", data: { maintenanceId: created.id, vehicleReg: maintenance.vehicle_reg, description: maintenance.description, cost: maintenance.cost } });
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to record maintenance' };
   }
@@ -951,6 +957,7 @@ export async function completeMaintenance(
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to complete maintenance' };
   }
+    await fireEvent(organizationId, { name: "maintenance.completed", data: { maintenanceId: maintenanceId, vehicleReg: "", actualCost: actualCost } });
 }
 
 // ============================================================
@@ -1019,6 +1026,7 @@ export async function recordChallan(
     invalidateVehicleCaches(organizationId);
     invalidateDashboardCaches(organizationId);
     return { success: true, data: { challanId: created.id } };
+    await fireEvent(organizationId, { name: "challan.recorded", data: { challanId: created.id, vehicleReg: challan.vehicle_reg, offence: challan.offence, amount: challan.amount } });
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to record challan' };
   }
@@ -1081,6 +1089,7 @@ export async function createWorkOrder(
 
     invalidateDashboardCaches(organizationId);
     return { success: true, data: { workOrderId: created.id } };
+    await fireEvent(organizationId, { name: "workorder.created", data: { workOrderId: created.id, vehicleReg: workOrder.vehicle_reg, woType: workOrder.type } });
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to create work order' };
   }
