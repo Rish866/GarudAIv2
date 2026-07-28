@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Vehicle, Driver, FuelEntry } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { useErpTransaction } from '../../../hooks/useErpTransaction';
 import { formatCurrency, formatDate } from '../../../lib/utils';
 import { showToast } from '../../ui/Toast';
 import { Edit, Trash2, X } from 'lucide-react';
@@ -11,6 +12,7 @@ export default function FuelModule() {
   const { data: vehicles } = useModuleData<Vehicle>('vehicles');
   const { data: drivers } = useModuleData<Driver>('drivers');
   const { can } = usePermission();
+  const erpTx = useErpTransaction();
   const canCreate = can('fuel.create');
   const canEdit = can('fuel.update');
   const [showModal, setShowModal] = useState(false);
@@ -111,9 +113,22 @@ export default function FuelModule() {
               if (!result.error) showToast('success', 'Fuel entry updated');
               else showToast('error', result.error);
             } else {
-              const result = await addFuelEntry(data);
-              if (!result.error) showToast('success', 'Fuel entry added');
-              else showToast('error', result.error);
+              // USE ERP TRANSACTION — updates fuel + vehicle odometer + trip cost
+              const result = await erpTx.recordFuel({
+                vehicle_id: data.vehicle_id || '',
+                vehicle_reg: data.vehicle_reg || '',
+                driver_id: data.driver_id || undefined,
+                driver_name: data.driver_name || undefined,
+                trip_id: data.trip_id || undefined,
+                date: data.date || new Date().toISOString().split('T')[0],
+                litres: data.litres || 0,
+                rate_per_litre: data.rate || 0,
+                amount: data.amount || (data.litres || 0) * (data.rate || 0),
+                odometer: data.odometer || 0,
+                station: data.station || '',
+                payment_mode: 'fuel_card',
+              });
+              if (result.success) showToast('success', 'Fuel entry added — vehicle odometer updated');
             }
             setShowModal(false);
             setEditingEntry(null);

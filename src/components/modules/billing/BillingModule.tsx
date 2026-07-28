@@ -171,32 +171,22 @@ export default function BillingModule() {
       return;
     }
 
-    // Use transaction-safe RPC
-    const { data: result, error } = await supabase.rpc('record_payment', {
-      p_organization_id: organizationId,
-      p_customer_id: customer.id,
-      p_invoice_id: payForm.invoice_id || null,
-      p_amount: payForm.amount,
-      p_tds_amount: payForm.tds_amount,
-      p_payment_mode: payForm.payment_mode,
-      p_reference_number: payForm.reference_number,
-      p_payment_date: new Date().toISOString().split('T')[0],
+    // USE ERP TRANSACTION — atomically updates payment + invoice + outstanding + bank/cash + activity
+    const result = await erpTx.recordPayment({
+      customer_id: customer.id,
+      invoice_id: payForm.invoice_id || undefined,
+      amount: payForm.amount,
+      tds_amount: payForm.tds_amount,
+      payment_mode: payForm.payment_mode,
+      reference_number: payForm.reference_number,
+      payment_date: new Date().toISOString().split('T')[0],
     });
 
-    if (error) {
-      showToast('error', error.message);
-      return;
+    if (result.success) {
+      showToast('success', 'Payment recorded — invoice, outstanding, and ledger updated');
+      setShowPaymentModal(false);
+      setPayForm({ customer_id: '', invoice_id: '', amount: 0, payment_mode: 'bank_transfer', reference_number: '', tds_amount: 0 });
     }
-    if (result && !result.success) {
-      showToast('error', result.error || 'Failed to record payment');
-      return;
-    }
-
-    showToast('success', 'Payment recorded & accounts updated');
-    setShowPaymentModal(false);
-    setPayForm({ customer_id: '', invoice_id: '', amount: 0, payment_mode: 'bank_transfer', reference_number: '', tds_amount: 0 });
-    // Refresh data to reflect the RPC changes
-    // Cache invalidation handled by ERP transaction engine
   };
 
   const handleAddExpense = async () => {
