@@ -401,36 +401,22 @@ export async function assignTripResources(
   driverPhone: string
 ): Promise<TransactionResult> {
   try {
-    // Update trip with vehicle + driver
-    const { error: tripErr } = await supabase
-      .from('trips')
-      .update({
-        vehicle_id: vehicleId,
-        vehicle_reg: vehicleReg,
-        driver_id: driverId,
-        driver_name: driverName,
-        driver_phone: driverPhone,
-        status: 'assigned',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', tripId)
-      .eq('organization_id', organizationId);
+    // Single atomic RPC: trip + vehicle + driver in one transaction
+    const { data: result, error } = await supabase.rpc('assign_trip_resources_atomic', {
+      p_organization_id: organizationId,
+      p_trip_id: tripId,
+      p_vehicle_id: vehicleId,
+      p_vehicle_reg: vehicleReg,
+      p_driver_id: driverId,
+      p_driver_name: driverName,
+      p_driver_phone: driverPhone,
+    });
 
-    if (tripErr) return { success: false, error: tripErr.message };
+    if (error) return { success: false, error: error.message };
+    if (result && !result.success) return { success: false, error: result.error };
 
-    // Set vehicle to on_trip
-    await supabase
-      .from('vehicles')
-      .update({ status: 'on_trip', driver_id: driverId, driver_name: driverName })
-      .eq('id', vehicleId)
-      .eq('organization_id', organizationId);
-
-    // Set driver to on_trip
-    await supabase
-      .from('drivers')
-      .update({ status: 'on_trip', assigned_vehicle_id: vehicleId, assigned_vehicle_reg: vehicleReg })
-      .eq('id', driverId)
-      .eq('organization_id', organizationId);
+    // Domain event
+    await fireEvent(organizationId, { name: 'trip.assigned', data: { tripId, tripNumber: '', vehicleReg, driverName } });
 
     // Invalidate caches
     invalidateTripCaches(organizationId);
@@ -1192,77 +1178,29 @@ export async function generateInvoiceFromTrip(
   gstPercent: number = 5
 ): Promise<TransactionResult<{ invoiceId: string }>> {
   try {
-    // Get trip details
-    const { data: trip } = await supabase
-      .from('trips')
-      .select('*')
-      .eq('id', tripId)
-      .eq('organization_id', organizationId)
-      .single();
-
-    if (!trip) return { success: false, error: 'Trip not found' };
-    if (!['completed', 'pod_pending'].includes(trip.status)) {
-      return { success: false, error: `Cannot invoice trip in "${trip.status}" status` };
-    }
-
-    // Check idempotency — is this trip already invoiced?
-    const { data: existingLink } = await supabase
-      .from('invoice_trips')
-      .select('invoice_id')
-      .eq('organization_id', organizationId)
-      .eq('trip_id', tripId)
-      .limit(1);
-
-    if (existingLink && existingLink.length > 0) {
-      return { success: true, data: { invoiceId: existingLink[0].invoice_id } };
-    }
-
-    // Calculate amounts
-    const subtotal = (trip.freight_amount || 0) + (trip.detention_charges || 0) + (trip.other_charges || 0);
-    const gstAmount = Math.round(subtotal * gstPercent / 100);
-    const totalAmount = subtotal + gstAmount;
-
-    // Use RPC for atomic invoice + outstanding update
-    const { data: result, error } = await supabase.rpc('create_invoice_with_outstanding', {
+    // Single atomic RPC: invoice + outstanding + trip link + journal entries
+    const { data: result, error } = await supabase.rpc('generate_invoice_from_trip_atomic', {
       p_organization_id: organizationId,
-      p_customer_id: trip.customer_id,
+      p_trip_id: tripId,
       p_invoice_number: invoiceNumber,
-      p_invoice_date: new Date().toISOString().split('T')[0],
-      p_due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-      p_trip_ids: JSON.stringify([tripId]),
-      p_freight_total: trip.freight_amount || 0,
-      p_detention_total: trip.detention_charges || 0,
-      p_other_charges: trip.other_charges || 0,
       p_gst_percent: gstPercent,
-      p_status: 'sent',
     });
 
     if (error) return { success: false, error: error.message };
+    if (result && !result.success) return { success: false, error: result.error };
 
-    const invoiceId = result?.invoice_id;
+    const invoiceId = result?.invoice_id || '';
 
-    // Link invoice to trip
-    if (invoiceId) {
-      await supabase.from('invoice_trips').insert({
-        organization_id: organizationId,
-        invoice_id: invoiceId,
-        trip_id: tripId,
-        billed_amount: totalAmount,
-      });
-    }
+    // Domain event
+    await fireEvent(organizationId, { name: 'invoice.created', data: { invoiceId, invoiceNumber, customerName: '', totalAmount: result?.total_amount || 0 } });
 
-    // Update trip status to billed
-    await supabase.from('trips')
-      .update({ status: 'billed' })
-      .eq('id', tripId)
-      .eq('organization_id', organizationId);
-
+    // Invalidate caches
     invalidateTripCaches(organizationId);
     invalidateInvoiceCaches(organizationId);
     invalidateCustomerCaches(organizationId);
     invalidateDashboardCaches(organizationId);
 
-    return { success: true, data: { invoiceId: invoiceId || '' } };
+    return { success: true, data: { invoiceId } };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to generate invoice' };
   }

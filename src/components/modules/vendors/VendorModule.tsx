@@ -5,6 +5,7 @@ import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
 import { formatCurrency, formatDate, classNames } from '../../../lib/utils';
+import { showToast } from '../../ui/Toast';
 
 import { Users, Plus, X, Search, Download, Edit, Trash2, Phone, Mail } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
@@ -64,6 +65,10 @@ export default function VendorModule() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [paymentVendor, setPaymentVendor] = useState<Vendor | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMode, setPaymentMode] = useState('bank_transfer');
+  const [paymentRef, setPaymentRef] = useState('');
 
   // Combined filter builder
   const buildFilters = useCallback(() => {
@@ -240,6 +245,9 @@ export default function VendorModule() {
                 <p className="text-sm font-medium text-orange-600">{formatCurrency(vendor.outstanding)}</p>
               </div>
             </div>
+            {vendor.outstanding > 0 && (
+              <button onClick={() => { setPaymentVendor(vendor); setPaymentAmount(String(vendor.outstanding)); }} className="w-full mt-2 px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">Record Payment</button>
+            )}
           </div>
         ))}
       </div>
@@ -338,6 +346,44 @@ export default function VendorModule() {
 
       {showBulkUpload && (
         <BulkUpload title="Bulk Upload Vendors" description="Import vendor records from CSV" sampleFields={['name', 'type', 'contact_person', 'phone', 'email', 'gstin', 'city', 'state']} onUpload={(data) => { data.forEach(row => { erpTx.createVendor({ name: row.name || '', type: (row.type as VendorType) || 'other', contact_person: row.contact_person || '', phone: row.phone || '', email: row.email || '', gstin: row.gstin || '', pan: row.pan || '', address: row.address || '', city: row.city || '', state: row.state || '', bank_name: '', account_number: '', ifsc: '', total_paid: 0, outstanding: 0, status: 'active', created_at: new Date().toISOString().split('T')[0] }); }); }} onClose={() => setShowBulkUpload(false)} />
+      )}
+
+      {/* Vendor Payment Modal */}
+      {paymentVendor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setPaymentVendor(null)} />
+          <div className="relative rounded-2xl border p-6 w-full max-w-md" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}>
+            <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Record Payment — {paymentVendor.name}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Amount *</label>
+                <input type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }} />
+              </div>
+              <div>
+                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Payment Mode</label>
+                <select value={paymentMode} onChange={e => setPaymentMode(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="cash">Cash</option>
+                  <option value="upi">UPI</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Reference</label>
+                <input type="text" value={paymentRef} onChange={e => setPaymentRef(e.target.value)} placeholder="UTR / Cheque No." className="w-full mt-1 px-3 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }} />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setPaymentVendor(null)} className="flex-1 px-4 py-2 text-sm border rounded-lg" style={{ borderColor: 'var(--border-color)' }}>Cancel</button>
+              <button onClick={async () => {
+                const amt = parseFloat(paymentAmount);
+                if (!amt || amt <= 0) { showToast('error', 'Enter valid amount'); return; }
+                const res = await erpTx.recordVendorPayment({ vendor_id: paymentVendor.id, amount: amt, payment_mode: paymentMode, reference: paymentRef, payment_date: new Date().toISOString().split('T')[0] });
+                if (res && res.success) { showToast('success', `Payment of ${formatCurrency(amt)} recorded`); setPaymentVendor(null); setPaymentAmount(''); setPaymentRef(''); } else { showToast('error', res?.error || 'Payment failed'); }
+              }} className="flex-1 px-4 py-2 text-sm bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">Record Payment</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

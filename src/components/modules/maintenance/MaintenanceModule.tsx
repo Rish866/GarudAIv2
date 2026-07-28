@@ -148,7 +148,7 @@ export default function MaintenanceModule() {
                 </>
               )}
               {canUpdate && record.status === 'in_progress' && (
-                <button onClick={() => { updateMaintenance(record.id, { status: 'completed' }); showToast('success', 'Completed'); }} className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">Complete</button>
+                <button onClick={async () => { const res = await erpTx.completeMaintenance(record.id, record.cost || 0); if (res && res.success) { showToast('success', 'Completed'); } else { showToast('error', res?.error || 'Failed'); } }} className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">Complete</button>
               )}
               {canUpdate && record.status !== 'completed' && (
                 <button onClick={() => { removeMaintenance(record.id); showToast('success', 'Deleted'); }} className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg font-medium ml-auto">Delete</button>

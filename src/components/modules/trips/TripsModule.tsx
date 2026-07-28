@@ -10,7 +10,6 @@ import { useErpTransaction } from '../../../hooks/useErpTransaction';
 import { tripRepository } from '../../../data/trips/tripRepository';
 import { validateStatusTransition, validateVehicleForTrip, validateDriverForTrip, validateCustomerCredit, canGenerateInvoice, getValidNextStatuses } from '../../../lib/workflowRules';
 import type { TripRecord } from '../../../lib/workflowRules';
-import { createInvoiceForTrip } from '../../../lib/workflowService';
 import type { Trip, TripStatus, Invoice, Vehicle, Driver, Customer, Payment, Expense, FuelEntry, Enquiry, Quotation, AppNotification } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames, generateTripNumber, generateInvoiceNumber } from '../../../lib/utils';
 import { generateLRPDF, generateTripReportPDF } from '../../../lib/pdf';
@@ -234,49 +233,23 @@ export default function TripsModule() {
         if (!invoiceCheck.allowed) {
           showToast('warning', `Trip completed but invoice not generated: ${invoiceCheck.errors[0]}`);
         } else {
-          const subtotal = (trip.freight_amount || 0) + (trip.detention_charges || 0) + (trip.other_charges || 0);
-          const gst_amount = Math.round(subtotal * 0.05);
-          const tds_amount = Math.round(subtotal * 0.02);
-          const total_amount = subtotal + gst_amount - tds_amount;
+          const result = await erpTx.generateInvoiceFromTrip(tripId, generateInvoiceNumber());
 
-          const result = await createInvoiceForTrip(organizationId, tripId, {
-            invoice_number: generateInvoiceNumber(),
-            customer_id: trip.customer_id,
-            customer_name: trip.customer_name,
-            invoice_date: new Date().toISOString().split('T')[0],
-            due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-            freight_total: trip.freight_amount || 0,
-            detention_total: trip.detention_charges || 0,
-            other_charges: trip.other_charges || 0,
-            subtotal,
-            gst_percent: 5,
-            gst_amount,
-            tds_amount,
-            total_amount,
-            paid_amount: 0,
-            balance_amount: total_amount,
-            status: 'sent',
-          });
-
-          if (result.success) {
-            if (result.isExisting) {
-              showToast('info', 'Invoice already exists for this trip.');
-            } else {
-              // Transition to billed
-              await tripRepository.transitionStatus(organizationId, tripId, 'billed');
-              await refreshTrips();
-              showToast('success', `Invoice generated (${formatCurrency(total_amount)})`);
-              addNotification({
-                type: 'invoice_generated',
-                title: 'Invoice Auto-Generated',
-                message: `Invoice created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,
-                link_module: 'billing',
-                is_read: false,
-                created_at: new Date().toISOString(),
-              });
-            }
+          if (result && result.success) {
+            await refreshTrips();
+            const subtotal = (trip.freight_amount || 0) + (trip.detention_charges || 0) + (trip.other_charges || 0);
+            const total_amount = subtotal + Math.round(subtotal * 0.05);
+            showToast('success', `Invoice generated (${formatCurrency(total_amount)})`);
+            addNotification({
+              type: 'invoice_generated',
+              title: 'Invoice Auto-Generated',
+              message: `Invoice created for trip ${trip.trip_number} (${formatCurrency(total_amount)})`,
+              link_module: 'billing',
+              is_read: false,
+              created_at: new Date().toISOString(),
+            });
           } else {
-            showToast('error', `Invoice creation failed: ${result.error}`);
+            showToast('error', `Invoice creation failed: ${result?.error || 'Unknown error'}`);
           }
         }
       }
@@ -321,9 +294,9 @@ export default function TripsModule() {
       showToast('error', 'Permission denied: you cannot cancel trips.');
       return;
     }
-    const { error } = await tripRepository.cancel(organizationId, tripId, reason);
-    if (error) {
-      showToast('error', `Cancel failed: ${error}`);
+    const result = await erpTx.cancelTrip(tripId, reason);
+    if (result && !result.success) {
+      showToast('error', `Cancel failed: ${result.error}`);
     } else {
       showToast('success', 'Trip cancelled successfully');
       await refreshTrips();

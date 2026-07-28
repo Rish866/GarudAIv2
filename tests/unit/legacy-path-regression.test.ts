@@ -51,9 +51,9 @@ describe('Legacy write-path regression guard', () => {
   });
 
   describe('Invoice: trip invoices must use invoice_trips', () => {
-    it('TripsModule uses createInvoiceForTrip service', () => {
+    it('TripsModule uses ERP Transaction Engine for invoice generation', () => {
       const content = readModule('components/modules/trips/TripsModule.tsx');
-      expect(content).toContain('createInvoiceForTrip');
+      expect(content).toContain('erpTx.generateInvoiceFromTrip');
       // Should NOT use addInvoice for trip invoices
       expect(content).not.toContain('addInvoice(');
     });
