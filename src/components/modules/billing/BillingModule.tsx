@@ -118,39 +118,33 @@ export default function BillingModule() {
       }
     }
 
-    // Use transaction-safe RPC
-    const { data: result, error } = await supabase.rpc('create_invoice_with_outstanding', {
-      p_organization_id: organizationId,
-      p_customer_id: customer.id,
-      p_invoice_number: generateInvoiceNumber(),
-      p_invoice_date: new Date().toISOString().split('T')[0],
-      p_due_date: new Date(Date.now() + (customer.credit_days || 30) * 86400000).toISOString().split('T')[0],
-      p_trip_ids: invForm.trip_id ? JSON.stringify([invForm.trip_id]) : '[]',
-      p_freight_total: invForm.freight_total,
-      p_detention_total: invForm.detention_total,
-      p_other_charges: invForm.other_charges,
-      p_gst_percent: invForm.gst_percent,
-      p_status: 'draft',
+    // USE ERP TRANSACTION — atomic invoice + outstanding + activity
+    const result = await erpTx.createInvoice({
+      customer_id: customer.id,
+      invoice_number: generateInvoiceNumber(),
+      invoice_date: new Date().toISOString().split('T')[0],
+      due_date: new Date(Date.now() + (customer.credit_days || 30) * 86400000).toISOString().split('T')[0],
+      trip_ids: invForm.trip_id ? [invForm.trip_id] : undefined,
+      freight_total: invForm.freight_total,
+      detention_total: invForm.detention_total,
+      other_charges: invForm.other_charges,
+      gst_percent: invForm.gst_percent,
     });
 
-    if (error) {
-      showToast('error', error.message);
-      return;
-    }
-    if (result && !result.success) {
+    if (!result.success) {
       showToast('error', result.error || 'Failed to create invoice');
       return;
     }
 
-    showToast('success', 'Invoice created');
-    // Create invoice_trips link for idempotency protection
-    if (invForm.trip_id && result?.invoice_id) {
+    showToast('success', 'Invoice created — customer outstanding updated');
+    // Create invoice_trips link for idempotency
+    if (invForm.trip_id && result.data?.invoiceId) {
       await supabase.from('invoice_trips').insert({
         organization_id: organizationId,
-        invoice_id: result.invoice_id,
+        invoice_id: result.data.invoiceId,
         trip_id: invForm.trip_id,
         billed_amount: invForm.freight_total + invForm.detention_total + invForm.other_charges,
-      }); // Best-effort — RPC already created the invoice
+      });
     }
     setShowInvoiceModal(false);
     setInvForm({ customer_id: '', trip_id: '', freight_total: 0, detention_total: 0, other_charges: 0, gst_percent: 5 });

@@ -29,6 +29,8 @@
 import { supabase } from '../lib/supabase';
 import { queryClient, queryKeys } from '../lib/queryClient';
 import { showToast } from '../components/ui/Toast';
+import * as domainEvents from '../lib/domainEvents';
+import type { DomainEvent } from '../lib/domainEvents';
 
 // ============================================================
 // TYPES
@@ -38,6 +40,23 @@ interface TransactionResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+/**
+ * Fire a domain event after successful transaction.
+ * Events trigger cache invalidation + notifications via subscribers.
+ * Errors in event handling do NOT fail the transaction.
+ */
+async function fireEvent(orgId: string, event: Omit<DomainEvent, 'organizationId' | 'timestamp'>): Promise<void> {
+  try {
+    await domainEvents.emit({
+      ...event,
+      organizationId: orgId,
+      timestamp: new Date().toISOString(),
+    } as DomainEvent);
+  } catch {
+    // Event failures are non-critical — don't crash the transaction
+  }
 }
 
 // ============================================================
@@ -89,7 +108,8 @@ export async function createCustomer(
           .single();
         if (insertErr) return { success: false, error: insertErr.message };
         invalidateCustomerCaches(organizationId);
-        return { success: true, data: { customerId: created.id } };
+        fireEvent(organizationId, { name: "customer.created", data: { customerId: created.id, customerName: customer.name } });
+    return { success: true, data: { customerId: created.id } };
       }
       return { success: false, error: error.message };
     }
