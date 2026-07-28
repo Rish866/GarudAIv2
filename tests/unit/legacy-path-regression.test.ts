@@ -66,7 +66,7 @@ describe('Legacy write-path regression guard', () => {
 
   describe('Profitability: must use authoritative service', () => {
     it('TripDetailModal uses calculateTripProfitability', () => {
-      const content = readModule('components/modules/trips/TripsModule.tsx');
+      const content = readModule('components/modules/trips/TripDetailModal.tsx');
       expect(content).toContain('calculateTripProfitability');
       // Should NOT have inline fuel cost estimates
       expect(content).not.toContain('fuelCostEstimate');
