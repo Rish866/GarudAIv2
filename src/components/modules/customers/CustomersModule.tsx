@@ -4,9 +4,11 @@ import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
 import { useStore } from '../../../store/useStore';
+import { useErpTransaction } from '../../../hooks/useErpTransaction';
 import type { Customer } from '../../../types';
 import { formatCurrency, getStatusColor, classNames } from '../../../lib/utils';
 import { exportCustomers } from '../../../lib/excel';
+import { showToast } from '../../ui/Toast';
 import { Plus, Search, Users, IndianRupee, TrendingUp, X, ExternalLink, Upload } from 'lucide-react';
 import CustomerTrackingPortal from '../tracking/CustomerTrackingPortal';
 import BulkUpload from '../../ui/BulkUpload';
@@ -311,7 +313,8 @@ export default function CustomersModule() {
 }
 
 function AddCustomerModal({ onClose }: { onClose: () => void }) {
-  const { create: addCustomer } = useModuleData<Customer>("customers");
+  const { createCustomer } = useErpTransaction();
+  const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
     branch_id: '',
@@ -329,12 +332,15 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.name.trim()) return;
+    setSaving(true);
 
-    const customer: Partial<Customer> = {
+    // USE ERP TRANSACTION — creates customer + ledger + activity log atomically
+    const result = await createCustomer({
       branch_id: form.branch_id || undefined,
-      name: form.name,
+      name: form.name.trim(),
       contact_person: form.contact_person,
       phone: form.phone,
       email: form.email,
@@ -342,14 +348,13 @@ function AddCustomerModal({ onClose }: { onClose: () => void }) {
       billing_address: form.billing_address,
       credit_limit: Number(form.credit_limit) || 0,
       credit_days: Number(form.credit_days) || 30,
-      outstanding: 0,
-      total_business: 0,
-      status: 'active',
-      created_at: new Date().toISOString(),
-    };
+    });
 
-    addCustomer(customer);
-    onClose();
+    setSaving(false);
+    if (result.success) {
+      showToast('success', `Customer "${form.name}" created with ledger account`);
+      onClose();
+    }
   };
 
   return (

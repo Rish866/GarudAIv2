@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
 import { useStore } from '../../../store/useStore';
 import { useOrganization } from '../../../contexts/OrganizationContext';
+import { useErpTransaction } from '../../../hooks/useErpTransaction';
 import { supabase } from '../../../lib/supabase';
 import { usePermission } from '../../../hooks/usePermission';
 import type { Invoice, Payment, Expense, ExpenseCategory, Vehicle, Customer, Trip } from '../../../types';
@@ -16,6 +17,7 @@ export default function BillingModule() {
   const { company } = useStore();
   const { organizationId } = useOrganization();
   const { can } = usePermission();
+  const erpTx = useErpTransaction();
   const canCreateInvoice = can('invoices.create');
   const canCreatePayment = can('payments.create');
   const canCreateExpense = can('expenses.create');
@@ -153,7 +155,7 @@ export default function BillingModule() {
     setShowInvoiceModal(false);
     setInvForm({ customer_id: '', trip_id: '', freight_total: 0, detention_total: 0, other_charges: 0, gst_percent: 5 });
     // Refresh data to reflect the RPC changes
-    window.location.hash = '#billing';
+    // Cache invalidation handled by ERP transaction engine
   };
 
 
@@ -194,14 +196,17 @@ export default function BillingModule() {
     setShowPaymentModal(false);
     setPayForm({ customer_id: '', invoice_id: '', amount: 0, payment_mode: 'bank_transfer', reference_number: '', tds_amount: 0 });
     // Refresh data to reflect the RPC changes
-    window.location.hash = '#billing';
+    // Cache invalidation handled by ERP transaction engine
   };
 
-  const handleAddExpense = () => {
+  const handleAddExpense = async () => {
     const vehicle = vehicles.find((v) => v.id === expForm.vehicle_id);
-    addExpense({
-      trip_id: expForm.trip_id || null,
-      vehicle_id: vehicle?.id || null,
+    if (!organizationId) return;
+
+    // USE ERP TRANSACTION — creates expense + cash/bank entry + activity log atomically
+    const result = await erpTx.recordExpense({
+      trip_id: expForm.trip_id || undefined,
+      vehicle_id: vehicle?.id || undefined,
       vehicle_reg: vehicle?.reg_number || '',
       category: expForm.category,
       amount: expForm.amount,
@@ -209,9 +214,11 @@ export default function BillingModule() {
       description: expForm.description,
       paid_to: expForm.paid_to,
       payment_mode: expForm.payment_mode,
-      approved: false,
     });
-    showToast('success', 'Expense added');
+
+    if (result.success) {
+      showToast('success', 'Expense recorded (cash/bank book updated)');
+    }
     setShowExpenseModal(false);
     setExpForm({ category: 'diesel', amount: 0, description: '', paid_to: '', vehicle_id: '', trip_id: '', payment_mode: 'cash', date: new Date().toISOString().split('T')[0] });
   };
