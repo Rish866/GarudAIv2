@@ -379,9 +379,9 @@ export async function completeTrip(
     invalidateDriverCaches(organizationId);
     invalidateDashboardCaches(organizationId);
 
+    await fireEvent(organizationId, { name: "trip.completed", data: { tripId: tripId, tripNumber: "", customerName: "", freightAmount: 0 } });
     return { success: true };
   } catch (e: unknown) {
-    await fireEvent(organizationId, { name: "trip.completed", data: { tripId: tripId, tripNumber: "", customerName: "", freightAmount: 0 } });
     return { success: false, error: e instanceof Error ? e.message : 'Failed to complete trip' };
   }
 }
@@ -453,7 +453,7 @@ export async function recordVendorPayment(
     // Reduce vendor outstanding
     const { data: vendor } = await supabase
       .from('vendors')
-      .select('outstanding, total_paid')
+      .select('name, outstanding, total_paid')
       .eq('id', payment.vendor_id)
       .eq('organization_id', organizationId)
       .single();
@@ -485,6 +485,7 @@ export async function recordVendorPayment(
     invalidateVendorCaches(organizationId);
     invalidateDashboardCaches(organizationId);
 
+    await fireEvent(organizationId, { name: "vendor.payment.recorded", data: { vendorName: vendor?.name || '', amount: payment.amount } });
     return { success: true };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to record vendor payment' };
@@ -846,24 +847,16 @@ export async function recordMaintenance(
 
       // If vendor specified, increase vendor outstanding
       if (maintenance.vendor_id) {
-        const { error: vendorErr } = await supabase.rpc('increment_vendor_outstanding', {
-          p_vendor_id: maintenance.vendor_id,
-          p_amount: maintenance.cost,
-          p_organization_id: organizationId,
-        });
-        // If RPC doesn't exist, do direct update
-        if (vendorErr) {
-          const { data: vendor } = await supabase.from('vendors')
-            .select('outstanding')
+        const { data: vendor } = await supabase.from('vendors')
+          .select('outstanding')
+          .eq('id', maintenance.vendor_id)
+          .eq('organization_id', organizationId)
+          .single();
+        if (vendor) {
+          await supabase.from('vendors')
+            .update({ outstanding: (vendor.outstanding || 0) + maintenance.cost })
             .eq('id', maintenance.vendor_id)
-            .eq('organization_id', organizationId)
-            .single();
-          if (vendor) {
-            await supabase.from('vendors')
-              .update({ outstanding: (vendor.outstanding || 0) + maintenance.cost })
-              .eq('id', maintenance.vendor_id)
-              .eq('organization_id', organizationId);
-          }
+            .eq('organization_id', organizationId);
         }
       }
 
@@ -881,8 +874,8 @@ export async function recordMaintenance(
     });
 
     invalidateDashboardCaches(organizationId);
-    return { success: true, data: { maintenanceId: created.id } };
     await fireEvent(organizationId, { name: "maintenance.recorded", data: { maintenanceId: created.id, vehicleReg: maintenance.vehicle_reg, description: maintenance.description, cost: maintenance.cost } });
+    return { success: true, data: { maintenanceId: created.id } };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to record maintenance' };
   }
@@ -939,11 +932,11 @@ export async function completeMaintenance(
 
     invalidateVehicleCaches(organizationId);
     invalidateDashboardCaches(organizationId);
+    await fireEvent(organizationId, { name: "maintenance.completed", data: { maintenanceId: maintenanceId, vehicleReg: record.vehicle_reg || "", actualCost: actualCost } });
     return { success: true };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to complete maintenance' };
   }
-    await fireEvent(organizationId, { name: "maintenance.completed", data: { maintenanceId: maintenanceId, vehicleReg: "", actualCost: actualCost } });
 }
 
 // ============================================================
@@ -1011,8 +1004,8 @@ export async function recordChallan(
     invalidateExpenseCaches(organizationId);
     invalidateVehicleCaches(organizationId);
     invalidateDashboardCaches(organizationId);
-    return { success: true, data: { challanId: created.id } };
     await fireEvent(organizationId, { name: "challan.recorded", data: { challanId: created.id, vehicleReg: challan.vehicle_reg, offence: challan.offence, amount: challan.amount } });
+    return { success: true, data: { challanId: created.id } };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to record challan' };
   }
@@ -1074,8 +1067,8 @@ export async function createWorkOrder(
     });
 
     invalidateDashboardCaches(organizationId);
-    return { success: true, data: { workOrderId: created.id } };
     await fireEvent(organizationId, { name: "workorder.created", data: { workOrderId: created.id, vehicleReg: workOrder.vehicle_reg, woType: workOrder.type } });
+    return { success: true, data: { workOrderId: created.id } };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to create work order' };
   }
@@ -1157,6 +1150,7 @@ export async function cancelTrip(
     invalidateVehicleCaches(organizationId);
     invalidateDriverCaches(organizationId);
     invalidateDashboardCaches(organizationId);
+    await fireEvent(organizationId, { name: "trip.cancelled", data: { tripId, tripNumber: trip.trip_number, reason } });
     return { success: true };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Failed to cancel trip' };
