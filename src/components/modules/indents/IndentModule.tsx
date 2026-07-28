@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Vehicle, Driver, Customer, Trip, Quotation } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { useErpTransaction } from '../../../hooks/useErpTransaction';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
@@ -45,7 +46,7 @@ export default function IndentModule() {
   const { data: drivers } = useModuleData<Driver>('drivers');
   const { data: trips } = useModuleData<Trip>('trips');
   const { data: quotations } = useModuleData<Quotation>('quotations');
-  const { create: addTrip } = useModuleData<Trip>('trips');
+  const erpTx = useErpTransaction();
   const {
     data: indents,
     totalCount,
@@ -276,7 +277,7 @@ export default function IndentModule() {
         status: 'booked' as const,
         created_at: new Date().toISOString(),
       };
-      addTrip(trip);
+      erpTx.createTrip(trip);
     });
     updateIndent(indent.id, { status: 'in_progress' });
   };

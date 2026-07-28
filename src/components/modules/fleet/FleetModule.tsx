@@ -7,10 +7,12 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import BulkUpload from '../../ui/BulkUpload';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { useErpTransaction } from '../../../hooks/useErpTransaction';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
 import BranchField from '../../ui/BranchField';
+import { showToast } from '../../ui/Toast';
 
 // Fix default leaflet icon
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -84,8 +86,9 @@ export default function FleetModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<Vehicle>('vehicles', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  // CRUD operations
-  const { create: addVehicle, update: updateVehicle, remove: deleteVehicle } = useModuleData<Vehicle>('vehicles', { fetchOnMount: false });
+  // CRUD operations (update/delete still use raw, create uses ERP engine)
+  const { update: updateVehicle, remove: deleteVehicle } = useModuleData<Vehicle>('vehicles', { fetchOnMount: false });
+  const erpTx = useErpTransaction();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState('');
@@ -198,9 +201,8 @@ export default function FleetModule() {
         return;
       }
     } else {
-      // Let PostgreSQL generate the UUID primary key. The legacy browser ID
-      // generator produces non-UUID strings and must not be used for DB rows.
-      const newVehicle: Partial<Vehicle> = {
+      // USE ERP TRANSACTION — creates vehicle + activity log
+      const result = await erpTx.createVehicle({
         branch_id: form.branch_id || undefined,
         reg_number: form.reg_number,
         vehicle_type: form.vehicle_type,
@@ -215,13 +217,9 @@ export default function FleetModule() {
         insurance_expiry: form.insurance_expiry,
         puc_expiry: form.puc_expiry,
         permit_expiry: form.permit_expiry,
-        status: 'available' as const,
-        odometer: 0,
-        created_at: new Date().toISOString(),
-      };
-      const result = await addVehicle(newVehicle);
-      if (result.error) {
-        setSaveError(result.error);
+      });
+      if (!result.success) {
+        setSaveError(result.error || 'Failed to create vehicle');
         setSaving(false);
         return;
       }
@@ -559,7 +557,7 @@ export default function FleetModule() {
           sampleFields={['reg_number', 'vehicle_type', 'make', 'model', 'year', 'ownership_type', 'owner_name', 'capacity_tons', 'fitness_expiry', 'insurance_expiry', 'puc_expiry', 'permit_expiry']}
           onUpload={(data) => {
             data.forEach(row => {
-              addVehicle({
+              erpTx.createVehicle({
                 reg_number: row.reg_number || '',
                 vehicle_type: (row.vehicle_type as any) || 'truck',
                 make: row.make || '',

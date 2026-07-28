@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { Vehicle } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { useErpTransaction } from '../../../hooks/useErpTransaction';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
@@ -88,7 +89,8 @@ export default function WorkOrderModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<WorkOrder>('work_orders', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: createWorkOrder, remove: removeWorkOrder } = useModuleData<WorkOrder>('work_orders', { fetchOnMount: false });
+  const erpTx = useErpTransaction();
+  const { remove: removeWorkOrder } = useModuleData<WorkOrder>('work_orders', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | WOStatus>('all');
   const [woSearch, setWoSearch] = useState('');
@@ -162,7 +164,7 @@ export default function WorkOrderModule() {
       status: 'open',
       parts_used: '',
     };
-    createWorkOrder(newOrder);
+    erpTx.createWorkOrder(newOrder);
     setShowModal(false);
     setForm({
       vehicle_reg: '',

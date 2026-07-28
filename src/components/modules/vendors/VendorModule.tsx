@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { useErpTransaction } from '../../../hooks/useErpTransaction';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
@@ -52,7 +53,8 @@ export default function VendorModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<Vendor>('vendors', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: createVendor, update: updateVendor, remove: removeVendor } = useModuleData<Vendor>('vendors', { fetchOnMount: false });
+  const erpTx = useErpTransaction();
+  const { update: updateVendor, remove: removeVendor } = useModuleData<Vendor>('vendors', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [search, setSearch] = useState('');
@@ -122,7 +124,7 @@ export default function VendorModule() {
       status: 'active',
       created_at: new Date().toISOString().split('T')[0],
     };
-    createVendor(newVendor);
+    erpTx.createVendor(newVendor);
     setShowModal(false);
     setForm({ name: '', type: 'vehicle_owner', contact_person: '', phone: '', email: '', gstin: '', pan: '', address: '', city: '', state: '', bank_name: '', account_number: '', ifsc: '' });
   };
@@ -335,7 +337,7 @@ export default function VendorModule() {
       )}
 
       {showBulkUpload && (
-        <BulkUpload title="Bulk Upload Vendors" description="Import vendor records from CSV" sampleFields={['name', 'type', 'contact_person', 'phone', 'email', 'gstin', 'city', 'state']} onUpload={(data) => { data.forEach(row => { createVendor( { name: row.name || '', type: (row.type as VendorType) || 'other', contact_person: row.contact_person || '', phone: row.phone || '', email: row.email || '', gstin: row.gstin || '', pan: row.pan || '', address: row.address || '', city: row.city || '', state: row.state || '', bank_name: '', account_number: '', ifsc: '', total_paid: 0, outstanding: 0, status: 'active', created_at: new Date().toISOString().split('T')[0] }); }); }} onClose={() => setShowBulkUpload(false)} />
+        <BulkUpload title="Bulk Upload Vendors" description="Import vendor records from CSV" sampleFields={['name', 'type', 'contact_person', 'phone', 'email', 'gstin', 'city', 'state']} onUpload={(data) => { data.forEach(row => { erpTx.createVendor({ name: row.name || '', type: (row.type as VendorType) || 'other', contact_person: row.contact_person || '', phone: row.phone || '', email: row.email || '', gstin: row.gstin || '', pan: row.pan || '', address: row.address || '', city: row.city || '', state: row.state || '', bank_name: '', account_number: '', ifsc: '', total_paid: 0, outstanding: 0, status: 'active', created_at: new Date().toISOString().split('T')[0] }); }); }} onClose={() => setShowBulkUpload(false)} />
       )}
     </div>
   );

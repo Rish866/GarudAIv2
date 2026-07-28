@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { useErpTransaction } from '../../../hooks/useErpTransaction';
+import { showToast } from '../../ui/Toast';
 import type { MaintenanceRecord, Vehicle } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, classNames } from '../../../lib/utils';
-import { showToast } from '../../ui/Toast';
 import { usePermission } from '../../../hooks/usePermission';
 
 export default function MaintenanceModule() {
-  const { data: maintenance, create: addMaintenance, update: updateMaintenance, remove: removeMaintenance } = useModuleData<MaintenanceRecord>('maintenance');
+  const erpTx = useErpTransaction();
+  const { data: maintenance, update: updateMaintenance, remove: removeMaintenance } = useModuleData<MaintenanceRecord>('maintenance');
   const { data: vehicles } = useModuleData<Vehicle>('vehicles');
   const { can } = usePermission();
   const canCreate = can('maintenance.create');
@@ -49,7 +51,8 @@ export default function MaintenanceModule() {
       await updateMaintenance(editingRecord.id, data);
       showToast('success', 'Maintenance record updated');
     } else {
-      await addMaintenance({ ...data, status: 'scheduled' });
+      const result = await erpTx.recordMaintenance({ ...data, status: 'scheduled' });
+              if (result.success) showToast('success', 'Maintenance recorded');
       showToast('success', 'Maintenance scheduled');
     }
     setShowModal(false);

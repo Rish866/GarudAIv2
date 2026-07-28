@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Driver, Trip } from '../../../types';
 import { formatCurrency, formatDate, getStatusColor, getDaysUntil, classNames } from '../../../lib/utils';
+import { useErpTransaction } from '../../../hooks/useErpTransaction';
 import { exportDrivers } from '../../../lib/excel';
 import { Plus, Search, Phone, Shield, MapPin, Calendar, X, AlertTriangle, TrendingUp, Clock, Award, Fuel, ChevronRight, BarChart3, Star, Edit, Trash2 } from 'lucide-react';
 import BulkUpload from '../../ui/BulkUpload';
@@ -12,7 +13,8 @@ type DriverView = 'list' | 'performance' | 'detail';
 
 export default function DriversModule() {
   const { data: trips } = useModuleData<Trip>('trips');
-  const { data: drivers, create: addDriver, update: updateDriver, remove: removeDriver, loading: driversLoading } = useModuleData<Driver>('drivers');
+  const { data: drivers, update: updateDriver, remove: removeDriver, loading: driversLoading } = useModuleData<Driver>('drivers');
+  const erpTx = useErpTransaction();
   const { can } = usePermission();
   const canCreate = can('drivers.create');
   const canEdit = can('drivers.update');
@@ -374,7 +376,7 @@ export default function DriversModule() {
           sampleFields={['name', 'phone', 'license_number', 'license_expiry', 'address', 'emergency_contact', 'emergency_phone', 'salary_type', 'base_salary', 'date_of_joining']}
           onUpload={(data) => {
             data.forEach(row => {
-              addDriver({
+              erpTx.createDriver({
                 name: row.name || '',
                 phone: row.phone || '',
                 license_number: row.license_number || '',
@@ -495,7 +497,8 @@ function DriverCard({ driver, onTimePercent, overallScore, rating }: { key?: str
 }
 
 function AddDriverModal({ driver: editDriver, onClose }: { driver?: Driver | null; onClose: () => void }) {
-  const { create: addDriver, update: updateDriver } = useModuleData<Driver>('drivers');
+  const { update: updateDriver } = useModuleData<Driver>("drivers", { fetchOnMount: false });
+  const erpTx2 = useErpTransaction();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -563,7 +566,7 @@ function AddDriverModal({ driver: editDriver, onClose }: { driver?: Driver | nul
       }
       showToast('success', 'Driver updated successfully');
     } else {
-      const result = await addDriver({
+      const result = await erpTx2.createDriver({
         ...data,
         status: 'available',
         safety_score: 100,

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { Vehicle } from '../../../types';
 import { useModuleData } from '../../../hooks/useModuleData';
+import { useErpTransaction } from '../../../hooks/useErpTransaction';
 import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import type { PaginationFilter } from '../../../hooks/usePaginatedData';
 import Pagination from '../../ui/Pagination';
@@ -60,7 +61,8 @@ export default function ChallanModule() {
     hasNextPage,
     hasPrevPage,
   } = usePaginatedData<Challan>('challans', { defaultSort: 'created_at', defaultSortDirection: 'desc' });
-  const { create: createChallan, remove: removeChallan } = useModuleData<Challan>('challans', { fetchOnMount: false });
+  const erpTx = useErpTransaction();
+  const { remove: removeChallan } = useModuleData<Challan>('challans', { fetchOnMount: false });
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<'all' | PaymentStatus>('all');
   const [challanSearch, setChallanSearch] = useState('');
@@ -125,7 +127,7 @@ export default function ChallanModule() {
       fine_amount: form.fine_amount,
       payment_status: 'pending',
     };
-    createChallan(newChallan);
+    erpTx.recordChallan(newChallan);
     setShowModal(false);
     setForm({
       date: new Date().toISOString().split('T')[0],
